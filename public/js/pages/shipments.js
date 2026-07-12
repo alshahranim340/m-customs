@@ -102,7 +102,8 @@ async function loadShipments() {
                 onclick="advanceStatus('${s.id}','${STATUS[s.status].next}')">
                 ${STATUS[s.status].nextAr}
               </button>` : ''}
-            <button class="icon-btn" title="تعديل" onclick="openEditModal('${s.id}')">✏️</button>
+            '<button class="icon-btn" title="عرض" onclick="navigate('shipment-view',{id:'${s.id}'})">👁️</button>
+        <button class="icon-btn" title="تعديل" onclick="openEditModal('${s.id}')">✏️</button>
             <button class="icon-btn" title="حذف"
               style="border-color:var(--red);"
               onclick="confirmDelete('${s.id}','${s.declaration_no || ''}')">🗑️</button>
