@@ -3,12 +3,14 @@ import { renderDashboard } from './pages/dashboard.js';
 import { renderNewShipment } from './pages/newShipment.js';
 import { renderShipments } from './pages/shipments.js';
 import { renderDrivers } from './pages/drivers.js';
+import { renderShipmentView } from './pages/shipmentView.js';
 
 const PAGES = {
-  'dashboard':    renderDashboard,
-  'new-shipment': renderNewShipment,
-  'shipments':    renderShipments,
-  'drivers':      renderDrivers,
+  'dashboard':     renderDashboard,
+  'new-shipment':  renderNewShipment,
+  'shipments':     renderShipments,
+  'drivers':       renderDrivers,
+  'shipment-view': renderShipmentView,
 };
 
 export function navigate(page, params = {}) {
@@ -55,7 +57,6 @@ export function closeModal() {
 }
 window.closeModal = closeModal;
 
-// ── UPDATE BADGES (call after any add/delete) ──
 export async function updateBadges() {
   try {
     const shipments = await getShipments(100);
