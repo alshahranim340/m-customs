@@ -1,11 +1,13 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Phase 1: open access (add auth later)
     match /drivers/{id} {
       allow read, write: if true;
     }
     match /shipments/{id} {
+      allow read, write: if true;
+    }
+    match /attachments/{id} {
       allow read, write: if true;
     }
   }
