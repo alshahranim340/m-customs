@@ -48,9 +48,8 @@ export async function renderShipments(container) {
         <div id="edit-form-body"><div class="loader"><div class="spinner"></div></div></div>
         <div class="modal-actions">
           <button class="btn btn-ghost"   onclick="closeEditModal()">إلغاء</button>
-          <button class="btn btn-gold"    id="btn-merge-broker" onclick="mergeForBroker()">📦 دمج للمخلص</button>
-          <button class="btn btn-green"   id="btn-merge-driver" onclick="mergeForDriver()">🚛 دمج للسائق</button>
-          <button class="btn btn-primary" id="btn-save"         onclick="saveEdit()">💾 حفظ</button>
+          <button class="btn btn-gold"    id="btn-merge" onclick="mergeAll()">📦 دمج وتحميل PDF</button>
+          <button class="btn btn-primary" id="btn-save"  onclick="saveEdit()">💾 حفظ</button>
         </div>
       </div>
     </div>`;
@@ -62,10 +61,8 @@ export async function renderShipments(container) {
   window.saveEdit         = saveEdit;
   window.confirmDelete    = confirmDelete;
   window.editFileSelected = editFileSelected;
-  window.mergeForBroker   = mergeForBroker;
-  window.mergeForDriver   = mergeForDriver;
+  window.mergeAll         = mergeAll;
   window.updatePortEdit   = updatePortEdit;
-  window.brokerReplySelected = brokerReplySelected;
 }
 
 // ─────────────────────────────────────────────
@@ -148,7 +145,6 @@ async function openEditModal(id) {
       </label>`;
   }).join('');
 
-  const hasBrokerReply = !!existing['broker_reply'];
 
   document.getElementById('edit-form-body').innerHTML = `
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;">
@@ -197,22 +193,7 @@ async function openEditModal(id) {
       </div>
       <div class="upload-grid">${attachHTML}</div>
     </div>
-
-    <div style="background:var(--surface);border-radius:8px;padding:14px;">
-      <div style="font-size:11px;font-weight:700;color:var(--muted);margin-bottom:10px;">
-        رد المخلص PDF ${hasBrokerReply ? '✅ محفوظ' : '📎 لم يُرفع بعد'}
-      </div>
-      <label class="upload-item ${hasBrokerReply?'uploaded':''}" style="cursor:pointer;">
-        <input type="file" accept=".pdf" style="display:none" onchange="brokerReplySelected(this)">
-        <span class="u-icon" id="broker-reply-icon">${hasBrokerReply?'✅':'📎'}</span>
-        <div>
-          <div class="u-name">رد المخلص (permit / entry docs)</div>
-          <div class="u-state" id="broker-reply-state">
-            ${hasBrokerReply?(existing['broker_reply']?.name||'✓ محفوظ'):'اضغط للرفع'}
-          </div>
-        </div>
-      </label>
-    </div>`;
+`;
 }
 
 function updatePortEdit() {
@@ -259,7 +240,6 @@ function closeEditModal() {
   _editingShipment = null;
   _editFiles = {};
   _existingFiles = {};
-  _brokerReplyFile = null;
 }
 
 // ─────────────────────────────────────────────
@@ -296,10 +276,6 @@ async function saveEdit() {
     if (Object.keys(_editFiles).length > 0) {
       await saveAttachments(_editingId, _editFiles);
     }
-    if (_brokerReplyFile) {
-      await saveAttachment(_editingId, 'broker_reply', _brokerReplyFile);
-    }
-
     toast('✅ تم الحفظ', 'success');
     closeEditModal();
     await loadShipments();
@@ -314,16 +290,17 @@ async function saveEdit() {
 }
 
 // ─────────────────────────────────────────────
-// MERGE FOR BROKER
+// MERGE ALL — ملف موحد كامل
 // ─────────────────────────────────────────────
-async function mergeForBroker() {
-  const btn = document.getElementById('btn-merge-broker');
+async function mergeAll() {
+  const btn = document.getElementById('btn-merge');
   btn.disabled = true;
   btn.textContent = '⏳ جاري الدمج...';
   try {
     const s   = _editingShipment;
     const drv = s?.driver_snapshot || {};
 
+    // Save any new files first
     if (Object.keys(_editFiles).length > 0) await saveAttachments(_editingId, _editFiles);
     if (_brokerReplyFile) await saveAttachment(_editingId, 'broker_reply', _brokerReplyFile);
 
@@ -331,6 +308,7 @@ async function mergeForBroker() {
     const form1Bytes = await htmlToPdfBytes(buildDeclarationHTML(s, drv));
     const form2Bytes = await htmlToPdfBytes(buildSampleHTML(s, drv));
 
+    // Build sources: forms + all attachments in order
     const sources = [
       { type: 'arraybuffer', data: form1Bytes },
       { type: 'arraybuffer', data: form2Bytes },
@@ -339,62 +317,17 @@ async function mergeForBroker() {
         .map(a => ({ type: 'base64', data: _existingFiles[a.key].base64 }))
     ];
 
+    toast('⏳ جاري دمج الملفات...', 'info');
     const merged   = await mergePDFs(sources);
-    const filename = `مخلص_${drv.name||'شحنة'}_${s?.declaration_no||''}.pdf`.replace(/\s+/g,'_');
+    const filename = `${drv.name||'شحنة'}_${s?.declaration_no||''}.pdf`.replace(/\s+/g,'_');
     downloadBytes(merged, filename);
-    toast('✅ تم تحميل ملف المخلص', 'success');
+    toast('✅ تم تحميل الملف الموحد', 'success');
   } catch(e) {
     console.error(e);
     toast('خطأ في الدمج', 'error');
   } finally {
     btn.disabled = false;
-    btn.textContent = '📦 دمج للمخلص';
-  }
-}
-
-// ─────────────────────────────────────────────
-// MERGE FOR DRIVER (بدون بيانات السائق، مع رد المخلص)
-// ─────────────────────────────────────────────
-async function mergeForDriver() {
-  const btn = document.getElementById('btn-merge-driver');
-  btn.disabled = true;
-  btn.textContent = '⏳ جاري الدمج...';
-  try {
-    const s   = _editingShipment;
-    const drv = s?.driver_snapshot || {};
-
-    if (Object.keys(_editFiles).length > 0) await saveAttachments(_editingId, _editFiles);
-    if (_brokerReplyFile) await saveAttachment(_editingId, 'broker_reply', _brokerReplyFile);
-
-    toast('⏳ جاري تجهيز الفورمات...', 'info');
-    const form1Bytes = await htmlToPdfBytes(buildDeclarationHTML(s, drv));
-    const form2Bytes = await htmlToPdfBytes(buildSampleHTML(s, drv));
-
-    const sources = [
-      { type: 'arraybuffer', data: form1Bytes },
-      { type: 'arraybuffer', data: form2Bytes },
-    ];
-
-    // رد المخلص
-    if (_existingFiles['broker_reply']) {
-      sources.push({ type: 'base64', data: _existingFiles['broker_reply'].base64 });
-    }
-
-    // باقي المرفقات بدون بيانات السائق
-    ATTACHMENTS_ORDER
-      .filter(a => a.key !== 'driver_docs' && _existingFiles[a.key])
-      .forEach(a => sources.push({ type: 'base64', data: _existingFiles[a.key].base64 }));
-
-    const merged   = await mergePDFs(sources);
-    const filename = `سائق_${drv.name||'شحنة'}_${s?.declaration_no||''}.pdf`.replace(/\s+/g,'_');
-    downloadBytes(merged, filename);
-    toast('✅ تم تحميل ملف السائق', 'success');
-  } catch(e) {
-    console.error(e);
-    toast('خطأ في الدمج', 'error');
-  } finally {
-    btn.disabled = false;
-    btn.textContent = '🚛 دمج للسائق';
+    btn.textContent = '📦 دمج وتحميل PDF';
   }
 }
 

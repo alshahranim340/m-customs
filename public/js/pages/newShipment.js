@@ -1,27 +1,31 @@
 import { searchDrivers, createShipment } from '../../../src/firebase/db.js';
+import { saveAttachments } from '../../../src/firebase/attachments.js';
+import { getExporters, saveExporter } from '../../../src/firebase/exporters.js';
 import { fileToBase64 } from '../../../src/utils/fileUtils.js';
-import { DECLARATION_TYPES } from '../../../src/utils/constants.js';
+import { DECLARATION_TYPES, ATTACHMENTS_ORDER } from '../../../src/utils/constants.js';
 import { toast, navigate } from '../app.js';
 
-export const ATTACHMENTS = [
-  { key: 'invoice',        ar: 'الفاتورة التجارية',          required: true },
-  { key: 'packing_list',   ar: 'قائمة التعبئة (Packing List)', required: true },
-  { key: 'coo',            ar: 'شهادة المنشأ',                required: true },
-  { key: 'analysis_cert',  ar: 'شهادة تحليل العينة',          required: false },
-  { key: 'saudi_clearance',ar: 'بيان فسح سعودي',              required: true },
-  { key: 'driver_docs',    ar: 'بيانات السائق',                required: true },
-];
-
-const PORTS_MAP = { uae: 'جمرك البطحاء', bahrain: 'جمرك جسر الملك فهد', oman: 'جمرك البطحاء' };
+const PORTS_MAP = {
+  uae:     'جمرك البطحاء',
+  bahrain: 'جمرك جسر الملك فهد',
+  oman:    'جمرك البطحاء'
+};
 
 let _selectedDriver = null;
 let _uploadedFiles  = {};
 let _destination    = 'uae';
+let _exporters      = [];
 
 export async function renderNewShipment(container) {
   _selectedDriver = null;
   _uploadedFiles  = {};
   _destination    = 'uae';
+
+  // Load exporters in background
+  getExporters().then(list => {
+    _exporters = list;
+    renderExporterOptions();
+  });
 
   const declOptions = DECLARATION_TYPES.map(d =>
     `<option value="${d.value}" ${d.value==='saudi_origin'?'selected':''}>${d.ar}</option>`
@@ -52,7 +56,8 @@ export async function renderNewShipment(container) {
             </div>
             <div class="field">
               <label>المنفذ الجمركي</label>
-              <input type="text" id="port-display" value="جمرك البطحاء" readonly style="background:var(--surface);color:var(--muted);">
+              <input type="text" id="port-display" value="جمرك البطحاء" readonly
+                style="background:var(--surface);color:var(--muted);">
             </div>
           </div>
         </div>
@@ -64,24 +69,68 @@ export async function renderNewShipment(container) {
             <div class="field">
               <label>اسم السائق <span style="color:var(--red)">*</span></label>
               <div class="driver-search-wrap">
-                <input type="text" id="driver-name" placeholder="ابحث عن سائق أو أدخل اسم جديد"
+                <input type="text" id="driver-name"
+                  placeholder="ابحث عن سائق أو أدخل اسم جديد"
                   oninput="searchDriverFn(this.value)" autocomplete="off">
                 <div id="driver-suggestions" class="driver-suggestions" style="display:none;"></div>
               </div>
               <div class="hint" id="driver-status"></div>
             </div>
             <div class="form-grid-2">
-              <div class="field"><label>الجنسية *</label><input type="text" id="driver-nationality" placeholder="هندي"></div>
-              <div class="field"><label>بلد الجواز *</label><input type="text" id="driver-passport-country" placeholder="الهند"></div>
+              <div class="field"><label>الجنسية *</label>
+                <input type="text" id="driver-nationality" placeholder="هندي"></div>
+              <div class="field"><label>بلد الجواز *</label>
+                <input type="text" id="driver-passport-country" placeholder="الهند"></div>
             </div>
             <div class="form-grid-3">
-              <div class="field"><label>نوع الناقل</label><input type="text" id="driver-carrier-type" placeholder="نقل عام"></div>
-              <div class="field"><label>نوع السيارة</label><input type="text" id="driver-vehicle-type" placeholder="فولفو"></div>
-              <div class="field"><label>جنسية اللوحة</label><input type="text" id="driver-plate-nationality" placeholder="سعودية"></div>
+              <div class="field"><label>نوع الناقل</label>
+                <input type="text" id="driver-carrier-type" placeholder="نقل عام"></div>
+              <div class="field"><label>نوع السيارة</label>
+                <input type="text" id="driver-vehicle-type" placeholder="فولفو"></div>
+              <div class="field"><label>جنسية اللوحة</label>
+                <input type="text" id="driver-plate-nationality" placeholder="سعودية"></div>
             </div>
             <div class="form-grid-2">
-              <div class="field"><label>رقم اللوحة *</label><input type="text" id="driver-plate" placeholder="ا د ق 9761"></div>
-              <div class="field"><label>قيد حركة الشاحنة</label><input type="text" id="driver-movement-ref" placeholder="اختياري"></div>
+              <div class="field"><label>رقم اللوحة *</label>
+                <input type="text" id="driver-plate" placeholder="ا د ق 9761"></div>
+              <div class="field"><label>قيد حركة الشاحنة</label>
+                <input type="text" id="driver-movement-ref" placeholder="اختياري"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- EXPORTER & GOODS -->
+        <div class="card" style="margin-bottom:16px;">
+          <div class="card-body">
+            <div class="form-section-title">المصدر والبضاعة</div>
+
+            <!-- Exporter -->
+            <div class="field">
+              <label>اسم المصدر <span style="color:var(--red)">*</span></label>
+              <div style="position:relative;">
+                <input type="text" id="exporter" placeholder="اكتب أو اختر من القائمة"
+                  oninput="filterExporters(this.value)" autocomplete="off">
+                <div id="exporter-suggestions" style="
+                  display:none;position:absolute;top:calc(100% + 4px);right:0;left:0;
+                  background:white;border:1.5px solid var(--blue);border-radius:8px;
+                  z-index:200;box-shadow:0 4px 16px rgba(0,0,0,0.12);overflow:hidden;max-height:200px;overflow-y:auto;">
+                </div>
+              </div>
+            </div>
+
+            <!-- Goods -->
+            <div class="field">
+              <label>وصف البضاعة <span style="color:var(--red)">*</span></label>
+              <div style="position:relative;">
+                <input type="text" id="goods-desc" placeholder="اكتب أو اختر بضاعة المصدر"
+                  oninput="filterGoods(this.value)" autocomplete="off">
+                <div id="goods-suggestions" style="
+                  display:none;position:absolute;top:calc(100% + 4px);right:0;left:0;
+                  background:white;border:1.5px solid var(--blue);border-radius:8px;
+                  z-index:200;box-shadow:0 4px 16px rgba(0,0,0,0.12);overflow:hidden;max-height:160px;overflow-y:auto;">
+                </div>
+              </div>
+              <div class="hint" id="goods-hint"></div>
             </div>
           </div>
         </div>
@@ -91,16 +140,16 @@ export async function renderNewShipment(container) {
           <div class="card-body">
             <div class="form-section-title">بيانات البيان الجمركي</div>
             <div class="form-grid-2">
-              <div class="field"><label>رقم البيان *</label><input type="text" id="decl-no" placeholder="117826"></div>
-              <div class="field"><label>الرقم الموحد *</label><input type="text" id="unified-no" placeholder="203294400312"></div>
+              <div class="field"><label>رقم البيان *</label>
+                <input type="text" id="decl-no" placeholder="117826"></div>
+              <div class="field"><label>الرقم الموحد *</label>
+                <input type="text" id="unified-no" placeholder="203294400312"></div>
             </div>
             <div class="form-grid-2">
-              <div class="field"><label>التاريخ (هجري) *</label><input type="text" id="decl-date" placeholder="1448-01-23"></div>
-              <div class="field"><label>نوع البيان</label><select id="decl-type">${declOptions}</select></div>
-            </div>
-            <div class="form-grid-2">
-              <div class="field"><label>اسم المصدر *</label><input type="text" id="exporter" placeholder="شركة إدارة خدمات البيئة العالمية المحدودة"></div>
-              <div class="field"><label>وصف البضاعة *</label><input type="text" id="goods-desc" placeholder="كلور هيدروجين"></div>
+              <div class="field"><label>التاريخ (هجري) *</label>
+                <input type="text" id="decl-date" placeholder="1448-01-23"></div>
+              <div class="field"><label>نوع البيان</label>
+                <select id="decl-type">${declOptions}</select></div>
             </div>
           </div>
         </div>
@@ -108,15 +157,15 @@ export async function renderNewShipment(container) {
         <!-- ATTACHMENTS -->
         <div class="card" style="margin-bottom:16px;">
           <div class="card-body">
-            <div class="form-section-title">المرفقات — ${ATTACHMENTS.length} ملفات (اختياري الآن، يمكن رفعها لاحقاً)</div>
+            <div class="form-section-title">المرفقات (يمكن رفعها لاحقاً)</div>
             <div class="upload-grid">
-              ${ATTACHMENTS.map(a => `
-                <label class="upload-item ${a.required?'required':''}" id="upload-${a.key}">
+              ${ATTACHMENTS_ORDER.map(a => `
+                <label class="upload-item" id="upload-${a.key}">
                   <input type="file" accept=".pdf,.jpg,.jpeg,.png" style="display:none"
-                    onchange="fileSelectedFn('${a.key}', this)">
+                    onchange="fileSelectedFn('${a.key}',this)">
                   <span class="u-icon">📎</span>
                   <div>
-                    <div class="u-name">${a.ar}</div>
+                    <div class="u-name">${a.ar}${a.required?' *':''}</div>
                     <div class="u-state" id="state-${a.key}">اضغط للرفع</div>
                   </div>
                 </label>`).join('')}
@@ -137,12 +186,82 @@ export async function renderNewShipment(container) {
       </div>
     </div>`;
 
+  // Expose globals
   window.setDest          = setDest;
   window.searchDriverFn   = searchDriverFn;
   window.selectDriver     = selectDriver;
   window.fileSelectedFn   = fileSelectedFn;
   window.submitShipmentFn = submitShipmentFn;
   window.saveDraftFn      = saveDraftFn;
+  window.filterExporters  = filterExporters;
+  window.selectExporter   = selectExporter;
+  window.filterGoods      = filterGoods;
+  window.selectGoods      = selectGoods;
+}
+
+// ── EXPORTER AUTOCOMPLETE ──
+function renderExporterOptions() {
+  // called after exporters load
+}
+
+function filterExporters(val) {
+  const sugg = document.getElementById('exporter-suggestions');
+  if (!val || val.length < 1) { sugg.style.display = 'none'; return; }
+
+  const matches = _exporters.filter(e =>
+    e.name.toLowerCase().includes(val.toLowerCase())
+  );
+
+  if (!matches.length) { sugg.style.display = 'none'; return; }
+
+  sugg.innerHTML = matches.map(e => `
+    <div onclick="selectExporter('${e.name.replace(/'/g,"\\'")}','${e.id}')"
+      style="padding:10px 14px;cursor:pointer;font-size:13px;border-bottom:1px solid var(--border);"
+      onmouseover="this.style.background='var(--surface)'"
+      onmouseout="this.style.background='white'">
+      <div style="font-weight:600;">${e.name}</div>
+      <div style="font-size:11px;color:var(--muted);">${(e.goods||[]).join(' · ')}</div>
+    </div>`).join('');
+  sugg.style.display = 'block';
+}
+
+function selectExporter(name, id) {
+  document.getElementById('exporter').value = name;
+  document.getElementById('exporter-suggestions').style.display = 'none';
+  // Show goods for this exporter
+  const exp = _exporters.find(e => e.id === id);
+  if (exp?.goods?.length) {
+    document.getElementById('goods-hint').textContent =
+      `بضائع ${name}: ${exp.goods.join(' | ')}`;
+  }
+}
+
+function filterGoods(val) {
+  const exporterName = document.getElementById('exporter').value.trim();
+  const exp = _exporters.find(e => e.name === exporterName);
+  const sugg = document.getElementById('goods-suggestions');
+
+  if (!exp?.goods?.length) { sugg.style.display = 'none'; return; }
+
+  const matches = val
+    ? exp.goods.filter(g => g.toLowerCase().includes(val.toLowerCase()))
+    : exp.goods;
+
+  if (!matches.length) { sugg.style.display = 'none'; return; }
+
+  sugg.innerHTML = matches.map(g => `
+    <div onclick="selectGoods('${g.replace(/'/g,"\\'")}') "
+      style="padding:10px 14px;cursor:pointer;font-size:13px;border-bottom:1px solid var(--border);"
+      onmouseover="this.style.background='var(--surface)'"
+      onmouseout="this.style.background='white'">
+      ${g}
+    </div>`).join('');
+  sugg.style.display = 'block';
+}
+
+function selectGoods(goods) {
+  document.getElementById('goods-desc').value = goods;
+  document.getElementById('goods-suggestions').style.display = 'none';
 }
 
 // ── DESTINATION ──
@@ -184,16 +303,16 @@ async function selectDriver(driverId) {
   if (!driver) return;
   _selectedDriver = driver;
   const v = driver.vehicles?.[driver.vehicles.length-1] || {};
-  document.getElementById('driver-name').value             = driver.name || '';
-  document.getElementById('driver-nationality').value      = driver.nationality || '';
-  document.getElementById('driver-passport-country').value = driver.passport_country || '';
-  document.getElementById('driver-carrier-type').value     = v.carrier_type || '';
-  document.getElementById('driver-vehicle-type').value     = v.vehicle_type || '';
-  document.getElementById('driver-plate-nationality').value= v.plate_nationality || '';
-  document.getElementById('driver-plate').value            = v.plate || '';
+  document.getElementById('driver-name').value              = driver.name || '';
+  document.getElementById('driver-nationality').value       = driver.nationality || '';
+  document.getElementById('driver-passport-country').value  = driver.passport_country || '';
+  document.getElementById('driver-carrier-type').value      = v.carrier_type || '';
+  document.getElementById('driver-vehicle-type').value      = v.vehicle_type || '';
+  document.getElementById('driver-plate-nationality').value = v.plate_nationality || '';
+  document.getElementById('driver-plate').value             = v.plate || '';
   document.getElementById('driver-suggestions').style.display = 'none';
   document.getElementById('driver-status').innerHTML =
-    `<span style="color:var(--green);">✓ سائق موجود — سيتم تحديث بياناته</span>`;
+    `<span style="color:var(--green);">✓ سائق موجود</span>`;
 }
 
 // ── FILE UPLOAD ──
@@ -209,12 +328,10 @@ async function fileSelectedFn(key, input) {
     item.classList.add('uploaded');
     item.querySelector('.u-icon').textContent = '✅';
     state.textContent = file.name.length > 22 ? file.name.substring(0,22)+'…' : file.name;
-  } catch(e) {
-    state.textContent = 'خطأ في الرفع';
-  }
+  } catch(e) { state.textContent = 'خطأ في الرفع'; }
 }
 
-// ── COLLECT DATA ──
+// ── COLLECT & VALIDATE ──
 function collectData() {
   return {
     shipment: {
@@ -241,7 +358,7 @@ function collectData() {
 }
 
 function validate({ shipment, driver }) {
-  const required = [
+  const req = [
     [driver.name,              'اسم السائق'],
     [driver.plate,             'رقم اللوحة'],
     [shipment.declaration_no,  'رقم البيان'],
@@ -250,7 +367,7 @@ function validate({ shipment, driver }) {
     [shipment.exporter,        'اسم المصدر'],
     [shipment.goods_description,'وصف البضاعة'],
   ];
-  for (const [v, label] of required) {
+  for (const [v, label] of req) {
     if (!v) return `حقل مطلوب: ${label}`;
   }
   return null;
@@ -267,17 +384,17 @@ async function submitShipmentFn() {
   btn.textContent = '⏳ جاري الحفظ...';
 
   try {
-    const fullShipment = {
-      ...shipment,
-      driver_snapshot: driver,
-      status: 'draft'
-    };
+    const fullShipment = { ...shipment, driver_snapshot: driver, status: 'draft' };
     const shipmentId = await createShipment(fullShipment, driver, _selectedDriver?.id || null);
+
     // Save attachments separately
     if (Object.keys(_uploadedFiles).length > 0) {
-      const { saveAttachments } = await import('../../../src/firebase/attachments.js');
       await saveAttachments(shipmentId, _uploadedFiles);
     }
+
+    // Save exporter & goods for future use
+    await saveExporter(shipment.exporter, shipment.goods_description);
+
     toast('✅ تم حفظ الشحنة', 'success');
     window.updateBadges?.();
     navigate('shipments');
@@ -291,14 +408,16 @@ async function submitShipmentFn() {
 
 async function saveDraftFn() {
   const { shipment, driver } = collectData();
-  if (!driver.name && !shipment.declaration_no) { toast('أدخل بيانات أولاً', 'error'); return; }
+  if (!driver.name && !shipment.declaration_no) {
+    toast('أدخل بيانات أولاً', 'error'); return;
+  }
   try {
     const fullShipment = { ...shipment, driver_snapshot: driver, status: 'draft' };
     const shipmentId = await createShipment(fullShipment, driver, _selectedDriver?.id || null);
     if (Object.keys(_uploadedFiles).length > 0) {
-      const { saveAttachments } = await import('../../../src/firebase/attachments.js');
       await saveAttachments(shipmentId, _uploadedFiles);
     }
+    if (shipment.exporter) await saveExporter(shipment.exporter, shipment.goods_description);
     toast('✅ تم حفظ المسودة', 'success');
     window.updateBadges?.();
     navigate('shipments');
