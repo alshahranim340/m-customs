@@ -1,5 +1,5 @@
 import { getShipments, updateShipment, getShipment } from '../../../src/firebase/db.js';
-import { saveAttachments, getAttachments } from '../../../src/firebase/attachments.js';
+import { saveAttachments, getAttachments, saveAttachment, getAttachment } from '../../../src/firebase/attachments.js';
 import { deleteDoc, doc } from 'firebase/firestore';
 import { db } from '../../../src/firebase/config.js';
 import { fileToBase64, mergePDFs, htmlToPdfBytes, downloadBytes } from '../../../src/utils/fileUtils.js';
@@ -7,12 +7,16 @@ import { ATTACHMENTS_ORDER, PORTS } from '../../../src/utils/constants.js';
 import { toast } from '../app.js';
 
 const STATUS = {
-  draft:          { ar: 'مسودة',        class: 'pill-draft',   next: 'sent_broker',    nextAr: 'إرسال للمخلص' },
-  sent_broker:    { ar: 'أُرسل للمخلص', class: 'pill-sent',    next: 'broker_replied', nextAr: 'رفع رد المخلص' },
-  broker_replied: { ar: 'رد المخلص',     class: 'pill-replied', next: 'sent_driver',    nextAr: 'إرسال للسائق' },
-  sent_driver:    { ar: 'أُرسل للسائق',  class: 'pill-done',    next: 'done',           nextAr: 'اكتمل' },
-  done:           { ar: 'مكتمل ✓',       class: 'pill-done',    next: null,             nextAr: null },
+  draft:          { ar: 'مسودة',        class: 'pill-draft' },
+  sent_broker:    { ar: 'أُرسل للمخلص', class: 'pill-sent' },
+  broker_replied: { ar: 'رد المخلص',     class: 'pill-replied' },
+  sent_driver:    { ar: 'أُرسل للسائق',  class: 'pill-done' },
+  done:           { ar: 'مكتمل ✓',       class: 'pill-done' },
 };
+
+const STATUS_FLOW = [
+  'draft', 'sent_broker', 'broker_replied', 'sent_driver', 'done'
+];
 
 const DEST  = { uae: '🇦🇪 إمارات', bahrain: '🇧🇭 بحرين', oman: '🇴🇲 عُمان' };
 const PMAPS = { uae: 'جمرك البطحاء', bahrain: 'جمرك جسر الملك فهد' };
@@ -42,25 +46,23 @@ export async function renderShipments(container) {
     <!-- EDIT MODAL -->
     <div id="edit-modal" class="modal-overlay hidden">
       <div class="modal-box" style="max-width:700px;width:95%;max-height:92vh;overflow-y:auto;">
-        <div class="modal-title">✏️ تعديل الشحنة</div>
+        <div class="modal-title" id="edit-modal-title">✏️ تعديل الشحنة</div>
         <div id="edit-form-body"><div class="loader"><div class="spinner"></div></div></div>
-        <div class="modal-actions">
-          <button class="btn btn-ghost"   onclick="closeEditModal()">إلغاء</button>
-          <button class="btn btn-gold"    onclick="mergeAndDownload()" id="btn-merge">📦 دمج وتحميل PDF</button>
-          <button class="btn btn-primary" onclick="saveEdit()" id="btn-save">💾 حفظ</button>
-        </div>
+        <div class="modal-actions" id="edit-modal-actions"></div>
       </div>
     </div>`;
 
   await loadShipments();
 
-  window.advanceStatus    = advanceStatus;
   window.openEditModal    = openEditModal;
   window.closeEditModal   = closeEditModal;
   window.saveEdit         = saveEdit;
   window.confirmDelete    = confirmDelete;
   window.editFileSelected = editFileSelected;
-  window.mergeAndDownload = mergeAndDownload;
+  window.mergeForBroker   = mergeForBroker;
+  window.uploadBrokerReply= uploadBrokerReply;
+  window.brokerReplySelected = brokerReplySelected;
+  window.mergeForDriver   = mergeForDriver;
   window.updatePortEdit   = updatePortEdit;
 }
 
@@ -72,16 +74,39 @@ async function loadShipments() {
   const list = document.getElementById('shipments-list');
 
   if (!shipments.length) {
-    list.innerHTML = `
-      <div class="empty-state">
-        <div class="empty-icon">📭</div>
-        <div class="empty-title">لا توجد شحنات</div><br>
-        <button class="btn btn-primary" onclick="navigate('new-shipment')">➕ شحنة جديدة</button>
-      </div>`;
+    list.innerHTML = `<div class="empty-state">
+      <div class="empty-icon">📭</div>
+      <div class="empty-title">لا توجد شحنات</div><br>
+      <button class="btn btn-primary" onclick="navigate('new-shipment')">➕ شحنة جديدة</button>
+    </div>`;
     return;
   }
 
-  list.innerHTML = `<div class="ship-list">${shipments.map(s => `
+  list.innerHTML = `<div class="ship-list">${shipments.map(s => {
+    const statusIdx = STATUS_FLOW.indexOf(s.status);
+    const nextStatus = STATUS_FLOW[statusIdx + 1];
+
+    // Action button per status
+    let actionBtn = '';
+    if (s.status === 'draft') {
+      actionBtn = `<button class="btn btn-sm btn-primary" onclick="openEditModal('${s.id}','sent_broker')">
+        📤 إرسال للمخلص
+      </button>`;
+    } else if (s.status === 'sent_broker') {
+      actionBtn = `<button class="btn btn-sm" style="background:#8b5cf6;color:white;" onclick="openEditModal('${s.id}','broker_replied')">
+        📩 رفع رد المخلص
+      </button>`;
+    } else if (s.status === 'broker_replied') {
+      actionBtn = `<button class="btn btn-sm btn-green" onclick="openEditModal('${s.id}','sent_driver')">
+        🚛 إرسال للسائق
+      </button>`;
+    } else if (s.status === 'sent_driver') {
+      actionBtn = `<button class="btn btn-sm btn-ghost" onclick="markDone('${s.id}')">
+        ✅ اكتمل
+      </button>`;
+    }
+
+    return `
     <div class="ship-item">
       <div style="flex:1;">
         <div class="ship-no">بيان #${s.declaration_no||'—'}</div>
@@ -94,38 +119,33 @@ async function loadShipments() {
       <div class="ship-dest">${DEST[s.destination]||'—'}</div>
       <span class="pill ${STATUS[s.status]?.class||'pill-draft'}">${STATUS[s.status]?.ar||s.status}</span>
       <div class="ship-actions">
-        ${STATUS[s.status]?.next
-          ? `<button class="btn btn-sm btn-primary"
-               onclick="advanceStatus('${s.id}','${STATUS[s.status].next}')">
-               ${STATUS[s.status].nextAr}
-             </button>`
-          : ''}
+        ${actionBtn}
         <button class="icon-btn" title="عرض وطباعة" onclick="navigate('shipment-view',{id:'${s.id}'})">👁️</button>
-        <button class="icon-btn" title="تعديل ورفع ملفات" onclick="openEditModal('${s.id}')">✏️</button>
+        <button class="icon-btn" title="تعديل" onclick="openEditModal('${s.id}','edit')">✏️</button>
         <button class="icon-btn" title="حذف" style="border-color:var(--red);"
           onclick="confirmDelete('${s.id}','${s.declaration_no||''}')">🗑️</button>
       </div>
-    </div>`).join('')}</div>`;
+    </div>`;
+  }).join('')}</div>`;
+
+  window.markDone = async (id) => {
+    await updateShipment(id, { status: 'done' });
+    toast('✅ تم إغلاق الشحنة', 'success');
+    await loadShipments();
+    window.updateBadges?.();
+  };
 }
 
 // ─────────────────────────────────────────────
-// ADVANCE STATUS
+// OPEN EDIT MODAL — mode: 'edit' | 'sent_broker' | 'broker_replied' | 'sent_driver'
 // ─────────────────────────────────────────────
-async function advanceStatus(id, newStatus) {
-  await updateShipment(id, { status: newStatus });
-  toast('✅ تم تحديث الحالة', 'success');
-  await loadShipments();
-}
-
-// ─────────────────────────────────────────────
-// EDIT MODAL
-// ─────────────────────────────────────────────
-async function openEditModal(id) {
+async function openEditModal(id, mode = 'edit') {
   _editingId = id;
   _editFiles = {};
   document.getElementById('edit-modal').classList.remove('hidden');
   document.getElementById('edit-form-body').innerHTML =
     '<div class="loader"><div class="spinner"></div></div>';
+  document.getElementById('edit-modal-actions').innerHTML = '';
 
   const [s, existing] = await Promise.all([
     getShipment(id),
@@ -136,14 +156,29 @@ async function openEditModal(id) {
   _editingShipment = s;
   _existingFiles   = existing;
 
+  if (mode === 'sent_broker') {
+    renderBrokerMode(s, existing);
+  } else if (mode === 'broker_replied') {
+    renderBrokerReplyMode(s);
+  } else if (mode === 'sent_driver') {
+    renderDriverMode(s, existing);
+  } else {
+    renderEditMode(s, existing);
+  }
+}
+
+// ─────────────────────────────────────────────
+// MODE 1: EDIT
+// ─────────────────────────────────────────────
+function renderEditMode(s, existing) {
+  document.getElementById('edit-modal-title').textContent = '✏️ تعديل الشحنة';
+
   const destOpts   = ['uae','bahrain','oman'].map(d =>
     `<option value="${d}" ${s.destination===d?'selected':''}>${DEST[d]}</option>`
   ).join('');
-
   const statusOpts = Object.entries(STATUS).map(([k,v]) =>
     `<option value="${k}" ${s.status===k?'selected':''}>${v.ar}</option>`
   ).join('');
-
   const attachHTML = ATTACHMENTS_ORDER.map(a => {
     const has = !!existing[a.key];
     return `
@@ -153,49 +188,30 @@ async function openEditModal(id) {
         <span class="u-icon">${has?'✅':'📎'}</span>
         <div>
           <div class="u-name">${a.ar}</div>
-          <div class="u-state" id="edit-state-${a.key}">
-            ${has ? (existing[a.key].name||'✓ محفوظ') : 'اضغط للرفع'}
-          </div>
+          <div class="u-state" id="edit-state-${a.key}">${has?(existing[a.key].name||'✓ محفوظ'):'اضغط للرفع'}</div>
         </div>
       </label>`;
   }).join('');
 
   document.getElementById('edit-form-body').innerHTML = `
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;">
-      <div class="field">
-        <label>الوجهة</label>
-        <select id="e-dest" onchange="updatePortEdit()">${destOpts}</select>
-      </div>
-      <div class="field">
-        <label>المنفذ</label>
-        <input type="text" id="e-port" value="${PMAPS[s.port]||PMAPS.uae}">
-      </div>
-      <div class="field">
-        <label>رقم البيان</label>
-        <input type="text" id="e-decl-no" value="${s.declaration_no||''}">
-      </div>
-      <div class="field">
-        <label>الرقم الموحد</label>
-        <input type="text" id="e-unified-no" value="${s.unified_no||''}">
-      </div>
-      <div class="field">
-        <label>التاريخ (هجري)</label>
-        <input type="text" id="e-date" value="${s.date||''}">
-      </div>
-      <div class="field">
-        <label>الحالة</label>
-        <select id="e-status">${statusOpts}</select>
-      </div>
-      <div class="field" style="grid-column:span 2;">
-        <label>اسم المصدر</label>
-        <input type="text" id="e-exporter" value="${s.exporter||''}">
-      </div>
-      <div class="field" style="grid-column:span 2;">
-        <label>وصف البضاعة</label>
-        <input type="text" id="e-goods" value="${s.goods_description||''}">
-      </div>
+      <div class="field"><label>الوجهة</label>
+        <select id="e-dest" onchange="updatePortEdit()">${destOpts}</select></div>
+      <div class="field"><label>المنفذ</label>
+        <input type="text" id="e-port" value="${PMAPS[s.port]||PMAPS.uae}"></div>
+      <div class="field"><label>رقم البيان</label>
+        <input type="text" id="e-decl-no" value="${s.declaration_no||''}"></div>
+      <div class="field"><label>الرقم الموحد</label>
+        <input type="text" id="e-unified-no" value="${s.unified_no||''}"></div>
+      <div class="field"><label>التاريخ (هجري)</label>
+        <input type="text" id="e-date" value="${s.date||''}"></div>
+      <div class="field"><label>الحالة</label>
+        <select id="e-status">${statusOpts}</select></div>
+      <div class="field" style="grid-column:span 2;"><label>اسم المصدر</label>
+        <input type="text" id="e-exporter" value="${s.exporter||''}"></div>
+      <div class="field" style="grid-column:span 2;"><label>وصف البضاعة</label>
+        <input type="text" id="e-goods" value="${s.goods_description||''}"></div>
     </div>
-
     <div style="background:var(--surface);border-radius:8px;padding:14px;margin-bottom:16px;">
       <div style="font-size:11px;font-weight:700;color:var(--muted);margin-bottom:10px;">بيانات السائق</div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
@@ -215,7 +231,6 @@ async function openEditModal(id) {
           <input type="text" id="e-drv-pnat" value="${s.driver_snapshot?.plate_nationality||''}"></div>
       </div>
     </div>
-
     <div style="background:var(--surface);border-radius:8px;padding:14px;">
       <div style="font-size:11px;font-weight:700;color:var(--muted);margin-bottom:10px;">
         المرفقات — <span style="color:var(--green);">✅ محفوظة</span> &nbsp;|&nbsp;
@@ -223,11 +238,141 @@ async function openEditModal(id) {
       </div>
       <div class="upload-grid">${attachHTML}</div>
     </div>`;
+
+  document.getElementById('edit-modal-actions').innerHTML = `
+    <button class="btn btn-ghost"   onclick="closeEditModal()">إلغاء</button>
+    <button class="btn btn-primary" onclick="saveEdit()">💾 حفظ</button>`;
 }
 
+// ─────────────────────────────────────────────
+// MODE 2: SENT TO BROKER — merge & download
+// ─────────────────────────────────────────────
+function renderBrokerMode(s, existing) {
+  document.getElementById('edit-modal-title').textContent = '📤 إرسال للمخلص الإماراتي';
+  const attachCount = ATTACHMENTS_ORDER.filter(a => existing[a.key]).length;
+  const attachHTML  = ATTACHMENTS_ORDER.map(a => {
+    const has = !!existing[a.key];
+    return `
+      <label class="upload-item ${has?'uploaded':''}" id="edit-upload-${a.key}">
+        <input type="file" accept=".pdf,.jpg,.jpeg,.png" style="display:none"
+          onchange="editFileSelected('${a.key}',this)">
+        <span class="u-icon">${has?'✅':'📎'}</span>
+        <div>
+          <div class="u-name">${a.ar}</div>
+          <div class="u-state" id="edit-state-${a.key}">${has?(existing[a.key].name||'✓ محفوظ'):'اضغط للرفع'}</div>
+        </div>
+      </label>`;
+  }).join('');
+
+  document.getElementById('edit-form-body').innerHTML = `
+    <div style="background:var(--amber-light);border-radius:8px;padding:14px;margin-bottom:16px;border:1px solid var(--amber);">
+      <div style="font-size:13px;font-weight:700;color:var(--amber);margin-bottom:6px;">📋 ملف المخلص يحتوي على:</div>
+      <div style="font-size:12px;color:var(--text);line-height:2;">
+        ١. فورم البيان الجمركي (يُولَّد تلقائياً)<br>
+        ٢. محضر استقطاع العينة (يُولَّد تلقائياً)<br>
+        ٣. المرفقات المرفوعة (${attachCount} من ${ATTACHMENTS_ORDER.length})
+      </div>
+    </div>
+    <div style="background:var(--surface);border-radius:8px;padding:14px;margin-bottom:16px;">
+      <div style="font-size:11px;font-weight:700;color:var(--muted);margin-bottom:10px;">
+        تحقق من المرفقات — أضف الناقصة
+      </div>
+      <div class="upload-grid">${attachHTML}</div>
+    </div>
+    <div class="field">
+      <label>ملاحظات للمخلص (اختياري)</label>
+      <textarea id="broker-notes" rows="2" style="width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-family:'Tajawal',sans-serif;font-size:13px;resize:none;"></textarea>
+    </div>`;
+
+  document.getElementById('edit-modal-actions').innerHTML = `
+    <button class="btn btn-ghost" onclick="closeEditModal()">إلغاء</button>
+    <button class="btn btn-gold btn-lg" id="btn-merge-broker" onclick="mergeForBroker()">
+      📦 دمج وتحميل PDF للمخلص
+    </button>`;
+}
+
+// ─────────────────────────────────────────────
+// MODE 3: BROKER REPLIED — upload broker PDF
+// ─────────────────────────────────────────────
+function renderBrokerReplyMode(s) {
+  document.getElementById('edit-modal-title').textContent = '📩 رفع رد المخلص';
+
+  document.getElementById('edit-form-body').innerHTML = `
+    <div style="background:var(--surface);border-radius:8px;padding:20px;text-align:center;margin-bottom:16px;">
+      <div style="font-size:32px;margin-bottom:10px;">📄</div>
+      <div style="font-size:14px;font-weight:700;color:var(--navy);margin-bottom:6px;">ارفع PDF رد المخلص</div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:16px;">
+        الملف الذي أرسله المخلص الإماراتي (permit / entry docs)
+      </div>
+      <label class="upload-item" id="broker-reply-upload" style="max-width:320px;margin:0 auto;cursor:pointer;">
+        <input type="file" accept=".pdf" style="display:none" onchange="brokerReplySelected(this)">
+        <span class="u-icon" id="broker-reply-icon">📎</span>
+        <div>
+          <div class="u-name">رد المخلص PDF</div>
+          <div class="u-state" id="broker-reply-state">اضغط للرفع</div>
+        </div>
+      </label>
+    </div>
+    <div class="field">
+      <label>موعد الدخول (اختياري — يمكن إضافته لاحقاً)</label>
+      <input type="text" id="entry-appointment" placeholder="مثال: الأحد 1448-02-05 الساعة 8:00 صباحاً"
+        value="${s.entry_appointment||''}">
+    </div>`;
+
+  document.getElementById('edit-modal-actions').innerHTML = `
+    <button class="btn btn-ghost" onclick="closeEditModal()">إلغاء</button>
+    <button class="btn btn-primary" id="btn-save-reply" onclick="uploadBrokerReply()">
+      💾 حفظ رد المخلص
+    </button>`;
+}
+
+// ─────────────────────────────────────────────
+// MODE 4: SEND TO DRIVER — merge without driver docs
+// ─────────────────────────────────────────────
+function renderDriverMode(s, existing) {
+  document.getElementById('edit-modal-title').textContent = '🚛 إرسال للسائق';
+  const hasBrokerReply = !!existing['broker_reply'];
+
+  document.getElementById('edit-form-body').innerHTML = `
+    <div style="background:var(--green-light);border-radius:8px;padding:14px;margin-bottom:16px;border:1px solid var(--green);">
+      <div style="font-size:13px;font-weight:700;color:var(--green);margin-bottom:6px;">🚛 ملف السائق يحتوي على:</div>
+      <div style="font-size:12px;color:var(--text);line-height:2;">
+        ١. فورم البيان الجمركي<br>
+        ٢. محضر استقطاع العينة<br>
+        ٣. رد المخلص ${hasBrokerReply ? '✅' : '⚠️ غير مرفوع'}<br>
+        ٤. الفاتورة وباقي المستندات<br>
+        <span style="color:var(--red);">✗ بدون بيانات السائق (تُستثنى تلقائياً)</span>
+      </div>
+    </div>
+    <div class="field">
+      <label>موعد الدخول <span style="color:var(--red)">*</span></label>
+      <input type="text" id="entry-appointment" placeholder="مثال: الأحد 1448-02-05 الساعة 8:00 صباحاً"
+        value="${s.entry_appointment||''}" style="font-size:14px;">
+    </div>
+    ${!hasBrokerReply ? `
+    <div style="background:var(--amber-light);border-radius:8px;padding:12px;margin-bottom:12px;border:1px solid var(--amber);">
+      <div style="font-size:12px;color:var(--amber);font-weight:600;">⚠️ لم يُرفع رد المخلص بعد — هل تريد رفعه الآن؟</div>
+      <label class="upload-item" style="margin-top:8px;cursor:pointer;">
+        <input type="file" accept=".pdf" style="display:none" onchange="brokerReplySelected(this)">
+        <span class="u-icon" id="broker-reply-icon">📎</span>
+        <div><div class="u-name">رد المخلص PDF</div>
+          <div class="u-state" id="broker-reply-state">اضغط للرفع</div></div>
+      </label>
+    </div>` : ''}`;
+
+  document.getElementById('edit-modal-actions').innerHTML = `
+    <button class="btn btn-ghost" onclick="closeEditModal()">إلغاء</button>
+    <button class="btn btn-green btn-lg" id="btn-merge-driver" onclick="mergeForDriver()">
+      🚛 دمج وتحميل PDF للسائق
+    </button>`;
+}
+
+// ─────────────────────────────────────────────
+// ACTIONS
+// ─────────────────────────────────────────────
 function updatePortEdit() {
-  const d = document.getElementById('e-dest').value;
-  document.getElementById('e-port').value = PMAPS[d] || PMAPS.uae;
+  const d = document.getElementById('e-dest')?.value;
+  if (d) document.getElementById('e-port').value = PMAPS[d] || PMAPS.uae;
 }
 
 async function editFileSelected(key, input) {
@@ -242,34 +387,36 @@ async function editFileSelected(key, input) {
     item.classList.add('uploaded');
     item.querySelector('.u-icon').textContent = '✅';
     state.textContent = file.name.length > 22 ? file.name.substring(0,22)+'…' : file.name;
+    // Update existing files cache
+    _existingFiles[key] = _editFiles[key];
     toast(`✅ ${file.name}`, 'success');
   } catch(e) {
     state.textContent = 'خطأ في الرفع';
-    toast('خطأ في قراءة الملف', 'error');
   }
 }
 
-function closeEditModal() {
-  document.getElementById('edit-modal').classList.add('hidden');
-  _editingId = null;
-  _editingShipment = null;
-  _editFiles = {};
-  _existingFiles = {};
+let _brokerReplyFile = null;
+
+async function brokerReplySelected(input) {
+  const file = input.files[0];
+  if (!file) return;
+  document.getElementById('broker-reply-state').textContent = '⏳ جاري التحميل...';
+  try {
+    const b64 = await fileToBase64(file);
+    _brokerReplyFile = { name: file.name, base64: b64, type: file.type };
+    document.getElementById('broker-reply-icon').textContent = '✅';
+    document.getElementById('broker-reply-state').textContent = file.name;
+    toast(`✅ ${file.name}`, 'success');
+  } catch(e) {
+    document.getElementById('broker-reply-state').textContent = 'خطأ في الرفع';
+  }
 }
 
-// ─────────────────────────────────────────────
-// SAVE EDIT
-// ─────────────────────────────────────────────
+// ── SAVE EDIT ──
 async function saveEdit() {
   if (!_editingId) return;
-  const btn = document.getElementById('btn-save');
-  btn.disabled = true;
-  btn.textContent = '⏳ جاري الحفظ...';
-
   const dest = document.getElementById('e-dest').value;
-
   try {
-    // 1. Save shipment data (no attachments in shipment doc)
     await updateShipment(_editingId, {
       destination:       dest,
       port:              dest === 'bahrain' ? 'bahrain' : 'uae',
@@ -289,12 +436,9 @@ async function saveEdit() {
         plate_nationality: document.getElementById('e-drv-pnat').value.trim(),
       }
     });
-
-    // 2. Save new attachments separately
     if (Object.keys(_editFiles).length > 0) {
       await saveAttachments(_editingId, _editFiles);
     }
-
     toast('✅ تم الحفظ', 'success');
     closeEditModal();
     await loadShipments();
@@ -302,40 +446,28 @@ async function saveEdit() {
   } catch(e) {
     console.error(e);
     toast('خطأ في الحفظ', 'error');
-  } finally {
-    btn.disabled = false;
-    btn.textContent = '💾 حفظ';
   }
 }
 
-// ─────────────────────────────────────────────
-// MERGE & DOWNLOAD
-// ─────────────────────────────────────────────
-async function mergeAndDownload() {
-  const btn = document.getElementById('btn-merge');
+// ── MERGE FOR BROKER ──
+async function mergeForBroker() {
+  const btn = document.getElementById('btn-merge-broker');
   btn.disabled = true;
   btn.textContent = '⏳ جاري الدمج...';
-
   try {
     const s   = _editingShipment;
     const drv = s?.driver_snapshot || {};
 
-    // Save any pending new files first
+    // Save any new files
     if (Object.keys(_editFiles).length > 0) {
       await saveAttachments(_editingId, _editFiles);
-      // Merge with existing
       Object.assign(_existingFiles, _editFiles);
     }
 
     toast('⏳ جاري تجهيز الفورمات...', 'info');
-
-    // 1. Form 1 HTML → PDF bytes
     const form1Bytes = await htmlToPdfBytes(buildDeclarationHTML(s, drv));
-
-    // 2. Form 2 HTML → PDF bytes
     const form2Bytes = await htmlToPdfBytes(buildSampleHTML(s, drv));
 
-    // 3. Build merge sources in order
     const sources = [
       { type: 'arraybuffer', data: form1Bytes },
       { type: 'arraybuffer', data: form2Bytes },
@@ -345,35 +477,135 @@ async function mergeAndDownload() {
     ];
 
     toast('⏳ جاري دمج الملفات...', 'info');
-
-    // 4. Merge all PDFs
-    const merged = await mergePDFs(sources);
-
-    // 5. Download
-    const filename = `${drv.name||'شحنة'}_${s?.declaration_no||''}.pdf`.replace(/\s+/g,'_');
+    const merged   = await mergePDFs(sources);
+    const filename = `مخلص_${drv.name||'شحنة'}_${s?.declaration_no||''}.pdf`.replace(/\s+/g,'_');
     downloadBytes(merged, filename);
 
-    toast('✅ تم تحميل الملف الموحد بنجاح!', 'success');
+    // Update status
+    await updateShipment(_editingId, {
+      status: 'sent_broker',
+      broker_notes: document.getElementById('broker-notes')?.value || ''
+    });
+
+    toast('✅ تم تحميل ملف المخلص — الحالة: أُرسل للمخلص', 'success');
+    closeEditModal();
+    await loadShipments();
+    window.updateBadges?.();
   } catch(e) {
     console.error(e);
     toast('خطأ في الدمج', 'error');
   } finally {
     btn.disabled = false;
-    btn.textContent = '📦 دمج وتحميل PDF';
+    btn.textContent = '📦 دمج وتحميل PDF للمخلص';
   }
 }
 
-// ─────────────────────────────────────────────
-// DELETE
-// ─────────────────────────────────────────────
+// ── UPLOAD BROKER REPLY ──
+async function uploadBrokerReply() {
+  if (!_brokerReplyFile) { toast('ارفع PDF رد المخلص أولاً', 'error'); return; }
+  const btn = document.getElementById('btn-save-reply');
+  btn.disabled = true;
+  btn.textContent = '⏳ جاري الحفظ...';
+  try {
+    await saveAttachment(_editingId, 'broker_reply', _brokerReplyFile);
+    await updateShipment(_editingId, {
+      status: 'broker_replied',
+      entry_appointment: document.getElementById('entry-appointment')?.value || ''
+    });
+    toast('✅ تم حفظ رد المخلص', 'success');
+    closeEditModal();
+    await loadShipments();
+    window.updateBadges?.();
+  } catch(e) {
+    console.error(e);
+    toast('خطأ في الحفظ', 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '💾 حفظ رد المخلص';
+  }
+}
+
+// ── MERGE FOR DRIVER ──
+async function mergeForDriver() {
+  const appointment = document.getElementById('entry-appointment')?.value;
+  if (!appointment) { toast('أدخل موعد الدخول أولاً', 'error'); return; }
+
+  const btn = document.getElementById('btn-merge-driver');
+  btn.disabled = true;
+  btn.textContent = '⏳ جاري الدمج...';
+
+  try {
+    const s   = _editingShipment;
+    const drv = s?.driver_snapshot || {};
+
+    // Save broker reply if uploaded now
+    if (_brokerReplyFile) {
+      await saveAttachment(_editingId, 'broker_reply', _brokerReplyFile);
+      _existingFiles['broker_reply'] = _brokerReplyFile;
+    }
+
+    toast('⏳ جاري تجهيز الفورمات...', 'info');
+    const form1Bytes = await htmlToPdfBytes(buildDeclarationHTML(s, drv));
+    const form2Bytes = await htmlToPdfBytes(buildSampleHTML(s, drv));
+
+    // Driver file: forms + broker reply + attachments EXCEPT driver_docs
+    const DRIVER_EXCLUDE = ['driver_docs'];
+    const sources = [
+      { type: 'arraybuffer', data: form1Bytes },
+      { type: 'arraybuffer', data: form2Bytes },
+    ];
+
+    // Add broker reply
+    if (_existingFiles['broker_reply']) {
+      sources.push({ type: 'base64', data: _existingFiles['broker_reply'].base64 });
+    }
+
+    // Add other attachments (exclude driver_docs)
+    ATTACHMENTS_ORDER
+      .filter(a => !DRIVER_EXCLUDE.includes(a.key) && _existingFiles[a.key])
+      .forEach(a => sources.push({ type: 'base64', data: _existingFiles[a.key].base64 }));
+
+    toast('⏳ جاري دمج الملفات...', 'info');
+    const merged   = await mergePDFs(sources);
+    const filename = `سائق_${drv.name||'شحنة'}_${s?.declaration_no||''}.pdf`.replace(/\s+/g,'_');
+    downloadBytes(merged, filename);
+
+    await updateShipment(_editingId, {
+      status: 'sent_driver',
+      entry_appointment: appointment
+    });
+
+    toast('✅ تم تحميل ملف السائق — الحالة: أُرسل للسائق', 'success');
+    closeEditModal();
+    await loadShipments();
+    window.updateBadges?.();
+  } catch(e) {
+    console.error(e);
+    toast('خطأ في الدمج', 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '🚛 دمج وتحميل PDF للسائق';
+  }
+}
+
+// ── DELETE ──
 async function confirmDelete(id, declNo) {
-  if (!window.confirm(`هل تريد حذف الشحنة رقم ${declNo||id}؟\nلا يمكن التراجع.`)) return;
+  if (!window.confirm(`هل تريد حذف الشحنة رقم ${declNo||id}؟`)) return;
   try {
     await deleteDoc(doc(db, 'shipments', id));
     toast('🗑️ تم الحذف', 'success');
     await loadShipments();
     window.updateBadges?.();
   } catch(e) { toast('خطأ في الحذف', 'error'); }
+}
+
+function closeEditModal() {
+  document.getElementById('edit-modal').classList.add('hidden');
+  _editingId = null;
+  _editingShipment = null;
+  _editFiles = {};
+  _existingFiles = {};
+  _brokerReplyFile = null;
 }
 
 // ─────────────────────────────────────────────
@@ -405,7 +637,7 @@ function buildDeclarationHTML(s, drv) {
         <td style="border:1px solid #1C2D4E;padding:7px 10px;font-weight:700;" colspan="3">${s?.exporter||'—'}</td>
       </tr>
     </table>
-    <div style="background:#1C2D4E;color:white;padding:6px 16px;font-size:11px;font-weight:700;">أرقام البيان — Declaration Numbers</div>
+    <div style="background:#1C2D4E;color:white;padding:6px 16px;font-size:11px;font-weight:700;">أرقام البيان</div>
     <table style="width:100%;border-collapse:collapse;font-size:12px;">
       <tr>
         <td style="border:1px solid #1C2D4E;padding:7px 10px;background:#f4f7fb;font-weight:700;color:#1C2D4E;">رقم البيان</td>
@@ -425,18 +657,16 @@ function buildDeclarationHTML(s, drv) {
     </table>
     <div style="background:#1C2D4E;color:white;padding:6px 16px;font-size:11px;font-weight:700;">بيانات الشاحنة والسائق</div>
     <table style="width:100%;border-collapse:collapse;font-size:11px;">
-      <thead>
-        <tr style="background:#e8edf4;">
-          <th style="border:1px solid #1C2D4E;padding:6px;text-align:center;">عدد</th>
-          <th style="border:1px solid #1C2D4E;padding:6px;text-align:center;">قيد حركة الشاحنة</th>
-          <th style="border:1px solid #1C2D4E;padding:6px;text-align:center;">أرقام اللوحات</th>
-          <th style="border:1px solid #1C2D4E;padding:6px;text-align:center;">جنسيتها</th>
-          <th style="border:1px solid #1C2D4E;padding:6px;text-align:center;">أسم السائق</th>
-          <th style="border:1px solid #1C2D4E;padding:6px;text-align:center;">جنسيته</th>
-          <th style="border:1px solid #1C2D4E;padding:6px;text-align:center;">نوع السيارة</th>
-          <th style="border:1px solid #1C2D4E;padding:6px;text-align:center;">نوع الناقل</th>
-        </tr>
-      </thead>
+      <thead><tr style="background:#e8edf4;">
+        <th style="border:1px solid #1C2D4E;padding:6px;text-align:center;">عدد</th>
+        <th style="border:1px solid #1C2D4E;padding:6px;text-align:center;">قيد حركة الشاحنة</th>
+        <th style="border:1px solid #1C2D4E;padding:6px;text-align:center;">أرقام اللوحات</th>
+        <th style="border:1px solid #1C2D4E;padding:6px;text-align:center;">جنسيتها</th>
+        <th style="border:1px solid #1C2D4E;padding:6px;text-align:center;">أسم السائق</th>
+        <th style="border:1px solid #1C2D4E;padding:6px;text-align:center;">جنسيته</th>
+        <th style="border:1px solid #1C2D4E;padding:6px;text-align:center;">نوع السيارة</th>
+        <th style="border:1px solid #1C2D4E;padding:6px;text-align:center;">نوع الناقل</th>
+      </tr></thead>
       <tbody>
         <tr>
           <td style="border:1px solid #1C2D4E;padding:6px;text-align:center;font-weight:700;">1</td>
@@ -452,7 +682,7 @@ function buildDeclarationHTML(s, drv) {
         <tr><td style="border:1px solid #1C2D4E;padding:10px;" colspan="8">&nbsp;</td></tr>
       </tbody>
     </table>
-    <div style="background:#1C2D4E;color:rgba(255,255,255,0.7);font-size:9px;padding:7px 16px;display:flex;justify-content:space-between;margin-top:0;">
+    <div style="background:#1C2D4E;color:rgba(255,255,255,0.7);font-size:9px;padding:7px 16px;display:flex;justify-content:space-between;">
       <span>www.sudais.com.sa | info@sudais.com.sa | 9200 08305</span>
       <span>Jeddah – Al Jawhara District – Building 3508 – Unit 14 – Postal 22416</span>
     </div>
@@ -485,16 +715,12 @@ function buildSampleHTML(s, drv) {
       <p>والارساليه باسم المصدر : <strong>${s?.exporter||'—'}</strong> .</p>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;margin-bottom:48px;padding:0 10px;">
-      <div style="text-align:right;">
-        <div style="font-size:13px;font-weight:700;color:#1C2D4E;margin-bottom:40px;">اسم السائق / ${drv.name||'—'}</div>
-      </div>
+      <div style="text-align:right;"><div style="font-size:13px;font-weight:700;color:#1C2D4E;margin-bottom:40px;">اسم السائق / ${drv.name||'—'}</div></div>
       <div style="text-align:center;">
         <div style="font-size:13px;font-weight:700;color:#1C2D4E;margin-bottom:10px;">الختم</div>
         <div style="width:85px;height:85px;border-radius:50%;border:2.5px solid #3a6099;color:#3a6099;font-size:8.5px;font-weight:700;display:flex;align-items:center;justify-content:center;text-align:center;line-height:1.5;padding:10px;margin:0 auto;">شركة عبدالرحمن عبدالعزيز السديس للخدمات اللوجستية</div>
       </div>
-      <div style="text-align:left;">
-        <div style="font-size:13px;font-weight:700;color:#1C2D4E;margin-bottom:40px;">مندوب صاحب الشأن</div>
-      </div>
+      <div style="text-align:left;"><div style="font-size:13px;font-weight:700;color:#1C2D4E;margin-bottom:40px;">مندوب صاحب الشأن</div></div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;margin-bottom:24px;padding:0 10px;">
       <div style="text-align:right;"><div style="font-size:13px;font-weight:700;color:#1C2D4E;">المعاين المختص</div></div>
