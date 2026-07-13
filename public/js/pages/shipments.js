@@ -88,6 +88,7 @@ async function loadShipments() {
         <div class="ship-drv">👤 ${s.driver_snapshot?.name||'—'} &nbsp;|&nbsp; ${s.exporter||''}</div>
         <div class="ship-drv" style="font-size:10px;margin-top:2px;">
           📦 ${s.goods_description||''} &nbsp;|&nbsp; 📅 ${s.date||''}
+          ${s.created_by?.name ? `&nbsp;|&nbsp; 👤 ${s.created_by.name}` : ''}
         </div>
       </div>
       <div class="ship-plate">${s.driver_snapshot?.plate||'—'}</div>

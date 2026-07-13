@@ -3,7 +3,7 @@ import { saveAttachments } from '../../../src/firebase/attachments.js';
 import { getExporters, saveExporter } from '../../../src/firebase/exporters.js';
 import { fileToBase64 } from '../../../src/utils/fileUtils.js';
 import { DECLARATION_TYPES, ATTACHMENTS_ORDER } from '../../../src/utils/constants.js';
-import { toast, navigate } from '../app.js';
+import { toast, navigate, getCurrentProfile } from '../app.js';
 
 const PORTS_MAP = {
   uae:     'جمرك البطحاء',
@@ -384,7 +384,13 @@ async function submitShipmentFn() {
   btn.textContent = '⏳ جاري الحفظ...';
 
   try {
-    const fullShipment = { ...shipment, driver_snapshot: driver, status: 'draft' };
+    const profile = getCurrentProfile();
+    const fullShipment = {
+      ...shipment,
+      driver_snapshot: driver,
+      status: 'draft',
+      created_by: { uid: profile?.id||'', name: profile?.name||'—' }
+    };
     const shipmentId = await createShipment(fullShipment, driver, _selectedDriver?.id || null);
 
     // Save attachments separately
@@ -412,7 +418,13 @@ async function saveDraftFn() {
     toast('أدخل بيانات أولاً', 'error'); return;
   }
   try {
-    const fullShipment = { ...shipment, driver_snapshot: driver, status: 'draft' };
+    const profile = getCurrentProfile();
+    const fullShipment = {
+      ...shipment,
+      driver_snapshot: driver,
+      status: 'draft',
+      created_by: { uid: profile?.id||'', name: profile?.name||'—' }
+    };
     const shipmentId = await createShipment(fullShipment, driver, _selectedDriver?.id || null);
     if (Object.keys(_uploadedFiles).length > 0) {
       await saveAttachments(shipmentId, _uploadedFiles);
