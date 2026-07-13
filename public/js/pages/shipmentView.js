@@ -1,3 +1,4 @@
+import { LOGO_B64, STAMP_B64 } from '../../../src/utils/assets.js';
 import { getShipment } from '../../../src/firebase/db.js';
 
 const PORTS = {
@@ -217,7 +218,7 @@ function buildForms(s, port, drv, declType) {
           <div class="f-lh-en">ABDULRAHMAN ABDULAZIZ AL-SUDAIS<br>LOGISTICS SERVICES COMPANY</div>
           <div class="f-lh-addr">سجل تجاري 4030126911 – جدة – حي الجوهرة – المملكة العربية السعودية &nbsp;|&nbsp; Jeddah – Al Jawhara District – KSA</div>
         </div>
-        <div class="f-lh-logo">السديس<br>AL SUDAIS</div>
+        <img src="${LOGO_B64}" style="height:60px;object-fit:contain;">
       </div>
 
       <div class="f-section">${port.ar} / ${port.en} — بيانات جمركية</div>
@@ -309,7 +310,7 @@ function buildForms(s, port, drv, declType) {
           <div class="f-lh-en">ABDULRAHMAN ABDULAZIZ AL-SUDAIS<br>LOGISTICS SERVICES COMPANY</div>
           <div class="f-lh-addr">سجل تجاري 4030126911 – جدة – حي الجوهرة – المملكة العربية السعودية &nbsp;|&nbsp; C.R 4030126911</div>
         </div>
-        <div class="f-lh-logo">السديس<br>AL SUDAIS</div>
+        <img src="${LOGO_B64}" style="height:60px;object-fit:contain;">
       </div>
 
       <div class="f-main-title">${port.ar} / الصادرات</div>
@@ -336,7 +337,7 @@ function buildForms(s, port, drv, declType) {
         </div>
         <div class="f-sign-cell" style="text-align:center;">
           <div class="f-sign-title">الختم</div>
-          <div class="f-stamp">شركة عبدالرحمن عبدالعزيز السديس للخدمات اللوجستية</div>
+          <img src="${STAMP_B64}" style="width:90px;height:90px;object-fit:contain;opacity:0.92;margin:0 auto;display:block;">
         </div>
         <div class="f-sign-cell" style="text-align:left;">
           <div class="f-sign-title">مندوب صاحب الشأن</div>

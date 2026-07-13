@@ -1,3 +1,4 @@
+import { LOGO_B64, STAMP_B64 } from '../../../src/utils/assets.js';
 import { getShipments, updateShipment, getShipment } from '../../../src/firebase/db.js';
 import { saveAttachments, getAttachments, saveAttachment, getAttachment } from '../../../src/firebase/attachments.js';
 import { deleteDoc, doc } from 'firebase/firestore';
@@ -241,6 +242,7 @@ function renderEditMode(s, existing) {
 
   document.getElementById('edit-modal-actions').innerHTML = `
     <button class="btn btn-ghost"   onclick="closeEditModal()">إلغاء</button>
+    <button class="btn btn-gold"    id="btn-merge-broker" onclick="mergeForBroker()">📦 دمج وتحميل</button>
     <button class="btn btn-primary" onclick="saveEdit()">💾 حفظ</button>`;
 }
 
@@ -286,9 +288,8 @@ function renderBrokerMode(s, existing) {
 
   document.getElementById('edit-modal-actions').innerHTML = `
     <button class="btn btn-ghost" onclick="closeEditModal()">إلغاء</button>
-    <button class="btn btn-gold btn-lg" id="btn-merge-broker" onclick="mergeForBroker()">
-      📦 دمج وتحميل PDF للمخلص
-    </button>`;
+    <button class="btn btn-green" id="btn-merge-driver" onclick="mergeForDriver()">🚛 دمج للسائق</button>
+    <button class="btn btn-gold"  id="btn-merge-broker" onclick="mergeForBroker()">📦 دمج للمخلص</button>`;
 }
 
 // ─────────────────────────────────────────────
@@ -302,7 +303,7 @@ function renderBrokerReplyMode(s) {
       <div style="font-size:32px;margin-bottom:10px;">📄</div>
       <div style="font-size:14px;font-weight:700;color:var(--navy);margin-bottom:6px;">ارفع PDF رد المخلص</div>
       <div style="font-size:12px;color:var(--muted);margin-bottom:16px;">
-        الملف الذي أرسله المخلص الإماراتي (permit / entry docs)
+        الملف الذي أرسله المخلص الإماراتي — الموعد مرفق داخله
       </div>
       <label class="upload-item" id="broker-reply-upload" style="max-width:320px;margin:0 auto;cursor:pointer;">
         <input type="file" accept=".pdf" style="display:none" onchange="brokerReplySelected(this)">
@@ -312,18 +313,13 @@ function renderBrokerReplyMode(s) {
           <div class="u-state" id="broker-reply-state">اضغط للرفع</div>
         </div>
       </label>
-    </div>
-    <div class="field">
-      <label>موعد الدخول (اختياري — يمكن إضافته لاحقاً)</label>
-      <input type="text" id="entry-appointment" placeholder="مثال: الأحد 1448-02-05 الساعة 8:00 صباحاً"
-        value="${s.entry_appointment||''}">
     </div>`;
 
   document.getElementById('edit-modal-actions').innerHTML = `
-    <button class="btn btn-ghost" onclick="closeEditModal()">إلغاء</button>
-    <button class="btn btn-primary" id="btn-save-reply" onclick="uploadBrokerReply()">
-      💾 حفظ رد المخلص
-    </button>`;
+    <button class="btn btn-ghost"   onclick="closeEditModal()">إلغاء</button>
+    <button class="btn btn-gold"    id="btn-merge-broker" onclick="mergeForBroker()">📦 دمج للمخلص</button>
+    <button class="btn btn-green"   id="btn-merge-driver" onclick="mergeForDriver()">🚛 دمج للسائق</button>
+    <button class="btn btn-primary" id="btn-save-reply"   onclick="uploadBrokerReply()">💾 حفظ رد المخلص</button>`;
 }
 
 // ─────────────────────────────────────────────
@@ -339,20 +335,15 @@ function renderDriverMode(s, existing) {
       <div style="font-size:12px;color:var(--text);line-height:2;">
         ١. فورم البيان الجمركي<br>
         ٢. محضر استقطاع العينة<br>
-        ٣. رد المخلص ${hasBrokerReply ? '✅' : '⚠️ غير مرفوع'}<br>
+        ٣. رد المخلص (يتضمن الموعد) ${hasBrokerReply ? '✅' : '⚠️ غير مرفوع'}<br>
         ٤. الفاتورة وباقي المستندات<br>
         <span style="color:var(--red);">✗ بدون بيانات السائق (تُستثنى تلقائياً)</span>
       </div>
     </div>
-    <div class="field">
-      <label>موعد الدخول <span style="color:var(--red)">*</span></label>
-      <input type="text" id="entry-appointment" placeholder="مثال: الأحد 1448-02-05 الساعة 8:00 صباحاً"
-        value="${s.entry_appointment||''}" style="font-size:14px;">
-    </div>
     ${!hasBrokerReply ? `
     <div style="background:var(--amber-light);border-radius:8px;padding:12px;margin-bottom:12px;border:1px solid var(--amber);">
-      <div style="font-size:12px;color:var(--amber);font-weight:600;">⚠️ لم يُرفع رد المخلص بعد — هل تريد رفعه الآن؟</div>
-      <label class="upload-item" style="margin-top:8px;cursor:pointer;">
+      <div style="font-size:12px;color:var(--amber);font-weight:600;margin-bottom:8px;">⚠️ لم يُرفع رد المخلص بعد — ارفعه الآن</div>
+      <label class="upload-item" style="cursor:pointer;">
         <input type="file" accept=".pdf" style="display:none" onchange="brokerReplySelected(this)">
         <span class="u-icon" id="broker-reply-icon">📎</span>
         <div><div class="u-name">رد المخلص PDF</div>
@@ -362,8 +353,9 @@ function renderDriverMode(s, existing) {
 
   document.getElementById('edit-modal-actions').innerHTML = `
     <button class="btn btn-ghost" onclick="closeEditModal()">إلغاء</button>
+    <button class="btn btn-gold"  id="btn-merge-broker" onclick="mergeForBroker()">📦 دمج للمخلص</button>
     <button class="btn btn-green btn-lg" id="btn-merge-driver" onclick="mergeForDriver()">
-      🚛 دمج وتحميل PDF للسائق
+      🚛 دمج للسائق
     </button>`;
 }
 
@@ -508,10 +500,7 @@ async function uploadBrokerReply() {
   btn.textContent = '⏳ جاري الحفظ...';
   try {
     await saveAttachment(_editingId, 'broker_reply', _brokerReplyFile);
-    await updateShipment(_editingId, {
-      status: 'broker_replied',
-      entry_appointment: document.getElementById('entry-appointment')?.value || ''
-    });
+    await updateShipment(_editingId, { status: 'broker_replied' });
     toast('✅ تم حفظ رد المخلص', 'success');
     closeEditModal();
     await loadShipments();
@@ -527,9 +516,6 @@ async function uploadBrokerReply() {
 
 // ── MERGE FOR DRIVER ──
 async function mergeForDriver() {
-  const appointment = document.getElementById('entry-appointment')?.value;
-  if (!appointment) { toast('أدخل موعد الدخول أولاً', 'error'); return; }
-
   const btn = document.getElementById('btn-merge-driver');
   btn.disabled = true;
   btn.textContent = '⏳ جاري الدمج...';
@@ -570,10 +556,7 @@ async function mergeForDriver() {
     const filename = `سائق_${drv.name||'شحنة'}_${s?.declaration_no||''}.pdf`.replace(/\s+/g,'_');
     downloadBytes(merged, filename);
 
-    await updateShipment(_editingId, {
-      status: 'sent_driver',
-      entry_appointment: appointment
-    });
+    await updateShipment(_editingId, { status: 'sent_driver' });
 
     toast('✅ تم تحميل ملف السائق — الحالة: أُرسل للسائق', 'success');
     closeEditModal();
@@ -620,7 +603,7 @@ function buildDeclarationHTML(s, drv) {
         <div style="font-size:10px;color:#1C2D4E;letter-spacing:0.5px;">ABDULRAHMAN ABDULAZIZ AL-SUDAIS LOGISTICS SERVICES COMPANY</div>
         <div style="font-size:9px;color:#5a7090;margin-top:3px;">سجل تجاري 4030126911 – جدة – حي الجوهرة – المملكة العربية السعودية</div>
       </div>
-      <div style="background:#1C2D4E;color:white;padding:10px 16px;border-radius:6px;font-size:12px;font-weight:800;text-align:center;">السديس<br>AL SUDAIS</div>
+      <img src="${LOGO_B64}" style="height:60px;object-fit:contain;">
     </div>
     <div style="background:#1C2D4E;color:white;padding:7px 16px;font-size:12px;font-weight:700;display:flex;justify-content:space-between;">
       <span>Customs Export Declaration</span><span>البيان الجمركي للصادر — ${port.ar}</span>
@@ -698,7 +681,7 @@ function buildSampleHTML(s, drv) {
         <div style="font-size:10px;color:#1C2D4E;">ABDULRAHMAN ABDULAZIZ AL-SUDAIS LOGISTICS SERVICES COMPANY</div>
         <div style="font-size:9px;color:#5a7090;margin-top:3px;">سجل تجاري 4030126911 – جدة – حي الجوهرة – C.R 4030126911</div>
       </div>
-      <div style="background:#1C2D4E;color:white;padding:10px 16px;border-radius:6px;font-size:12px;font-weight:800;text-align:center;">السديس<br>AL SUDAIS</div>
+      <img src="${LOGO_B64}" style="height:60px;object-fit:contain;">
     </div>
     <div style="font-size:18px;font-weight:800;color:#1C2D4E;text-align:right;border-right:5px solid #1C2D4E;padding-right:10px;margin-bottom:6px;">${port.ar} / الصادرات</div>
     <div style="font-size:14px;font-weight:600;color:#1C2D4E;text-align:right;padding-right:16px;margin-bottom:16px;">( محضر استقطاع عينه ) مشتقات بتروليه (</div>
@@ -718,7 +701,7 @@ function buildSampleHTML(s, drv) {
       <div style="text-align:right;"><div style="font-size:13px;font-weight:700;color:#1C2D4E;margin-bottom:40px;">اسم السائق / ${drv.name||'—'}</div></div>
       <div style="text-align:center;">
         <div style="font-size:13px;font-weight:700;color:#1C2D4E;margin-bottom:10px;">الختم</div>
-        <div style="width:85px;height:85px;border-radius:50%;border:2.5px solid #3a6099;color:#3a6099;font-size:8.5px;font-weight:700;display:flex;align-items:center;justify-content:center;text-align:center;line-height:1.5;padding:10px;margin:0 auto;">شركة عبدالرحمن عبدالعزيز السديس للخدمات اللوجستية</div>
+        <img src="${STAMP_B64}" style="width:90px;height:90px;object-fit:contain;opacity:0.92;">
       </div>
       <div style="text-align:left;"><div style="font-size:13px;font-weight:700;color:#1C2D4E;margin-bottom:40px;">مندوب صاحب الشأن</div></div>
     </div>
