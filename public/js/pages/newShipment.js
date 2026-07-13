@@ -270,10 +270,14 @@ async function submitShipmentFn() {
     const fullShipment = {
       ...shipment,
       driver_snapshot: driver,
-      attachments: _uploadedFiles,
       status: 'draft'
     };
-    await createShipment(fullShipment, driver, _selectedDriver?.id || null);
+    const shipmentId = await createShipment(fullShipment, driver, _selectedDriver?.id || null);
+    // Save attachments separately
+    if (Object.keys(_uploadedFiles).length > 0) {
+      const { saveAttachments } = await import('../../../src/firebase/attachments.js');
+      await saveAttachments(shipmentId, _uploadedFiles);
+    }
     toast('✅ تم حفظ الشحنة', 'success');
     window.updateBadges?.();
     navigate('shipments');
@@ -289,8 +293,12 @@ async function saveDraftFn() {
   const { shipment, driver } = collectData();
   if (!driver.name && !shipment.declaration_no) { toast('أدخل بيانات أولاً', 'error'); return; }
   try {
-    const fullShipment = { ...shipment, driver_snapshot: driver, attachments: _uploadedFiles, status: 'draft' };
-    await createShipment(fullShipment, driver, _selectedDriver?.id || null);
+    const fullShipment = { ...shipment, driver_snapshot: driver, status: 'draft' };
+    const shipmentId = await createShipment(fullShipment, driver, _selectedDriver?.id || null);
+    if (Object.keys(_uploadedFiles).length > 0) {
+      const { saveAttachments } = await import('../../../src/firebase/attachments.js');
+      await saveAttachments(shipmentId, _uploadedFiles);
+    }
     toast('✅ تم حفظ المسودة', 'success');
     window.updateBadges?.();
     navigate('shipments');
