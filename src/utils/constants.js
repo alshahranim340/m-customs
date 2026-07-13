@@ -10,11 +10,14 @@ export const PORTS = {
   bahrain: { ar: 'جمرك جسر الملك فهد', en: 'King Fahd Causeway Customs' }
 };
 
+// ترتيب المرفقات في الملف الموحد
 export const ATTACHMENTS_ORDER = [
-  { key: 'invoice',        ar: 'الفاتورة التجارية' },
-  { key: 'packing_list',   ar: 'قائمة التعبئة' },
-  { key: 'coo',            ar: 'شهادة المنشأ' },
-  { key: 'analysis_cert',  ar: 'شهادة تحليل العينة' },
-  { key: 'saudi_clearance',ar: 'بيان فسح سعودي' },
-  { key: 'driver_docs',    ar: 'بيانات السائق' },
+  { key: 'invoice',        ar: 'الفاتورة التجارية',          required: true  },
+  { key: 'packing_list',   ar: 'قائمة التعبئة (Packing List)', required: true  },
+  { key: 'coo',            ar: 'شهادة المنشأ',                required: true  },
+  { key: 'analysis_cert',  ar: 'شهادة تحليل العينة',          required: false },
+  { key: 'saudi_clearance',ar: 'بيان فسح سعودي',              required: true  },
+  { key: 'driver_docs',    ar: 'بيانات السائق',                required: true  },
+  { key: 'broker_reply',   ar: 'رد المخلص',                   required: false },
+  { key: 'appointment',    ar: 'وثيقة الموعد',                 required: false },
 ];
