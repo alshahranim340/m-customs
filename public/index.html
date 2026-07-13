@@ -5,85 +5,26 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#1C2D4E">
   <title>M-Customs — نظام التخليص الجمركي</title>
-  <link rel="manifest" href="/manifest.json">
   <link rel="stylesheet" href="/css/main.css">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800&display=swap" rel="stylesheet">
-  <!-- jsPDF for PDF generation -->
   <!-- Libraries -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
-  <!-- PDF-lib for merging PDFs -->
   <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
 </head>
 <body>
 
-<div class="app-layout" id="app">
+<!-- App root — JS renders everything here -->
+<div id="root"></div>
 
-  <!-- ── SIDEBAR ── -->
-  <aside class="sidebar" id="sidebar">
-    <div class="sidebar-logo">
-      <div class="logo-icon">🚛</div>
-      <div class="logo-text">
-        <div class="logo-name">M-Customs</div>
-        <div class="logo-sub">نظام التخليص الجمركي</div>
-      </div>
-    </div>
-
-    <nav class="sidebar-nav">
-      <div class="nav-group-label">الرئيسية</div>
-      <a class="nav-item active" data-page="dashboard" onclick="navigate('dashboard')">
-        <span class="nav-icon">🏠</span> لوحة التحكم
-      </a>
-      <a class="nav-item" data-page="new-shipment" onclick="navigate('new-shipment')">
-        <span class="nav-icon">➕</span> شحنة جديدة
-      </a>
-
-      <div class="nav-group-label">السجلات</div>
-      <a class="nav-item" data-page="shipments" onclick="navigate('shipments')">
-        <span class="nav-icon">📋</span> سجل الشحنات
-        <span class="nav-badge" id="badge-shipments">—</span>
-      </a>
-      <a class="nav-item" data-page="drivers" onclick="navigate('drivers')">
-        <span class="nav-icon">👤</span> السائقون
-      </a>
-
-      <div class="nav-group-label">التنبيهات</div>
-      <a class="nav-item" data-page="alerts" onclick="navigate('alerts')">
-        <span class="nav-icon">⚠️</span> وثائق منتهية
-        <span class="nav-badge red" id="badge-alerts">—</span>
-      </a>
-    </nav>
-
-    <div class="sidebar-footer">
-      <div class="user-chip">
-        <div class="user-avatar">م</div>
-        <div class="user-info">
-          <div class="user-name">موظف التخليص</div>
-          <div class="user-role">قسم الصادرات</div>
-        </div>
-      </div>
-    </div>
-  </aside>
-
-  <!-- ── MAIN CONTENT ── -->
-  <main class="main-content" id="main-content">
-    <!-- Pages injected here by JS -->
-    <div id="page-container"></div>
-  </main>
-
-</div>
-
-<!-- ── TOAST NOTIFICATIONS ── -->
+<!-- Toast & Modal containers (re-created by app shell) -->
 <div id="toast-container"></div>
-
-<!-- ── MODAL ── -->
 <div id="modal-overlay" class="modal-overlay hidden">
   <div class="modal-box" id="modal-box"></div>
 </div>
 
-<!-- Firebase -->
 <script type="module">
   import { initApp } from '/js/app.js';
   initApp();
