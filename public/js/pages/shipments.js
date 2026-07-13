@@ -1,4 +1,4 @@
-import { LOGO_B64, STAMP_B64 } from '../../../src/utils/assets.js';
+import { LOGO_B64, STAMP_B64, AEO_PDF_B64 } from '../../../src/utils/assets.js';
 import { getShipments, updateShipment, getShipment } from '../../../src/firebase/db.js';
 import { saveAttachments, getAttachments, saveAttachment } from '../../../src/firebase/attachments.js';
 import { deleteDoc, doc } from 'firebase/firestore';
@@ -308,10 +308,11 @@ async function mergeAll() {
     const form1Bytes = await htmlToPdfBytes(buildDeclarationHTML(s, drv));
     const form2Bytes = await htmlToPdfBytes(buildSampleHTML(s, drv));
 
-    // Build sources: forms + all attachments in order
+    // Build sources: forms + AEO certificate (ثابتة) + all attachments in order
     const sources = [
       { type: 'arraybuffer', data: form1Bytes },
       { type: 'arraybuffer', data: form2Bytes },
+      { type: 'base64',      data: AEO_PDF_B64 }, // شهادة المشغل الاقتصادي — ثابتة دائماً
       ...ATTACHMENTS_ORDER
         .filter(a => _existingFiles[a.key])
         .map(a => ({ type: 'base64', data: _existingFiles[a.key].base64 }))
