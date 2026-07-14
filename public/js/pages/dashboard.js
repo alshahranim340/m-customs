@@ -28,7 +28,7 @@ export async function renderDashboard(container) {
         <div class="topbar-sub">نظرة عامة على عمليات التخليص</div>
       </div>
       <div class="topbar-actions">
-        <button class="btn btn-primary" onclick="navigate('new-shipment')">➕ شحنة جديدة</button>
+        <button class="btn btn-primary" onclick="navigate('new-shipment')"><i class="ti ti-plus"></i> شحنة جديدة</button>
       </div>
     </div>
 
@@ -37,19 +37,19 @@ export async function renderDashboard(container) {
       <!-- Stats -->
       <div class="stats-row">
         <div class="stat-card">
-          <div class="stat-icon si-blue">📋</div>
+          <div class="stat-icon si-blue"><i class="ti ti-truck" style="font-size:22px;color:var(--blue)"></i></div>
           <div><div class="stat-num">${total}</div><div class="stat-label">إجمالي الشحنات</div></div>
         </div>
         <div class="stat-card">
-          <div class="stat-icon si-green">✅</div>
+          <div class="stat-icon si-green"><i class="ti ti-circle-check" style="font-size:22px;color:var(--green)"></i></div>
           <div><div class="stat-num">${sent}</div><div class="stat-label">أُرسلت للمخلص</div></div>
         </div>
         <div class="stat-card">
-          <div class="stat-icon si-amber">⏳</div>
+          <div class="stat-icon si-amber"><i class="ti ti-clock" style="font-size:22px;color:var(--amber)"></i></div>
           <div><div class="stat-num">${pending}</div><div class="stat-label">قيد التجهيز</div></div>
         </div>
         <div class="stat-card">
-          <div class="stat-icon si-red">🚛</div>
+          <div class="stat-icon si-red"><i class="ti ti-flag" style="font-size:22px;color:var(--red)"></i></div>
           <div><div class="stat-num">${shipments.filter(s=>s.destination==='uae').length}</div><div class="stat-label">شحنات الإمارات</div></div>
         </div>
       </div>
@@ -91,7 +91,7 @@ export async function renderDashboard(container) {
             <div class="empty-title">لا توجد شحنات بعد</div>
             <div class="empty-sub">ابدأ بإنشاء أول شحنة</div>
             <br>
-            <button class="btn btn-primary" onclick="navigate('new-shipment')">➕ شحنة جديدة</button>
+            <button class="btn btn-primary" onclick="navigate('new-shipment')"><i class="ti ti-plus"></i> شحنة جديدة</button>
           </div>
         ` : `
           <div class="ship-list">

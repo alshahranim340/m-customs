@@ -127,17 +127,16 @@ function renderShipmentsList(shipments) {
         <div class="ship-drv">👤 ${s.driver_snapshot?.name||'—'} &nbsp;|&nbsp; ${s.exporter||''}</div>
         <div class="ship-drv" style="font-size:10px;margin-top:2px;">
           📦 ${s.goods_description||''} &nbsp;|&nbsp; 📅 ${s.date||''}
-          ${s.created_by?.name ? `&nbsp;|&nbsp; 👤 ${s.created_by.name}` : ''}
+          ${s.created_by?.name ? `&nbsp;|&nbsp; <span class="emp-tag"><i class="ti ti-user" style="font-size:10px"></i>${s.created_by.name}</span>` : ''}
         </div>
       </div>
       <div class="ship-plate">${s.driver_snapshot?.plate||'—'}</div>
       <div class="ship-dest">${DEST[s.destination]||'—'}</div>
       <span class="pill ${STATUS[s.status]?.class||'pill-draft'}">${STATUS[s.status]?.ar||s.status}</span>
       <div class="ship-actions">
-        <button class="icon-btn" title="عرض وطباعة" onclick="navigate('shipment-view',{id:'${s.id}'})">👁️</button>
-        <button class="icon-btn" title="تعديل" onclick="openEditModal('${s.id}')">✏️</button>
-        <button class="icon-btn" title="حذف" style="border-color:var(--red);"
-          onclick="confirmDelete('${s.id}','${s.declaration_no||''}')">🗑️</button>
+        <button class="icon-btn" title="عرض وطباعة" onclick="navigate('shipment-view',{id:'${s.id}'})"><i class="ti ti-eye"></i></button>
+        <button class="icon-btn" title="تعديل" onclick="openEditModal('${s.id}')"><i class="ti ti-edit"></i></button>
+        <button class="icon-btn" title="حذف" style="border-color:var(--red-light);" onclick="confirmDelete('${s.id}','${s.declaration_no||''}')"><i class="ti ti-trash" style="color:var(--red)"></i></button>
       </div>
     </div>`).join('')}</div>`;
 }
