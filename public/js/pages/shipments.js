@@ -250,7 +250,10 @@ async function openEditModal(id) {
 
   // Init hijri date picker AFTER innerHTML is set
   const dateWrap = document.getElementById('e-date-wrap');
-  if (dateWrap) dateWrap.innerHTML = buildHijriPicker('e-date', s.date || todayHijri(), 'التاريخ (هجري)');
+  if (dateWrap) {
+    dateWrap.innerHTML = '';
+    dateWrap.appendChild(buildHijriPicker('e-date', s.date || todayHijri(), 'التاريخ (هجري)'));
+  }
 }
 
 function updatePortEdit() {

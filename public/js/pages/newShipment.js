@@ -189,7 +189,10 @@ export async function renderNewShipment(container) {
   // Expose globals
   // Init hijri date picker
   const hijriWrap = document.getElementById('hijri-picker-wrap');
-  if (hijriWrap) hijriWrap.innerHTML = buildHijriPicker('decl-date', todayHijri(), 'التاريخ (هجري) *');
+  if (hijriWrap) {
+    hijriWrap.innerHTML = '';
+    hijriWrap.appendChild(buildHijriPicker('decl-date', todayHijri(), 'التاريخ (هجري) *'));
+  }
 
   window.updateHijriValue = window.updateHijriValue;
   window.rebuildHijriDays = window.rebuildHijriDays;
