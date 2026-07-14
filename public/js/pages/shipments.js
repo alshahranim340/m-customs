@@ -429,8 +429,8 @@ function previewMerge() {
     <div class="preview-title">معاينة الملف الموحد — بيان #${s.declaration_no||'—'}</div>
     <div class="preview-sub">👤 ${drv.name||'—'} &nbsp;|&nbsp; ${drv.plate||'—'} &nbsp;|&nbsp; ${s.exporter||'—'}</div>
   </div>
-  <button class="btn-download" id="btn-confirm-download" onclick="confirmDownload()" 
-    style="opacity:1;transition:opacity 0.2s;">
+  <button class="btn-download" id="btn-confirm-download"
+    onclick="this.disabled=true;this.textContent='⏳ جاري...';localStorage.setItem('m-customs-merge',Date.now().toString());setTimeout(()=>{this.textContent='✅ تم — سيبدأ التحميل';},800);">
     📥 تأكيد وتحميل PDF
   </button>
 </div>
