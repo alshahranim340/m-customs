@@ -36,6 +36,17 @@ export async function renderShipments(container) {
       </div>
     </div>
     <div class="page-body">
+      <!-- Search bar -->
+      <div style="margin-bottom:14px;">
+        <input type="text" id="search-input"
+          placeholder="🔍 بحث برقم البيان، اسم السائق، المصدر، رقم اللوحة..."
+          oninput="searchShipments(this.value)"
+          style="width:100%;padding:11px 16px;border:1.5px solid var(--border);
+          border-radius:10px;font-size:14px;font-family:'Tajawal',sans-serif;
+          background:white;outline:none;transition:border-color 0.15s;"
+          onfocus="this.style.borderColor='var(--blue)'"
+          onblur="this.style.borderColor='var(--border)'">
+      </div>
       <div class="card">
         <div id="shipments-list"><div class="loader"><div class="spinner"></div></div></div>
       </div>
@@ -48,7 +59,7 @@ export async function renderShipments(container) {
         <div id="edit-form-body"><div class="loader"><div class="spinner"></div></div></div>
         <div class="modal-actions">
           <button class="btn btn-ghost"   onclick="closeEditModal()">إلغاء</button>
-          <button class="btn btn-gold"    id="btn-merge" onclick="mergeAll()">📦 دمج وتحميل PDF</button>
+          <button class="btn btn-gold"    id="btn-merge" onclick="previewMerge()">👁️ معاينة ودمج PDF</button>
           <button class="btn btn-primary" id="btn-save"  onclick="saveEdit()">💾 حفظ</button>
         </div>
       </div>
@@ -62,21 +73,49 @@ export async function renderShipments(container) {
   window.confirmDelete    = confirmDelete;
   window.editFileSelected = editFileSelected;
   window.mergeAll         = mergeAll;
+  window.previewMerge     = previewMerge;
+  window.doMergeDownload  = mergeAll;
   window.updatePortEdit   = updatePortEdit;
 }
 
 // ─────────────────────────────────────────────
 // LIST
 // ─────────────────────────────────────────────
+let _allShipments = [];
+
+function searchShipments(query) {
+  const q = query.toLowerCase().trim();
+  if (!q) {
+    renderShipmentsList(_allShipments);
+    return;
+  }
+  const filtered = _allShipments.filter(s =>
+    (s.declaration_no||'').toLowerCase().includes(q) ||
+    (s.driver_snapshot?.name||'').toLowerCase().includes(q) ||
+    (s.driver_snapshot?.plate||'').toLowerCase().includes(q) ||
+    (s.exporter||'').toLowerCase().includes(q) ||
+    (s.goods_description||'').toLowerCase().includes(q) ||
+    (s.created_by?.name||'').toLowerCase().includes(q)
+  );
+  renderShipmentsList(filtered);
+}
+
 async function loadShipments() {
-  const shipments = await getShipments(100);
+  _allShipments = await getShipments(100);
   const list = document.getElementById('shipments-list');
+
+  renderShipmentsList(_allShipments);
+  window.searchShipments = searchShipments;
+}
+
+function renderShipmentsList(shipments) {
+  const list = document.getElementById('shipments-list');
+  if (!list) return;
 
   if (!shipments.length) {
     list.innerHTML = `<div class="empty-state">
       <div class="empty-icon">📭</div>
-      <div class="empty-title">لا توجد شحنات</div><br>
-      <button class="btn btn-primary" onclick="navigate('new-shipment')">➕ شحنة جديدة</button>
+      <div class="empty-title">لا توجد نتائج</div>
     </div>`;
     return;
   }
@@ -291,29 +330,175 @@ async function saveEdit() {
 }
 
 // ─────────────────────────────────────────────
+// PREVIEW IN NEW TAB — معاينة قبل الدمج
+// ─────────────────────────────────────────────
+function previewMerge() {
+  if (!_editingShipment) return;
+  const s   = _editingShipment;
+  const drv = s?.driver_snapshot || {};
+
+  // Build attachment list
+  const allFiles = { ...(_existingFiles||{}), ..._editFiles };
+  const attachList = [
+    { label: 'شهادة المشغل الاقتصادي GCC AEO', fixed: true, available: true },
+    ...ATTACHMENTS_ORDER.map(a => ({
+      label: a.ar,
+      fixed: false,
+      available: !!allFiles[a.key],
+      name: allFiles[a.key]?.name || ''
+    }))
+  ];
+
+  const previewHTML = `<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>معاينة — بيان #${s.declaration_no||'—'}</title>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:'Tajawal',sans-serif; direction:rtl; background:#F2F5F9; color:#1a2535; }
+  .no-print { }
+  @media print { .no-print { display:none !important; } body { background:white; } }
+
+  /* Header */
+  .preview-header {
+    background:#1C2D4E; color:white; padding:16px 28px;
+    display:flex; align-items:center; justify-content:space-between;
+    position:sticky; top:0; z-index:100;
+  }
+  .preview-title { font-size:17px; font-weight:700; }
+  .preview-sub   { font-size:12px; color:rgba(255,255,255,0.5); margin-top:3px; }
+  .btn-download  {
+    background:#C8943A; color:white; border:none; border-radius:8px;
+    padding:10px 22px; font-size:14px; font-weight:700;
+    font-family:'Tajawal',sans-serif; cursor:pointer;
+  }
+  .btn-download:hover { opacity:0.9; }
+
+  /* Content */
+  .preview-body { padding:24px; max-width:900px; margin:0 auto; }
+
+  /* Checklist */
+  .checklist-card {
+    background:white; border-radius:10px; border:1px solid #D0DCE8;
+    margin-bottom:24px; overflow:hidden;
+  }
+  .checklist-header {
+    background:#1C2D4E; color:white; padding:12px 18px;
+    font-size:13px; font-weight:700;
+  }
+  .checklist-item {
+    display:flex; align-items:center; gap:12px;
+    padding:10px 18px; border-bottom:1px solid #F2F5F9;
+    font-size:13px;
+  }
+  .checklist-item:last-child { border-bottom:none; }
+  .check-num  { width:24px; height:24px; border-radius:50%; background:#1C2D4E; color:white; font-size:11px; font-weight:700; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+  .check-icon { font-size:16px; flex-shrink:0; }
+  .check-label { flex:1; font-weight:500; }
+  .check-name  { font-size:11px; color:#5a7090; margin-top:2px; }
+  .check-status { font-size:11px; font-weight:700; padding:3px 10px; border-radius:20px; }
+  .s-yes   { background:#e6f5ed; color:#1a7a50; }
+  .s-fixed { background:#EBF4FF; color:#2563a8; }
+  .s-no    { background:#fef3e2; color:#b86a0a; }
+
+  /* Forms preview */
+  .form-wrap { background:white; border-radius:10px; border:1px solid #D0DCE8; overflow:hidden; margin-bottom:20px; }
+  .form-label { background:#e8edf4; padding:10px 18px; font-size:12px; font-weight:700; color:#1C2D4E; border-bottom:1px solid #D0DCE8; }
+</style>
+</head>
+<body>
+
+<div class="preview-header no-print">
+  <div>
+    <div class="preview-title">معاينة الملف الموحد — بيان #${s.declaration_no||'—'}</div>
+    <div class="preview-sub">👤 ${drv.name||'—'} &nbsp;|&nbsp; ${drv.plate||'—'} &nbsp;|&nbsp; ${s.exporter||'—'}</div>
+  </div>
+  <button class="btn-download" onclick="window.close();setTimeout(()=>window.opener&&window.opener.doMergeDownload&&window.opener.doMergeDownload(),100)">
+    📥 تأكيد وتحميل PDF
+  </button>
+</div>
+
+<div class="preview-body">
+
+  <!-- Checklist -->
+  <div class="checklist-card">
+    <div class="checklist-header">📋 محتويات الملف الموحد — ${attachList.filter(a=>a.available).length + 2} ملف</div>
+    <div class="checklist-item">
+      <div class="check-num">١</div>
+      <span class="check-icon">📄</span>
+      <div style="flex:1;"><div class="check-label">فورم البيان الجمركي</div></div>
+      <span class="check-status s-yes">✓ تلقائي</span>
+    </div>
+    <div class="checklist-item">
+      <div class="check-num">٢</div>
+      <span class="check-icon">📋</span>
+      <div style="flex:1;"><div class="check-label">محضر استقطاع العينة</div></div>
+      <span class="check-status s-yes">✓ تلقائي</span>
+    </div>
+    ${attachList.map((a, i) => `
+    <div class="checklist-item">
+      <div class="check-num">${i+3}</div>
+      <span class="check-icon">${a.available ? '✅' : '⚠️'}</span>
+      <div style="flex:1;">
+        <div class="check-label">${a.label} ${a.fixed?'<span style="font-size:10px;color:#2563a8;">(ثابتة)</span>':''}</div>
+        ${a.name ? `<div class="check-name">${a.name}</div>` : ''}
+      </div>
+      <span class="check-status ${a.available?(a.fixed?'s-fixed':'s-yes'):'s-no'}">
+        ${a.available ? (a.fixed?'ثابتة':'✓ موجود') : '⚠️ غير مرفوع'}
+      </span>
+    </div>`).join('')}
+  </div>
+
+  <!-- Form 1 Preview -->
+  <div class="form-label">📄 فورم البيان الجمركي</div>
+  <div class="form-wrap">
+    ${buildDeclarationHTML(s, drv)}
+  </div>
+
+  <!-- Form 2 Preview -->
+  <div class="form-label">📋 محضر استقطاع العينة</div>
+  <div class="form-wrap">
+    ${buildSampleHTML(s, drv)}
+  </div>
+
+</div>
+</body>
+</html>`;
+
+  // Open in new tab
+  const win = window.open('', '_blank');
+  win.document.write(previewHTML);
+  win.document.close();
+
+  // Expose download function to parent window
+  window.doMergeDownload = mergeAll;
+}
+
+// ─────────────────────────────────────────────
 // MERGE ALL — ملف موحد كامل
 // ─────────────────────────────────────────────
 async function mergeAll() {
   const btn = document.getElementById('btn-merge');
-  btn.disabled = true;
-  btn.textContent = '⏳ جاري الدمج...';
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ جاري الدمج...'; }
   try {
     const s   = _editingShipment;
     const drv = s?.driver_snapshot || {};
 
     // Save any new files first
     if (Object.keys(_editFiles).length > 0) await saveAttachments(_editingId, _editFiles);
-    if (_brokerReplyFile) await saveAttachment(_editingId, 'broker_reply', _brokerReplyFile);
 
     toast('⏳ جاري تجهيز الفورمات...', 'info');
     const form1Bytes = await htmlToPdfBytes(buildDeclarationHTML(s, drv));
     const form2Bytes = await htmlToPdfBytes(buildSampleHTML(s, drv));
 
-    // Build sources: forms + AEO certificate (ثابتة) + all attachments in order
+    // Build sources: forms + AEO + attachments
     const sources = [
       { type: 'arraybuffer', data: form1Bytes },
       { type: 'arraybuffer', data: form2Bytes },
-      { type: 'base64',      data: AEO_PDF_B64 }, // شهادة المشغل الاقتصادي — ثابتة دائماً
+      { type: 'base64',      data: AEO_PDF_B64 },
       ...ATTACHMENTS_ORDER
         .filter(a => _existingFiles[a.key])
         .map(a => ({ type: 'base64', data: _existingFiles[a.key].base64 }))
@@ -328,8 +513,7 @@ async function mergeAll() {
     console.error(e);
     toast('خطأ في الدمج', 'error');
   } finally {
-    btn.disabled = false;
-    btn.textContent = '📦 دمج وتحميل PDF';
+    if (btn) { btn.disabled = false; btn.textContent = '📦 دمج وتحميل PDF'; }
   }
 }
 
