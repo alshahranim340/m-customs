@@ -70,7 +70,7 @@ export function daysInHijriMonth(year, month) {
  */
 export function buildHijriPicker(id, value = '', label = 'التاريخ (هجري)') {
   const today  = toHijri();
-  const parsed = parseHijriStr(value) || today;
+  const parsed = (value ? parseHijriStr(value) : null) || today;
 
   // Years range: 1440 to current+2
   const years = [];
@@ -109,9 +109,26 @@ function buildDaysOpts(year, month, selected) {
 
 function parseHijriStr(str) {
   if (!str) return null;
-  const parts = str.split('-');
+  // Support both YYYY-MM-DD and DD/MM/YYYY
+  let parts;
+  if (str.includes('-')) {
+    parts = str.split('-');
+  } else if (str.includes('/')) {
+    parts = str.split('/').reverse(); // DD/MM/YYYY -> [YYYY, MM, DD]
+  } else {
+    return null;
+  }
   if (parts.length !== 3) return null;
-  return { year: parseInt(parts[0]), month: parseInt(parts[1]), day: parseInt(parts[2]), str };
+  const [a, b, c] = parts.map(Number);
+  // Detect if year is first (YYYY-MM-DD) or last (from DD/MM/YYYY reversed)
+  const year  = a > 1000 ? a : c;
+  const month = a > 1000 ? b : b;
+  const day   = a > 1000 ? c : a;
+  if (!year || !month || !day) return null;
+  return {
+    year, month, day,
+    str: `\${year}-\${month.toString().padStart(2,'0')}-\${day.toString().padStart(2,'0')}`
+  };
 }
 
 // Expose to window for onchange handlers
