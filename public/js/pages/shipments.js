@@ -1,3 +1,4 @@
+import { buildHijriPicker, todayHijri } from '../../../src/utils/hijriDate.js';
 import { LOGO_B64, STAMP_B64, AEO_PDF_B64 } from '../../../src/utils/assets.js';
 import { getShipments, updateShipment, getShipment } from '../../../src/firebase/db.js';
 import { saveAttachments, getAttachments, saveAttachment } from '../../../src/firebase/attachments.js';
@@ -163,6 +164,12 @@ async function openEditModal(id) {
   _editFiles = {};
   _brokerReplyFile = null;
   document.getElementById('edit-modal').classList.remove('hidden');
+
+  // Init hijri date picker with current value
+  setTimeout(() => {
+    const wrap = document.getElementById('e-date-wrap');
+    if (wrap) wrap.innerHTML = buildHijriPicker('e-date', s.date || todayHijri(), 'التاريخ (هجري)');
+  }, 50);
   document.getElementById('edit-form-body').innerHTML =
     '<div class="loader"><div class="spinner"></div></div>';
 
@@ -209,8 +216,7 @@ async function openEditModal(id) {
         <input type="text" id="e-decl-no" value="${s.declaration_no||''}"></div>
       <div class="field"><label>الرقم الموحد</label>
         <input type="text" id="e-unified-no" value="${s.unified_no||''}"></div>
-      <div class="field"><label>التاريخ (هجري)</label>
-        <input type="text" id="e-date" value="${s.date||''}"></div>
+      <div id="e-date-wrap"></div>
       <div class="field"><label>الحالة</label>
         <select id="e-status">${statusOpts}</select></div>
       <div class="field" style="grid-column:span 2;"><label>اسم المصدر</label>

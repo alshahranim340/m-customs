@@ -3,6 +3,7 @@ import { saveAttachments } from '../../../src/firebase/attachments.js';
 import { getExporters, saveExporter } from '../../../src/firebase/exporters.js';
 import { fileToBase64 } from '../../../src/utils/fileUtils.js';
 import { DECLARATION_TYPES, ATTACHMENTS_ORDER } from '../../../src/utils/constants.js';
+import { buildHijriPicker, todayHijri } from '../../../src/utils/hijriDate.js';
 import { toast, navigate, getCurrentProfile } from '../app.js';
 
 const PORTS_MAP = {
@@ -146,8 +147,7 @@ export async function renderNewShipment(container) {
                 <input type="text" id="unified-no" placeholder="203294400312"></div>
             </div>
             <div class="form-grid-2">
-              <div class="field"><label>التاريخ (هجري) *</label>
-                <input type="text" id="decl-date" placeholder="1448-01-23"></div>
+              <div id="hijri-picker-wrap"></div>
               <div class="field"><label>نوع البيان</label>
                 <select id="decl-type">${declOptions}</select></div>
             </div>
@@ -187,6 +187,12 @@ export async function renderNewShipment(container) {
     </div>`;
 
   // Expose globals
+  // Init hijri date picker
+  const hijriWrap = document.getElementById('hijri-picker-wrap');
+  if (hijriWrap) hijriWrap.innerHTML = buildHijriPicker('decl-date', todayHijri(), 'التاريخ (هجري) *');
+
+  window.updateHijriValue = window.updateHijriValue;
+  window.rebuildHijriDays = window.rebuildHijriDays;
   window.setDest          = setDest;
   window.searchDriverFn   = searchDriverFn;
   window.selectDriver     = selectDriver;
