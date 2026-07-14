@@ -4,15 +4,22 @@ import {
 } from 'firebase/auth';
 import {
   doc, setDoc, getDoc, getDocs,
-  collection, updateDoc, deleteDoc, serverTimestamp
+  collection, updateDoc, serverTimestamp
 } from 'firebase/firestore';
 import { db } from './config.js';
 import app from './config.js';
 
 export const auth = getAuth(app);
 
-// Admin UID — يتحدد بعد أول تسجيل دخول
+// المدير الوحيد
 const ADMIN_EMAIL = 'alshahranim340@gmail.com';
+
+// الرتب المتاحة
+export const ROLES = {
+  admin:      { ar: 'مدير',           color: '#c8943a' },
+  supervisor: { ar: 'مشرف',           color: '#2563a8' },
+  employee:   { ar: 'موظف تخليص',     color: '#1a7a50' },
+};
 
 // ─────────────────────────────────────────────
 // AUTH STATE
@@ -43,27 +50,50 @@ export async function logOut() {
 }
 
 // ─────────────────────────────────────────────
-// USERS MANAGEMENT (admin only)
+// ENSURE PROFILE ON FIRST LOGIN
+// ─────────────────────────────────────────────
+export async function ensureAdminProfile(user) {
+  const existing = await getUserProfile(user.uid);
+
+  if (!existing) {
+    // أول تسجيل دخول — إنشاء ملف شخصي
+    const isRealAdmin = user.email === ADMIN_EMAIL;
+    await setDoc(doc(db, 'users', user.uid), {
+      name:       isRealAdmin ? 'المدير' : user.email.split('@')[0],
+      email:      user.email,
+      role:       isRealAdmin ? 'admin' : 'employee',
+      created_at: serverTimestamp(),
+      active:     true
+    });
+  } else if (existing.role === 'admin' && user.email !== ADMIN_EMAIL) {
+    // تصحيح: أي حساب آخر حصل على admin بالخطأ → يُخفض لموظف
+    await updateDoc(doc(db, 'users', user.uid), { role: 'employee' });
+  }
+}
+
+// ─────────────────────────────────────────────
+// USERS MANAGEMENT
 // ─────────────────────────────────────────────
 export async function getAllUsers() {
   const snap = await getDocs(collection(db, 'users'));
-  return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  return snap.docs.map(d => ({ id: d.id, ...d.data() }))
+    .sort((a, b) => {
+      // المدير أولاً ثم المشرف ثم الموظفين
+      const order = { admin: 0, supervisor: 1, employee: 2 };
+      return (order[a.role]||2) - (order[b.role]||2);
+    });
 }
 
-export async function createEmployee(email, password, name) {
-  // Create Firebase Auth user
+export async function createEmployee(email, password, name, role = 'employee') {
   const cred = await createUserWithEmailAndPassword(auth, email, password);
   const uid  = cred.user.uid;
-
-  // Save profile to Firestore
   await setDoc(doc(db, 'users', uid), {
     name,
     email,
-    role:       'employee',
+    role,
     created_at: serverTimestamp(),
     active:     true
   });
-
   return uid;
 }
 
@@ -76,18 +106,4 @@ export async function updateEmployee(uid, updates) {
 
 export function isAdmin(user) {
   return user?.email === ADMIN_EMAIL;
-}
-
-// Save admin profile on first login
-export async function ensureAdminProfile(user) {
-  const existing = await getUserProfile(user.uid);
-  if (!existing) {
-    await setDoc(doc(db, 'users', user.uid), {
-      name:       'المدير',
-      email:      user.email,
-      role:       'admin',
-      created_at: serverTimestamp(),
-      active:     true
-    });
-  }
 }
