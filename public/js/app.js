@@ -155,24 +155,24 @@ function renderAppShell(profile) {
         <nav class="sidebar-nav">
           <div class="nav-group-label">الرئيسية</div>
           <a class="nav-item active" data-page="dashboard" onclick="navigate('dashboard')">
-            <span class="nav-icon">🏠</span> لوحة التحكم
+            <i class="ti ti-home" aria-hidden="true"></i> لوحة التحكم
           </a>
           <a class="nav-item" data-page="new-shipment" onclick="navigate('new-shipment')">
-            <span class="nav-icon">➕</span> شحنة جديدة
+            <i class="ti ti-plus" aria-hidden="true"></i> شحنة جديدة
           </a>
           <div class="nav-group-label">السجلات</div>
           <a class="nav-item" data-page="shipments" onclick="navigate('shipments')">
-            <span class="nav-icon">📋</span> سجل الشحنات
+            <i class="ti ti-list" aria-hidden="true"></i> سجل الشحنات
             <span class="nav-badge" id="badge-shipments">—</span>
           </a>
           <a class="nav-item" data-page="drivers" onclick="navigate('drivers')">
-            <span class="nav-icon">👤</span> السائقون
+            <i class="ti ti-user" aria-hidden="true"></i> السائقون
           </a>
-          ${adminOnly ? `
+          \${adminOnly ? \`
           <div class="nav-group-label">الإدارة</div>
           <a class="nav-item" data-page="users" onclick="navigate('users')">
-            <span class="nav-icon">👥</span> الموظفون
-          </a>` : ''}
+            <i class="ti ti-users" aria-hidden="true"></i> الموظفون
+          </a>\` : ''}
         </nav>
         <div class="sidebar-footer">
           <div class="user-chip">
@@ -183,10 +183,11 @@ function renderAppShell(profile) {
             </div>
           </div>
           <button onclick="doLogout()"
-            style="margin-top:10px;width:100%;padding:7px;background:rgba(255,255,255,0.08);
-            border:1px solid rgba(255,255,255,0.15);border-radius:7px;color:rgba(255,255,255,0.6);
-            font-family:'Tajawal',sans-serif;font-size:12px;cursor:pointer;">
-            🚪 تسجيل الخروج
+            style="margin-top:10px;width:100%;padding:7px;background:rgba(255,255,255,0.06);
+            border:0.5px solid rgba(255,255,255,0.12);border-radius:7px;color:rgba(255,255,255,0.5);
+            font-family:'Tajawal',sans-serif;font-size:12px;cursor:pointer;
+            display:flex;align-items:center;justify-content:center;gap:6px;">
+            <i class="ti ti-logout" style="font-size:14px" aria-hidden="true"></i> تسجيل الخروج
           </button>
         </div>
       </aside>
