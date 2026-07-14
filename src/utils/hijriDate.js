@@ -3,160 +3,142 @@
 // ─────────────────────────────────────────────
 
 const HIJRI_MONTHS = [
-  'محرم', 'صفر', 'ربيع الأول', 'ربيع الآخر',
-  'جمادى الأولى', 'جمادى الآخرة', 'رجب', 'شعبان',
-  'رمضان', 'شوال', 'ذو القعدة', 'ذو الحجة'
+  'محرم','صفر','ربيع الأول','ربيع الآخر',
+  'جمادى الأولى','جمادى الآخرة','رجب','شعبان',
+  'رمضان','شوال','ذو القعدة','ذو الحجة'
 ];
 
 const HIJRI_DAYS = ['الأحد','الإثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
 
-/**
- * Convert Gregorian date to Hijri
- */
 export function toHijri(date = new Date()) {
-  const d = new Date(date);
-  // Use Intl API for conversion
   const hijri = new Intl.DateTimeFormat('ar-SA-u-ca-islamic', {
-    year:  'numeric',
-    month: '2-digit',
-    day:   '2-digit'
-  }).formatToParts(d);
-
-  const year  = hijri.find(p => p.type === 'year')?.value;
-  const month = hijri.find(p => p.type === 'month')?.value;
-  const day   = hijri.find(p => p.type === 'day')?.value;
-
-  return {
-    year:  parseInt(year),
-    month: parseInt(month),
-    day:   parseInt(day),
-    str:   `${year}-${month.padStart(2,'0')}-${day.padStart(2,'0')}`
-  };
+    year:'numeric', month:'2-digit', day:'2-digit'
+  }).formatToParts(date);
+  const y = parseInt(hijri.find(p=>p.type==='year')?.value);
+  const m = parseInt(hijri.find(p=>p.type==='month')?.value);
+  const d = parseInt(hijri.find(p=>p.type==='day')?.value);
+  return { year:y, month:m, day:d, str:`${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}` };
 }
 
-/**
- * Get today's Hijri date as string YYYY-MM-DD
- */
 export function todayHijri() {
-  return toHijri(new Date()).str;
+  return toHijri().str;
 }
 
-/**
- * Get Hijri day name from date string
- */
-export function hijriDayName(dateStr) {
-  // Use today's day name if we can't parse
+export function hijriDayName() {
   return HIJRI_DAYS[new Date().getDay()];
 }
 
-/**
- * Get month name in Arabic
- */
-export function hijriMonthName(month) {
-  return HIJRI_MONTHS[(month - 1)] || '';
-}
-
-/**
- * Get days in a Hijri month (approximate)
- */
-export function daysInHijriMonth(year, month) {
-  // Hijri months alternate 30/29 days
-  // Even months = 29 days, odd = 30 days (approximate)
+function daysInMonth(month) {
   return month % 2 === 0 ? 29 : 30;
 }
 
-/**
- * Build Hijri picker HTML
- */
-export function buildHijriPicker(id, value = '', label = 'التاريخ (هجري)') {
+function parseDate(val) {
+  if (!val) return null;
+  let y, m, d;
+  if (val.includes('-')) {
+    [y, m, d] = val.split('-').map(Number);
+  } else if (val.includes('/')) {
+    [d, m, y] = val.split('/').map(Number);
+  }
+  if (!y || !m || !d) return null;
+  return { year:y, month:m, day:d };
+}
+
+// Build picker using DOM directly (no template string issues)
+export function buildHijriPicker(id, value, label) {
   const today  = toHijri();
-  const parsed = (value ? parseHijriStr(value) : null) || today;
+  const parsed = parseDate(value) || today;
 
-  // Years range: 1440 to current+3
-  const years = [];
-  for (let y = 1440; y <= today.year + 3; y++) years.push(y);
+  const Y = parsed.year;
+  const M = parsed.month;
+  const D = parsed.day;
 
-  const py = parsed.year;
-  const pm = parsed.month;
-  const pd = parsed.day;
+  // Container
+  const wrap = document.createElement('div');
+  wrap.className = 'field';
+  wrap.id = `hijri-picker-${id}`;
 
-  const monthsOpts = HIJRI_MONTHS.map((m, i) =>
-    `<option value="${i+1}" ${pm===i+1?'selected':''}>${i+1} — ${m}</option>`
-  ).join('');
+  // Label
+  const lbl = document.createElement('label');
+  lbl.textContent = label || 'التاريخ (هجري)';
+  wrap.appendChild(lbl);
 
-  const yearsOpts = years.map(y =>
-    `<option value="${y}" ${py===y?'selected':''}>${y} هـ</option>`
-  ).join('');
+  // Grid
+  const grid = document.createElement('div');
+  grid.style.cssText = 'display:grid;grid-template-columns:70px 1fr 105px;gap:8px;';
+  wrap.appendChild(grid);
 
-  const daysOpts = buildDaysOpts(py, pm, pd);
+  // Hidden input
+  const hidden = document.createElement('input');
+  hidden.type = 'hidden';
+  hidden.id   = id;
+  hidden.value = `${Y}-${String(M).padStart(2,'0')}-${String(D).padStart(2,'0')}`;
+  wrap.appendChild(hidden);
 
-  return `
-    <div class="field" id="hijri-picker-${id}">
-      <label>${label}</label>
-      <div style="display:grid;grid-template-columns:80px 1fr 100px;gap:8px;">
-        <select id="${id}-day"   onchange="updateHijriValue('${id}')" style="text-align:center;">${daysOpts}</select>
-        <select id="${id}-month" onchange="updateHijriValue('${id}');rebuildHijriDays('${id}')">${monthsOpts}</select>
-        <select id="${id}-year"  onchange="updateHijriValue('${id}');rebuildHijriDays('${id}')">${yearsOpts}</select>
-      </div>
-      <input type="hidden" id="${id}" value="${py}-${String(pm).padStart(2,'0')}-${String(pd).padStart(2,'0')}">
-    </div>`;
-}
-
-function buildDaysOpts(year, month, selected) {
-  const total = daysInHijriMonth(year, month);
-  let opts = '';
-  for (let d = 1; d <= total; d++) {
-    opts += `<option value="${d}" ${selected===d?'selected':''}>${d}</option>`;
+  // Update hidden value
+  function update() {
+    const y = parseInt(yearSel.value);
+    const m = parseInt(monthSel.value);
+    const d = parseInt(daySel.value);
+    hidden.value = `${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
   }
-  return opts;
-}
 
-function parseHijriStr(str) {
-  if (!str) return null;
-  // Support both YYYY-MM-DD and DD/MM/YYYY
-  let parts;
-  if (str.includes('-')) {
-    parts = str.split('-');
-  } else if (str.includes('/')) {
-    parts = str.split('/').reverse(); // DD/MM/YYYY -> [YYYY, MM, DD]
-  } else {
-    return null;
-  }
-  if (parts.length !== 3) return null;
-  const [a, b, c] = parts.map(Number);
-  // Detect if year is first (YYYY-MM-DD) or last (from DD/MM/YYYY reversed)
-  const year  = a > 1000 ? a : c;
-  const month = a > 1000 ? b : b;
-  const day   = a > 1000 ? c : a;
-  if (!year || !month || !day) return null;
-  return {
-    year, month, day,
-    str: `\${year}-\${month.toString().padStart(2,'0')}-\${day.toString().padStart(2,'0')}`
-  };
-}
-
-// Expose to window for onchange handlers
-if (typeof window !== 'undefined') {
-  // Set today's hijri day name globally
-  window._hijriDayName = HIJRI_DAYS[new Date().getDay()];
-  window.updateHijriValue = (id) => {
-    const y = document.getElementById(`${id}-year`)?.value;
-    const m = document.getElementById(`${id}-month`)?.value;
-    const d = document.getElementById(`${id}-day`)?.value;
-    if (y && m && d) {
-      const val = `${y}-${m.toString().padStart(2,'0')}-${d.toString().padStart(2,'0')}`;
-      const hidden = document.getElementById(id);
-      if (hidden) hidden.value = val;
+  // Rebuild days when year/month changes
+  function rebuildDays(selYear, selMonth, selDay) {
+    const total = daysInMonth(selMonth);
+    daySel.innerHTML = '';
+    for (let i = 1; i <= total; i++) {
+      const o = document.createElement('option');
+      o.value = i;
+      o.textContent = i;
+      if (i === selDay) o.selected = true;
+      daySel.appendChild(o);
     }
-  };
+    update();
+  }
 
-  window.rebuildHijriDays = (id) => {
-    const y     = parseInt(document.getElementById(`${id}-year`)?.value);
-    const m     = parseInt(document.getElementById(`${id}-month`)?.value);
-    const dayEl = document.getElementById(`${id}-day`);
-    if (!dayEl) return;
-    const curDay = parseInt(dayEl.value);
-    dayEl.innerHTML = buildDaysOpts(y, m, Math.min(curDay, daysInHijriMonth(y, m)));
-    window.updateHijriValue(id);
-  };
+  // DAY select
+  const daySel = document.createElement('select');
+  daySel.id = `${id}-day`;
+  daySel.style.textAlign = 'center';
+  rebuildDays(Y, M, D);
+  daySel.addEventListener('change', update);
+  grid.appendChild(daySel);
+
+  // MONTH select
+  const monthSel = document.createElement('select');
+  monthSel.id = `${id}-month`;
+  HIJRI_MONTHS.forEach((name, i) => {
+    const o = document.createElement('option');
+    o.value = i + 1;
+    o.textContent = `${i+1} — ${name}`;
+    if (i + 1 === M) o.selected = true;
+    monthSel.appendChild(o);
+  });
+  monthSel.addEventListener('change', () => {
+    rebuildDays(parseInt(yearSel.value), parseInt(monthSel.value), parseInt(daySel.value));
+  });
+  grid.appendChild(monthSel);
+
+  // YEAR select
+  const yearSel = document.createElement('select');
+  yearSel.id = `${id}-year`;
+  for (let y = 1440; y <= today.year + 3; y++) {
+    const o = document.createElement('option');
+    o.value = y;
+    o.textContent = `${y} هـ`;
+    if (y === Y) o.selected = true;
+    yearSel.appendChild(o);
+  }
+  yearSel.addEventListener('change', () => {
+    rebuildDays(parseInt(yearSel.value), parseInt(monthSel.value), parseInt(daySel.value));
+  });
+  grid.appendChild(yearSel);
+
+  return wrap;
+}
+
+// Set global day name
+if (typeof window !== 'undefined') {
+  window._hijriDayName = HIJRI_DAYS[new Date().getDay()];
 }
