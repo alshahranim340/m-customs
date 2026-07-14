@@ -72,29 +72,33 @@ export function buildHijriPicker(id, value = '', label = 'التاريخ (هجر
   const today  = toHijri();
   const parsed = (value ? parseHijriStr(value) : null) || today;
 
-  // Years range: 1440 to current+2
+  // Years range: 1440 to current+3
   const years = [];
-  for (let y = 1440; y <= today.year + 2; y++) years.push(y);
+  for (let y = 1440; y <= today.year + 3; y++) years.push(y);
+
+  const py = parsed.year;
+  const pm = parsed.month;
+  const pd = parsed.day;
 
   const monthsOpts = HIJRI_MONTHS.map((m, i) =>
-    `<option value="${i+1}" ${parsed.month===i+1?'selected':''}>${i+1} — ${m}</option>`
+    `<option value="${i+1}" ${pm===i+1?'selected':''}>${i+1} — ${m}</option>`
   ).join('');
 
   const yearsOpts = years.map(y =>
-    `<option value="${y}" ${parsed.year===y?'selected':''}>${y}</option>`
+    `<option value="${y}" ${py===y?'selected':''}>${y} هـ</option>`
   ).join('');
 
-  const daysOpts = buildDaysOpts(parsed.year, parsed.month, parsed.day);
+  const daysOpts = buildDaysOpts(py, pm, pd);
 
   return `
     <div class="field" id="hijri-picker-${id}">
       <label>${label}</label>
-      <div style="display:grid;grid-template-columns:1fr 1.5fr 1fr;gap:8px;">
+      <div style="display:grid;grid-template-columns:80px 1fr 100px;gap:8px;">
         <select id="${id}-day"   onchange="updateHijriValue('${id}')" style="text-align:center;">${daysOpts}</select>
         <select id="${id}-month" onchange="updateHijriValue('${id}');rebuildHijriDays('${id}')">${monthsOpts}</select>
         <select id="${id}-year"  onchange="updateHijriValue('${id}');rebuildHijriDays('${id}')">${yearsOpts}</select>
       </div>
-      <input type="hidden" id="${id}" value="${parsed.str}">
+      <input type="hidden" id="${id}" value="${py}-${String(pm).padStart(2,'0')}-${String(pd).padStart(2,'0')}">
     </div>`;
 }
 
