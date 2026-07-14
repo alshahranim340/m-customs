@@ -164,12 +164,6 @@ async function openEditModal(id) {
   _editFiles = {};
   _brokerReplyFile = null;
   document.getElementById('edit-modal').classList.remove('hidden');
-
-  // Init hijri date picker with current value
-  setTimeout(() => {
-    const wrap = document.getElementById('e-date-wrap');
-    if (wrap) wrap.innerHTML = buildHijriPicker('e-date', s.date || todayHijri(), 'التاريخ (هجري)');
-  }, 50);
   document.getElementById('edit-form-body').innerHTML =
     '<div class="loader"><div class="spinner"></div></div>';
 
@@ -253,6 +247,10 @@ async function openEditModal(id) {
       <div class="upload-grid">${attachHTML}</div>
     </div>
 `;
+
+  // Init hijri date picker AFTER innerHTML is set
+  const dateWrap = document.getElementById('e-date-wrap');
+  if (dateWrap) dateWrap.innerHTML = buildHijriPicker('e-date', s.date || todayHijri(), 'التاريخ (هجري)');
 }
 
 function updatePortEdit() {
