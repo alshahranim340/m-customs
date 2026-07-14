@@ -75,6 +75,14 @@ export async function renderShipments(container) {
   window.mergeAll         = mergeAll;
   window.previewMerge     = previewMerge;
   window.doMergeDownload  = mergeAll;
+
+  // Listen for message from preview tab
+  window.removeEventListener('message', _mergeMessageHandler);
+  window._mergeMessageHandler = (e) => {
+    if (e.data === 'do-merge-download') mergeAll();
+  };
+  window._mergeMessageHandler = window._mergeMessageHandler.bind(window);
+  window.addEventListener('message', window._mergeMessageHandler);
   window.updatePortEdit   = updatePortEdit;
 }
 
@@ -415,7 +423,7 @@ function previewMerge() {
     <div class="preview-title">معاينة الملف الموحد — بيان #${s.declaration_no||'—'}</div>
     <div class="preview-sub">👤 ${drv.name||'—'} &nbsp;|&nbsp; ${drv.plate||'—'} &nbsp;|&nbsp; ${s.exporter||'—'}</div>
   </div>
-  <button class="btn-download" onclick="window.close();setTimeout(()=>window.opener&&window.opener.doMergeDownload&&window.opener.doMergeDownload(),100)">
+  <button class="btn-download" id="btn-confirm-download" onclick="confirmDownload()">
     📥 تأكيد وتحميل PDF
   </button>
 </div>
