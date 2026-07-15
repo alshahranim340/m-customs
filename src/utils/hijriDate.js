@@ -1,148 +1,81 @@
 // ─────────────────────────────────────────────
-// HIJRI DATE UTILITIES
+// HIJRI DATE — Calendar picker with auto conversion
 // ─────────────────────────────────────────────
-
-const HIJRI_MONTHS = [
-  'محرم','صفر','ربيع الأول','ربيع الآخر',
-  'جمادى الأولى','جمادى الآخرة','رجب','شعبان',
-  'رمضان','شوال','ذو القعدة','ذو الحجة'
-];
 
 const HIJRI_DAYS = ['الأحد','الإثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
 
+/**
+ * Convert Gregorian date to Hijri string
+ */
 export function toHijri(date = new Date()) {
-  const hijri = new Intl.DateTimeFormat('en-US-u-ca-islamic-umalqura-nu-latn', {
+  const parts = new Intl.DateTimeFormat('en-u-ca-islamic', {
     year:'numeric', month:'2-digit', day:'2-digit'
   }).formatToParts(date);
-  const y = parseInt(hijri.find(p=>p.type==='year')?.value);
-  const m = parseInt(hijri.find(p=>p.type==='month')?.value);
-  const d = parseInt(hijri.find(p=>p.type==='day')?.value);
-  const Y = Number.isFinite(y) ? y : 1447;
-  const M = Number.isFinite(m) ? m : 1;
-  const D = Number.isFinite(d) ? d : 1;
-  return { year:Y, month:M, day:D, str:`${Y}-${String(M).padStart(2,'0')}-${String(D).padStart(2,'0')}` };
+  const y = parts.find(p=>p.type==='year')?.value.replace(/\s*AH/,'');
+  const m = parts.find(p=>p.type==='month')?.value;
+  const d = parts.find(p=>p.type==='day')?.value;
+  return `${y}-${m}-${d}`;
 }
 
 export function todayHijri() {
-  return toHijri().str;
+  return toHijri(new Date());
 }
 
 export function hijriDayName() {
   return HIJRI_DAYS[new Date().getDay()];
 }
 
-function daysInMonth(month) {
-  return month % 2 === 0 ? 29 : 30;
-}
-
-function parseDate(val) {
-  if (!val) return null;
-  let y, m, d;
-  if (val.includes('-')) {
-    [y, m, d] = val.split('-').map(Number);
-  } else if (val.includes('/')) {
-    [d, m, y] = val.split('/').map(Number);
-  }
-  if (!y || !m || !d) return null;
-  return { year:y, month:m, day:d };
-}
-
-// Build picker using DOM directly (no template string issues)
-export function buildHijriPicker(id, value, label) {
-  const today  = toHijri();
-  // Handle string value; if empty/invalid use today
-  let parsed = null;
-  if (value && typeof value === 'string') {
-    parsed = parseDate(value);
-  }
-  if (!parsed) parsed = today;
-
-  const Y = parsed.year;
-  const M = parsed.month;
-  const D = parsed.day;
-
-  // Container
+/**
+ * Build a calendar date picker that shows Hijri equivalent
+ * Returns a DOM element
+ */
+export function buildHijriPicker(id, savedHijriValue, label) {
   const wrap = document.createElement('div');
   wrap.className = 'field';
-  wrap.id = `hijri-picker-${id}`;
 
   // Label
   const lbl = document.createElement('label');
   lbl.textContent = label || 'التاريخ (هجري)';
   wrap.appendChild(lbl);
 
-  // Grid
-  const grid = document.createElement('div');
-  grid.style.cssText = 'display:grid;grid-template-columns:70px 1fr 105px;gap:8px;';
-  wrap.appendChild(grid);
+  // Container
+  const row = document.createElement('div');
+  row.style.cssText = 'display:flex;gap:10px;align-items:center;';
+  wrap.appendChild(row);
 
-  // Hidden input
+  // Calendar input (Gregorian)
+  const calInput = document.createElement('input');
+  calInput.type = 'date';
+  calInput.style.cssText = 'flex:1;padding:9px 12px;border:0.5px solid #D8E2EE;border-radius:8px;font-size:13px;font-family:Tajawal,sans-serif;outline:none;';
+  calInput.valueAsDate = new Date(); // default today
+  row.appendChild(calInput);
+
+  // Hijri display
+  const hijriBox = document.createElement('div');
+  hijriBox.style.cssText = 'flex:1;padding:9px 12px;background:#EBF4FF;border:0.5px solid #2563a8;border-radius:8px;font-size:13px;font-weight:700;color:#1C2D4E;text-align:center;direction:ltr;';
+  hijriBox.textContent = toHijri(new Date());
+  row.appendChild(hijriBox);
+
+  // Hidden input for form value
   const hidden = document.createElement('input');
   hidden.type = 'hidden';
-  hidden.id   = id;
-  hidden.value = `${Y}-${String(M).padStart(2,'0')}-${String(D).padStart(2,'0')}`;
+  hidden.id = id;
+  hidden.value = toHijri(new Date());
   wrap.appendChild(hidden);
 
-  // Update hidden value
-  function update() {
-    const y = parseInt(yearSel.value);
-    const m = parseInt(monthSel.value);
-    const d = parseInt(daySel.value);
-    hidden.value = `${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-  }
-
-  // Rebuild days when year/month changes
-  function rebuildDays(selYear, selMonth, selDay) {
-    const total = daysInMonth(selMonth);
-    daySel.innerHTML = '';
-    for (let i = 1; i <= total; i++) {
-      const o = document.createElement('option');
-      o.value = i;
-      o.textContent = i;
-      if (i === selDay) o.selected = true;
-      daySel.appendChild(o);
-    }
-    update();
-  }
-
-  // DAY select
-  const daySel = document.createElement('select');
-  daySel.id = `${id}-day`;
-  daySel.style.textAlign = 'center';
-  rebuildDays(Y, M, D);
-  daySel.addEventListener('change', update);
-  grid.appendChild(daySel);
-
-  // MONTH select
-  const monthSel = document.createElement('select');
-  monthSel.id = `${id}-month`;
-  HIJRI_MONTHS.forEach((name, i) => {
-    const o = document.createElement('option');
-    o.value = i + 1;
-    o.textContent = `${i+1} — ${name}`;
-    if (i + 1 === M) o.selected = true;
-    monthSel.appendChild(o);
+  // Update on change
+  calInput.addEventListener('change', () => {
+    const selected = calInput.valueAsDate || new Date();
+    const hijriStr = toHijri(selected);
+    hijriBox.textContent = hijriStr;
+    hidden.value = hijriStr;
   });
-  monthSel.addEventListener('change', () => {
-    rebuildDays(parseInt(yearSel.value), parseInt(monthSel.value), parseInt(daySel.value));
-  });
-  grid.appendChild(monthSel);
 
-  // YEAR select
-  const yearSel = document.createElement('select');
-  yearSel.id = `${id}-year`;
-  const endY = Number.isFinite(today.year) ? today.year + 3 : 1455;
-  for (let y = 1440; y <= endY; y++) {
-    const o = document.createElement('option');
-    o.value = y;
-    o.textContent = `${y} هـ`;
-    if (y === Y) o.selected = true;
-    yearSel.appendChild(o);
+  // If we have a saved value, show it
+  if (savedHijriValue && savedHijriValue.includes('-')) {
+    hijriBox.textContent = savedHijriValue;
+    hidden.value = savedHijriValue;
   }
-  yearSel.addEventListener('change', () => {
-    rebuildDays(parseInt(yearSel.value), parseInt(monthSel.value), parseInt(daySel.value));
-  });
-  grid.appendChild(yearSel);
 
   return wrap;
 }
