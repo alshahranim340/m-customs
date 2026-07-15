@@ -69,7 +69,14 @@ export function buildHijriPicker(id, savedHijriValue, label) {
     const hijriStr = toHijri(selected);
     hijriBox.textContent = hijriStr;
     hidden.value = hijriStr;
+    // Store day name
+    hidden.dataset.dayName = HIJRI_DAYS[selected.getDay()];
+    hidden.dataset.gregorian = calInput.value;
   });
+
+  // Set initial day name
+  hidden.dataset.dayName = HIJRI_DAYS[new Date().getDay()];
+  hidden.dataset.gregorian = calInput.value;
 
   // If we have a saved value, show it
   if (savedHijriValue && savedHijriValue.includes('-')) {
@@ -78,6 +85,18 @@ export function buildHijriPicker(id, savedHijriValue, label) {
   }
 
   return wrap;
+}
+
+/**
+ * Get day name for a specific date (from calendar input)
+ */
+export function getDayName(gregorianDateStr) {
+  try {
+    const d = gregorianDateStr ? new Date(gregorianDateStr) : new Date();
+    return HIJRI_DAYS[d.getDay()];
+  } catch(e) {
+    return HIJRI_DAYS[new Date().getDay()];
+  }
 }
 
 // Set global day name
