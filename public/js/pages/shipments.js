@@ -702,7 +702,7 @@ function buildSampleHTML(s, drv) {
       <p>انه في <strong>الأربعاء الموافق ${s?.date||'—'} هـ</strong> تم استقطاع عينه من الشاحنه</p>
       <p>رقم اللوحه <strong>${drv.plate||'—'}</strong> بقياده السائق <strong>${drv.name||'—'}</strong> لجنسيه <strong>${drv.nationality||'—'}</strong></p>
       <p>بموجب جواز سفر صادر من <strong>${drv.passport_country||drv.nationality||'—'}</strong></p>
-      <p>وبموجب بيان رقم : <strong>${s?.declaration_no||'—'}</strong> بتاريخ <strong>${s?.sample_date||s?.date||'—'}</strong></p>
+      <p>وبموجب بيان رقم : <strong>${s?.declaration_no||'—'}</strong> بتاريخ <strong>${s?.date||'—'}</strong></p>
       <p>والارساليه باسم المصدر : <strong>${s?.exporter||'—'}</strong> .</p>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;margin-bottom:48px;padding:0 10px;">
