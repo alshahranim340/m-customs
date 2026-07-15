@@ -92,3 +92,26 @@ export async function saveAttachments(shipmentId, filesObj) {
     await saveAttachment(shipmentId, key, fileData);
   }
 }
+
+// ─────────────────────────────────────────────
+// DELETE one attachment (metadata + all chunks)
+// ─────────────────────────────────────────────
+export async function deleteAttachment(shipmentId, key) {
+  const { deleteDoc, doc, getDoc } = await import('firebase/firestore');
+
+  // Get metadata to know chunk count
+  const metaRef = doc(db, 'attachments', `${shipmentId}_${key}`);
+  const metaSnap = await getDoc(metaRef);
+
+  if (metaSnap.exists()) {
+    const count = metaSnap.data().chunk_count || 1;
+    // Delete all chunks
+    for (let i = 0; i < count; i++) {
+      try {
+        await deleteDoc(doc(db, 'attachments', `${shipmentId}_${key}_chunk${i}`));
+      } catch(e) {}
+    }
+    // Delete metadata
+    await deleteDoc(metaRef);
+  }
+}
