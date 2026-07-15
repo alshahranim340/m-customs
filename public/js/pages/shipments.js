@@ -360,8 +360,40 @@ async function saveEdit() {
 // ─────────────────────────────────────────────
 // PREVIEW IN NEW TAB — معاينة قبل الدمج
 // ─────────────────────────────────────────────
+// Sync current form inputs into _editingShipment (for live preview)
+function syncFormToShipment() {
+  if (!_editingShipment) return;
+  const g = (id) => document.getElementById(id);
+  if (g('e-decl-no'))   _editingShipment.declaration_no = g('e-decl-no').value.trim();
+  if (g('e-unified-no'))_editingShipment.unified_no     = g('e-unified-no').value.trim();
+  if (g('e-date'))      _editingShipment.date           = g('e-date').value.trim();
+  if (g('e-sample-date')) {
+    _editingShipment.sample_date     = g('e-sample-date').value.trim();
+    _editingShipment.sample_day_name = g('e-sample-date').dataset?.dayName || '';
+  }
+  if (g('e-exporter')) _editingShipment.exporter          = g('e-exporter').value.trim();
+  if (g('e-goods'))    _editingShipment.goods_description = g('e-goods').value.trim();
+  if (g('e-dest')) {
+    const dest = g('e-dest').value;
+    _editingShipment.destination = dest;
+    _editingShipment.port = dest === 'bahrain' ? 'bahrain' : 'uae';
+  }
+  // Driver
+  _editingShipment.driver_snapshot = {
+    name:              g('e-drv-name')?.value?.trim() || '',
+    nationality:       g('e-drv-nat')?.value?.trim() || '',
+    passport_country:  g('e-drv-passport')?.value?.trim() || '',
+    plate:             g('e-drv-plate')?.value?.trim() || '',
+    vehicle_type:      g('e-drv-vtype')?.value?.trim() || '',
+    carrier_type:      g('e-drv-ctype')?.value?.trim() || '',
+    plate_nationality: g('e-drv-pnat')?.value?.trim() || '',
+  };
+}
+
 function previewMerge() {
   if (!_editingShipment) return;
+  // Refresh shipment data from current form inputs (so preview shows latest)
+  syncFormToShipment();
   const s   = _editingShipment;
   const drv = s?.driver_snapshot || {};
 
@@ -513,6 +545,7 @@ async function mergeAll() {
   const btn = document.getElementById('btn-merge');
   if (btn) { btn.disabled = true; btn.textContent = '⏳ جاري الدمج...'; }
   try {
+    syncFormToShipment();
     const s   = _editingShipment;
     const drv = s?.driver_snapshot || {};
 
