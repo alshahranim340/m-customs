@@ -11,13 +11,16 @@ const HIJRI_MONTHS = [
 const HIJRI_DAYS = ['الأحد','الإثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
 
 export function toHijri(date = new Date()) {
-  const hijri = new Intl.DateTimeFormat('ar-SA-u-ca-islamic', {
+  const hijri = new Intl.DateTimeFormat('en-US-u-ca-islamic-umalqura-nu-latn', {
     year:'numeric', month:'2-digit', day:'2-digit'
   }).formatToParts(date);
   const y = parseInt(hijri.find(p=>p.type==='year')?.value);
   const m = parseInt(hijri.find(p=>p.type==='month')?.value);
   const d = parseInt(hijri.find(p=>p.type==='day')?.value);
-  return { year:y, month:m, day:d, str:`${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}` };
+  const Y = Number.isFinite(y) ? y : 1447;
+  const M = Number.isFinite(m) ? m : 1;
+  const D = Number.isFinite(d) ? d : 1;
+  return { year:Y, month:M, day:D, str:`${Y}-${String(M).padStart(2,'0')}-${String(D).padStart(2,'0')}` };
 }
 
 export function todayHijri() {
@@ -47,7 +50,12 @@ function parseDate(val) {
 // Build picker using DOM directly (no template string issues)
 export function buildHijriPicker(id, value, label) {
   const today  = toHijri();
-  const parsed = parseDate(value) || today;
+  // Handle string value; if empty/invalid use today
+  let parsed = null;
+  if (value && typeof value === 'string') {
+    parsed = parseDate(value);
+  }
+  if (!parsed) parsed = today;
 
   const Y = parsed.year;
   const M = parsed.month;
@@ -123,7 +131,8 @@ export function buildHijriPicker(id, value, label) {
   // YEAR select
   const yearSel = document.createElement('select');
   yearSel.id = `${id}-year`;
-  for (let y = 1440; y <= today.year + 3; y++) {
+  const endY = Number.isFinite(today.year) ? today.year + 3 : 1455;
+  for (let y = 1440; y <= endY; y++) {
     const o = document.createElement('option');
     o.value = y;
     o.textContent = `${y} هـ`;
