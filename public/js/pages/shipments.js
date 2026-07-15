@@ -1,7 +1,8 @@
 import { buildHijriPicker, todayHijri, getDayName, dayNameFromHijri } from '../../../src/utils/hijriDate.js';
 import { LOGO_B64, STAMP_B64, AEO_PDF_B64 } from '../../../src/utils/assets.js';
 import { getShipments, updateShipment, getShipment } from '../../../src/firebase/db.js';
-import { saveAttachments, getAttachments, saveAttachment } from '../../../src/firebase/attachments.js';
+import { saveAttachments, getAttachments, saveAttachment, deleteAttachment } from '../../../src/firebase/attachments.js';
+import { getFolders, createFolder, deleteFolder } from '../../../src/firebase/folders.js';
 import { deleteDoc, doc } from 'firebase/firestore';
 import { db } from '../../../src/firebase/config.js';
 import { fileToBase64, mergePDFs, htmlToPdfBytes, downloadBytes } from '../../../src/utils/fileUtils.js';
@@ -37,6 +38,9 @@ export async function renderShipments(container) {
       </div>
     </div>
     <div class="page-body">
+      <!-- Folder tabs -->
+      <div id="folder-tabs" class="folder-tabs-wrap"></div>
+
       <!-- Search bar -->
       <div style="margin-bottom:14px;">
         <input type="text" id="search-input"
@@ -73,6 +77,7 @@ export async function renderShipments(container) {
   window.saveEdit         = saveEdit;
   window.confirmDelete    = confirmDelete;
   window.editFileSelected = editFileSelected;
+  window.deleteAttach     = deleteAttach;
   window.mergeAll         = mergeAll;
   window.previewMerge     = previewMerge;
   window.doMergeDownload  = mergeAll;
@@ -94,33 +99,140 @@ export async function renderShipments(container) {
 }
 
 // ─────────────────────────────────────────────
-// LIST
+// LIST — with numbering, sorting, folders
 // ─────────────────────────────────────────────
 let _allShipments = [];
+let _folders      = [];
+let _currentFolder = 'all';  // 'all' or folder id
+let _sortField    = 'created';
+let _sortDir      = 'desc';
+let _searchQuery  = '';
 
 function searchShipments(query) {
-  const q = query.toLowerCase().trim();
-  if (!q) {
-    renderShipmentsList(_allShipments);
-    return;
+  _searchQuery = query.toLowerCase().trim();
+  applyFiltersAndRender();
+}
+
+function applyFiltersAndRender() {
+  let list = [..._allShipments];
+
+  // Filter by folder
+  if (_currentFolder !== 'all') {
+    list = list.filter(s => s.folder_id === _currentFolder);
   }
-  const filtered = _allShipments.filter(s =>
-    (s.declaration_no||'').toLowerCase().includes(q) ||
-    (s.driver_snapshot?.name||'').toLowerCase().includes(q) ||
-    (s.driver_snapshot?.plate||'').toLowerCase().includes(q) ||
-    (s.exporter||'').toLowerCase().includes(q) ||
-    (s.goods_description||'').toLowerCase().includes(q) ||
-    (s.created_by?.name||'').toLowerCase().includes(q)
-  );
-  renderShipmentsList(filtered);
+
+  // Filter by search
+  if (_searchQuery) {
+    list = list.filter(s =>
+      (s.declaration_no||'').toLowerCase().includes(_searchQuery) ||
+      (s.driver_snapshot?.name||'').toLowerCase().includes(_searchQuery) ||
+      (s.driver_snapshot?.plate||'').toLowerCase().includes(_searchQuery) ||
+      (s.exporter||'').toLowerCase().includes(_searchQuery) ||
+      (s.goods_description||'').toLowerCase().includes(_searchQuery) ||
+      (s.created_by?.name||'').toLowerCase().includes(_searchQuery)
+    );
+  }
+
+  // Sort
+  list.sort((a, b) => {
+    let av, bv;
+    switch(_sortField) {
+      case 'declaration_no': av = a.declaration_no||''; bv = b.declaration_no||''; break;
+      case 'driver':         av = a.driver_snapshot?.name||''; bv = b.driver_snapshot?.name||''; break;
+      case 'date':           av = a.date||''; bv = b.date||''; break;
+      case 'status':         av = a.status||''; bv = b.status||''; break;
+      default:               av = a.created_at?.seconds||0; bv = b.created_at?.seconds||0;
+    }
+    if (av < bv) return _sortDir === 'asc' ? -1 : 1;
+    if (av > bv) return _sortDir === 'asc' ? 1 : -1;
+    return 0;
+  });
+
+  renderShipmentsList(list);
 }
 
 async function loadShipments() {
-  _allShipments = await getShipments(100);
-  const list = document.getElementById('shipments-list');
-
-  renderShipmentsList(_allShipments);
+  [_allShipments, _folders] = await Promise.all([
+    getShipments(200),
+    getFolders()
+  ]);
+  renderFolderTabs();
+  applyFiltersAndRender();
   window.searchShipments = searchShipments;
+  window.setSortField    = setSortField;
+  window.selectFolder    = selectFolder;
+  window.openNewFolder   = openNewFolder;
+  window.deleteFolderFn  = deleteFolderFn;
+}
+
+function setSortField(field) {
+  if (_sortField === field) {
+    _sortDir = _sortDir === 'asc' ? 'desc' : 'asc';
+  } else {
+    _sortField = field;
+    _sortDir = 'asc';
+  }
+  applyFiltersAndRender();
+}
+
+function sortIcon(field) {
+  if (_sortField !== field) return '<i class="ti ti-arrows-sort" style="opacity:0.4;font-size:13px"></i>';
+  return _sortDir === 'asc'
+    ? '<i class="ti ti-sort-ascending" style="color:var(--blue);font-size:13px"></i>'
+    : '<i class="ti ti-sort-descending" style="color:var(--blue);font-size:13px"></i>';
+}
+
+// ── FOLDER TABS ──
+function renderFolderTabs() {
+  const wrap = document.getElementById('folder-tabs');
+  if (!wrap) return;
+  wrap.innerHTML = `
+    <button class="folder-tab ${_currentFolder==='all'?'active':''}" onclick="selectFolder('all')">
+      <i class="ti ti-inbox"></i> الكل
+      <span class="folder-count">${_allShipments.length}</span>
+    </button>
+    ${_folders.map(f => {
+      const count = _allShipments.filter(s => s.folder_id === f.id).length;
+      return `<button class="folder-tab ${_currentFolder===f.id?'active':''}" onclick="selectFolder('${f.id}')">
+        <i class="ti ti-folder"></i> ${f.name}
+        <span class="folder-count">${count}</span>
+        <span class="folder-del" onclick="event.stopPropagation();deleteFolderFn('${f.id}','${f.name}')"><i class="ti ti-x"></i></span>
+      </button>`;
+    }).join('')}
+    <button class="folder-tab folder-add" onclick="openNewFolder()">
+      <i class="ti ti-plus"></i> مجلد جديد
+    </button>`;
+}
+
+function selectFolder(id) {
+  _currentFolder = id;
+  renderFolderTabs();
+  applyFiltersAndRender();
+}
+
+async function openNewFolder() {
+  const name = window.prompt('اسم المجلد الجديد:');
+  if (!name || !name.trim()) return;
+  await createFolder(name.trim());
+  _folders = await getFolders();
+  renderFolderTabs();
+  toast('✅ تم إنشاء المجلد', 'success');
+}
+
+async function deleteFolderFn(id, name) {
+  if (!window.confirm(`حذف مجلد "${name}"؟\nالشحنات بداخله لن تُحذف، ستعود للقائمة العامة.`)) return;
+  // Remove folder_id from shipments in this folder
+  const inFolder = _allShipments.filter(s => s.folder_id === id);
+  for (const s of inFolder) {
+    await updateShipment(s.id, { folder_id: null });
+    s.folder_id = null;
+  }
+  await deleteFolder(id);
+  _folders = await getFolders();
+  if (_currentFolder === id) _currentFolder = 'all';
+  renderFolderTabs();
+  applyFiltersAndRender();
+  toast('🗑️ تم حذف المجلد', 'success');
 }
 
 function renderShipmentsList(shipments) {
@@ -130,13 +242,25 @@ function renderShipmentsList(shipments) {
   if (!shipments.length) {
     list.innerHTML = `<div class="empty-state">
       <div class="empty-icon">📭</div>
-      <div class="empty-title">لا توجد نتائج</div>
+      <div class="empty-title">لا توجد شحنات</div>
     </div>`;
     return;
   }
 
-  list.innerHTML = `<div class="ship-list">${shipments.map(s => `
+  // Sort header
+  const header = `
+    <div class="ship-header">
+      <div class="sh-num">#</div>
+      <div class="sh-col" onclick="setSortField('declaration_no')">البيان ${sortIcon('declaration_no')}</div>
+      <div class="sh-col sh-flex" onclick="setSortField('driver')">السائق / المصدر ${sortIcon('driver')}</div>
+      <div class="sh-col" onclick="setSortField('date')">التاريخ ${sortIcon('date')}</div>
+      <div class="sh-col" onclick="setSortField('status')">الحالة ${sortIcon('status')}</div>
+      <div class="sh-col-actions">إجراءات</div>
+    </div>`;
+
+  const rows = shipments.map((s, i) => `
     <div class="ship-item">
+      <div class="ship-num">${i+1}</div>
       <div style="flex:1;">
         <div class="ship-no">بيان #${s.declaration_no||'—'}</div>
         <div class="ship-drv">👤 ${s.driver_snapshot?.name||'—'} &nbsp;|&nbsp; ${s.exporter||''}</div>
@@ -149,11 +273,38 @@ function renderShipmentsList(shipments) {
       <div class="ship-dest">${DEST[s.destination]||'—'}</div>
       <span class="pill ${STATUS[s.status]?.class||'pill-draft'}">${STATUS[s.status]?.ar||s.status}</span>
       <div class="ship-actions">
+        <button class="icon-btn" title="نقل لمجلد" onclick="moveToFolder('${s.id}')"><i class="ti ti-folder-plus"></i></button>
         <button class="icon-btn" title="عرض وطباعة" onclick="navigate('shipment-view',{id:'${s.id}'})"><i class="ti ti-eye"></i></button>
         <button class="icon-btn" title="تعديل" onclick="openEditModal('${s.id}')"><i class="ti ti-edit"></i></button>
         <button class="icon-btn" title="حذف" style="border-color:var(--red-light);" onclick="confirmDelete('${s.id}','${s.declaration_no||''}')"><i class="ti ti-trash" style="color:var(--red)"></i></button>
       </div>
-    </div>`).join('')}</div>`;
+    </div>`).join('');
+
+  list.innerHTML = header + `<div class="ship-list">${rows}</div>`;
+
+  window.moveToFolder = moveToFolder;
+}
+
+// ── MOVE SHIPMENT TO FOLDER ──
+async function moveToFolder(shipmentId) {
+  if (!_folders.length) {
+    toast('أنشئ مجلداً أولاً', 'error');
+    return;
+  }
+  const options = _folders.map((f, i) => `${i+1}. ${f.name}`).join('\n');
+  const choice = window.prompt(`انقل إلى مجلد (اكتب الرقم):\n0. إزالة من المجلد\n${options}`);
+  if (choice === null) return;
+  const idx = parseInt(choice);
+  let folderId = null;
+  if (idx > 0 && idx <= _folders.length) {
+    folderId = _folders[idx-1].id;
+  }
+  await updateShipment(shipmentId, { folder_id: folderId });
+  const ship = _allShipments.find(s => s.id === shipmentId);
+  if (ship) ship.folder_id = folderId;
+  renderFolderTabs();
+  applyFiltersAndRender();
+  toast(folderId ? '✅ تم النقل للمجلد' : '✅ أُزيل من المجلد', 'success');
 }
 
 // ─────────────────────────────────────────────
@@ -186,17 +337,25 @@ async function openEditModal(id) {
   const attachHTML = ATTACHMENTS_ORDER.map(a => {
     const has = !!existing[a.key];
     return `
-      <label class="upload-item ${has?'uploaded':''}" id="edit-upload-${a.key}">
-        <input type="file" accept=".pdf,.jpg,.jpeg,.png" style="display:none"
-          onchange="editFileSelected('${a.key}',this)">
-        <span class="u-icon">${has?'✅':'📎'}</span>
-        <div>
-          <div class="u-name">${a.ar}</div>
-          <div class="u-state" id="edit-state-${a.key}">
-            ${has?(existing[a.key].name||'✓ محفوظ'):'اضغط للرفع'}
+      <div class="upload-item ${has?'uploaded':''}" id="edit-upload-${a.key}" style="position:relative;">
+        <label style="display:flex;align-items:center;gap:8px;flex:1;cursor:pointer;">
+          <input type="file" accept=".pdf,.jpg,.jpeg,.png" style="display:none"
+            onchange="editFileSelected('${a.key}',this)">
+          <span class="u-icon">${has?'✅':'📎'}</span>
+          <div>
+            <div class="u-name">${a.ar}</div>
+            <div class="u-state" id="edit-state-${a.key}">
+              ${has?(existing[a.key].name||'✓ محفوظ'):'اضغط للرفع'}
+            </div>
           </div>
-        </div>
-      </label>`;
+        </label>
+        ${has ? `<button onclick="deleteAttach('${a.key}')" title="حذف المرفق"
+          style="position:absolute;left:6px;top:50%;transform:translateY(-50%);
+          width:24px;height:24px;border:none;border-radius:6px;background:var(--red-light);
+          color:var(--red);cursor:pointer;display:flex;align-items:center;justify-content:center;">
+          <i class="ti ti-trash" style="font-size:13px"></i>
+        </button>` : ''}
+      </div>`;
   }).join('');
 
 
@@ -265,6 +424,29 @@ async function openEditModal(id) {
 function updatePortEdit() {
   const d = document.getElementById('e-dest')?.value;
   if (d) document.getElementById('e-port').value = PMAPS[d] || PMAPS.uae;
+}
+
+async function deleteAttach(key) {
+  if (!window.confirm('حذف هذا المرفق نهائياً؟')) return;
+  try {
+    await deleteAttachment(_editingId, key);
+    delete _existingFiles[key];
+    delete _editFiles[key];
+    // Update UI
+    const item = document.getElementById(`edit-upload-${key}`);
+    if (item) {
+      item.classList.remove('uploaded');
+      item.querySelector('.u-icon').textContent = '📎';
+      const state = document.getElementById(`edit-state-${key}`);
+      if (state) state.textContent = 'اضغط للرفع';
+      const delBtn = item.querySelector('button');
+      if (delBtn) delBtn.remove();
+    }
+    toast('🗑️ تم حذف المرفق', 'success');
+  } catch(e) {
+    console.error(e);
+    toast('خطأ في الحذف', 'error');
+  }
 }
 
 async function editFileSelected(key, input) {
