@@ -148,6 +148,7 @@ export async function renderNewShipment(container) {
             </div>
             <div class="form-grid-2">
               <div id="hijri-picker-wrap"></div>
+              <div id="hijri-picker-wrap2"></div>
               <div class="field"><label>نوع البيان</label>
                 <select id="decl-type">${declOptions}</select></div>
             </div>
@@ -187,11 +188,16 @@ export async function renderNewShipment(container) {
     </div>`;
 
   // Expose globals
-  // Init hijri date picker
+  // Init hijri date pickers
   const hijriWrap = document.getElementById('hijri-picker-wrap');
   if (hijriWrap) {
     hijriWrap.innerHTML = '';
-    hijriWrap.appendChild(buildHijriPicker('decl-date', todayHijri(), 'التاريخ (هجري) *'));
+    hijriWrap.appendChild(buildHijriPicker('decl-date', todayHijri(), 'تاريخ البيان *'));
+  }
+  const hijriWrap2 = document.getElementById('hijri-picker-wrap2');
+  if (hijriWrap2) {
+    hijriWrap2.innerHTML = '';
+    hijriWrap2.appendChild(buildHijriPicker('sample-date', todayHijri(), 'تاريخ استقطاع العينة *'));
   }
 
   window.updateHijriValue = window.updateHijriValue;
@@ -349,6 +355,7 @@ function collectData() {
       declaration_no:    document.getElementById('decl-no').value.trim(),
       unified_no:        document.getElementById('unified-no').value.trim(),
       date:              document.getElementById('decl-date').value.trim(),
+      sample_date:       document.getElementById('sample-date').value.trim(),
       declaration_type:  document.getElementById('decl-type').value,
       exporter:          document.getElementById('exporter').value.trim(),
       goods_description: document.getElementById('goods-desc').value.trim(),

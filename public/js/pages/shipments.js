@@ -211,6 +211,7 @@ async function openEditModal(id) {
       <div class="field"><label>الرقم الموحد</label>
         <input type="text" id="e-unified-no" value="${s.unified_no||''}"></div>
       <div id="e-date-wrap"></div>
+      <div id="e-sample-date-wrap"></div>
       <div class="field"><label>الحالة</label>
         <select id="e-status">${statusOpts}</select></div>
       <div class="field" style="grid-column:span 2;"><label>اسم المصدر</label>
@@ -248,11 +249,16 @@ async function openEditModal(id) {
     </div>
 `;
 
-  // Init hijri date picker AFTER innerHTML is set
+  // Init hijri date pickers AFTER innerHTML is set
   const dateWrap = document.getElementById('e-date-wrap');
   if (dateWrap) {
     dateWrap.innerHTML = '';
-    dateWrap.appendChild(buildHijriPicker('e-date', s.date || todayHijri(), 'التاريخ (هجري)'));
+    dateWrap.appendChild(buildHijriPicker('e-date', s.date || todayHijri(), 'تاريخ البيان'));
+  }
+  const sampleWrap = document.getElementById('e-sample-date-wrap');
+  if (sampleWrap) {
+    sampleWrap.innerHTML = '';
+    sampleWrap.appendChild(buildHijriPicker('e-sample-date', s.sample_date || s.date || todayHijri(), 'تاريخ استقطاع العينة'));
   }
 }
 
@@ -319,6 +325,7 @@ async function saveEdit() {
       declaration_no:    document.getElementById('e-decl-no').value.trim(),
       unified_no:        document.getElementById('e-unified-no').value.trim(),
       date:              document.getElementById('e-date').value.trim(),
+      sample_date:       document.getElementById('e-sample-date')?.value?.trim() || document.getElementById('e-date').value.trim(),
       status:            document.getElementById('e-status').value,
       exporter:          document.getElementById('e-exporter').value.trim(),
       goods_description: document.getElementById('e-goods').value.trim(),
@@ -661,7 +668,7 @@ function buildSampleHTML(s, drv) {
       <p>انه في <strong>الأربعاء الموافق ${s?.date||'—'} هـ</strong> تم استقطاع عينه من الشاحنه</p>
       <p>رقم اللوحه <strong>${drv.plate||'—'}</strong> بقياده السائق <strong>${drv.name||'—'}</strong> لجنسيه <strong>${drv.nationality||'—'}</strong></p>
       <p>بموجب جواز سفر صادر من <strong>${drv.passport_country||drv.nationality||'—'}</strong></p>
-      <p>وبموجب بيان رقم : <strong>${s?.declaration_no||'—'}</strong> بتاريخ <strong>${s?.date||'—'}</strong></p>
+      <p>وبموجب بيان رقم : <strong>${s?.declaration_no||'—'}</strong> بتاريخ <strong>${s?.sample_date||s?.date||'—'}</strong></p>
       <p>والارساليه باسم المصدر : <strong>${s?.exporter||'—'}</strong> .</p>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;margin-bottom:48px;padding:0 10px;">
