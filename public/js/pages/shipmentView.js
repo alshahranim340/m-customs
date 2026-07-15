@@ -1,3 +1,4 @@
+import { dayNameFromHijri } from '../../../src/utils/hijriDate.js';
 import { LOGO_B64, STAMP_B64 } from '../../../src/utils/assets.js';
 import { getShipment } from '../../../src/firebase/db.js';
 
@@ -323,7 +324,7 @@ function buildForms(s, port, drv, declType) {
       </div>
 
       <div class="f-body">
-        <p>انه في <strong>${s.sample_day_name || '—'} الموافق ${s.sample_date || '—'} هـ</strong> تم استقطاع عينه من الشاحنه</p>
+        <p>انه في <strong>${s.sample_day_name || (s.sample_date ? dayNameFromHijri(s.sample_date) : '—')} الموافق ${s.sample_date || '—'} هـ</strong> تم استقطاع عينه من الشاحنه</p>
         <p>رقم اللوحه <strong>${drv.plate || '—'}</strong> بقياده السائق <strong>${drv.name || '—'}</strong> لجنسيه <strong>${drv.nationality || '—'}</strong></p>
         <p>بموجب جواز سفر صادر من <strong>${drv.passport_country || drv.nationality || '—'}</strong></p>
         <p>وبموجب بيان رقم : <strong>${s.declaration_no || '—'}</strong> بتاريخ <strong>${s.date || '—'}</strong></p>

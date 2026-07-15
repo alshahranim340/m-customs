@@ -1,4 +1,4 @@
-import { buildHijriPicker, todayHijri, getDayName } from '../../../src/utils/hijriDate.js';
+import { buildHijriPicker, todayHijri, getDayName, dayNameFromHijri } from '../../../src/utils/hijriDate.js';
 import { LOGO_B64, STAMP_B64, AEO_PDF_B64 } from '../../../src/utils/assets.js';
 import { getShipments, updateShipment, getShipment } from '../../../src/firebase/db.js';
 import { saveAttachments, getAttachments, saveAttachment } from '../../../src/firebase/attachments.js';
@@ -699,7 +699,7 @@ function buildSampleHTML(s, drv) {
       البترولية تمهيدا لارسالها الى مختبرات تحليل المنتجات البتروليه
     </div>
     <div style="font-size:14px;color:#1a2535;line-height:3.2;text-align:right;margin-bottom:36px;">
-      <p>انه في <strong>الأربعاء الموافق ${s?.date||'—'} هـ</strong> تم استقطاع عينه من الشاحنه</p>
+      <p>انه في <strong>${s?.sample_day_name || (s?.sample_date ? dayNameFromHijri(s.sample_date) : '—')} الموافق ${s?.sample_date||'—'} هـ</strong> تم استقطاع عينه من الشاحنه</p>
       <p>رقم اللوحه <strong>${drv.plate||'—'}</strong> بقياده السائق <strong>${drv.name||'—'}</strong> لجنسيه <strong>${drv.nationality||'—'}</strong></p>
       <p>بموجب جواز سفر صادر من <strong>${drv.passport_country||drv.nationality||'—'}</strong></p>
       <p>وبموجب بيان رقم : <strong>${s?.declaration_no||'—'}</strong> بتاريخ <strong>${s?.date||'—'}</strong></p>
