@@ -356,6 +356,7 @@ function collectData() {
       unified_no:        document.getElementById('unified-no').value.trim(),
       date:              document.getElementById('decl-date').value.trim(),
       sample_date:       document.getElementById('sample-date').value.trim(),
+      sample_day_name:   document.getElementById('sample-date')?.dataset?.dayName || '',
       declaration_type:  document.getElementById('decl-type').value,
       exporter:          document.getElementById('exporter').value.trim(),
       goods_description: document.getElementById('goods-desc').value.trim(),

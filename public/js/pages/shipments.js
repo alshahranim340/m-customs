@@ -1,4 +1,4 @@
-import { buildHijriPicker, todayHijri } from '../../../src/utils/hijriDate.js';
+import { buildHijriPicker, todayHijri, getDayName } from '../../../src/utils/hijriDate.js';
 import { LOGO_B64, STAMP_B64, AEO_PDF_B64 } from '../../../src/utils/assets.js';
 import { getShipments, updateShipment, getShipment } from '../../../src/firebase/db.js';
 import { saveAttachments, getAttachments, saveAttachment } from '../../../src/firebase/attachments.js';
@@ -326,6 +326,7 @@ async function saveEdit() {
       unified_no:        document.getElementById('e-unified-no').value.trim(),
       date:              document.getElementById('e-date').value.trim(),
       sample_date:       document.getElementById('e-sample-date')?.value?.trim() || document.getElementById('e-date').value.trim(),
+      sample_day_name:   document.getElementById('e-sample-date')?.dataset?.dayName || '',
       status:            document.getElementById('e-status').value,
       exporter:          document.getElementById('e-exporter').value.trim(),
       goods_description: document.getElementById('e-goods').value.trim(),
