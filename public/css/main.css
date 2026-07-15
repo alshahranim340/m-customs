@@ -393,3 +393,63 @@ body {
   .two-col, .three-col { grid-template-columns:1fr; }
   .form-grid-2, .form-grid-3 { grid-template-columns:1fr; }
 }
+
+/* ═══════════════════════════════════════
+   FOLDERS
+═══════════════════════════════════════ */
+.folder-tabs-wrap {
+  display: flex; gap: 8px; flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+.folder-tab {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 7px 14px; border-radius: 20px;
+  border: 0.5px solid var(--border); background: white;
+  font-family: 'Tajawal', sans-serif; font-size: 12.5px;
+  color: var(--muted); cursor: pointer; transition: all 0.15s;
+  position: relative;
+}
+.folder-tab:hover { border-color: var(--blue); color: var(--blue); }
+.folder-tab.active { background: var(--navy); color: white; border-color: var(--navy); }
+.folder-tab i { font-size: 15px; }
+.folder-count {
+  background: rgba(0,0,0,0.08); color: inherit;
+  font-size: 10px; font-weight: 700;
+  padding: 1px 7px; border-radius: 10px;
+}
+.folder-tab.active .folder-count { background: rgba(255,255,255,0.2); }
+.folder-del {
+  display: none; margin-right: 2px;
+  width: 16px; height: 16px; border-radius: 50%;
+  background: var(--red-light); color: var(--red);
+  align-items: center; justify-content: center;
+}
+.folder-tab:hover .folder-del { display: inline-flex; }
+.folder-add { border-style: dashed; color: var(--blue); }
+
+/* ═══════════════════════════════════════
+   SHIP HEADER (sortable)
+═══════════════════════════════════════ */
+.ship-header {
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 18px; background: #F7F9FC;
+  border-bottom: 1px solid var(--border);
+  font-size: 11px; font-weight: 700; color: var(--muted);
+}
+.sh-num { width: 28px; text-align: center; }
+.sh-col {
+  cursor: pointer; user-select: none;
+  display: flex; align-items: center; gap: 4px;
+  transition: color 0.15s; white-space: nowrap;
+}
+.sh-col:hover { color: var(--blue); }
+.sh-flex { flex: 1; }
+.sh-col-actions { margin-right: auto; }
+
+/* Ship number badge */
+.ship-num {
+  width: 28px; height: 28px; flex-shrink: 0;
+  background: var(--surface); border: 0.5px solid var(--border);
+  border-radius: 7px; display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 700; color: var(--muted);
+}
