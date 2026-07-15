@@ -6,5 +6,6 @@ service cloud.firestore {
     match /attachments/{id} { allow read, write: if request.auth != null; }
     match /exporters/{id}   { allow read, write: if request.auth != null; }
     match /users/{id}       { allow read, write: if request.auth != null; }
+    match /folders/{id}     { allow read, write: if request.auth != null; }
   }
 }
