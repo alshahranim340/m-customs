@@ -72,7 +72,7 @@ export async function getAttachment(shipmentId, key) {
 // GET all attachments for a shipment
 // ─────────────────────────────────────────────
 export async function getAttachments(shipmentId) {
-  const keys = ['invoice','packing_list','coo','analysis_cert','saudi_clearance','driver_docs'];
+  const keys = ['invoice','packing_list','coo','analysis_cert','saudi_clearance','driver_docs','broker_reply','appointment'];
   const result = {};
 
   await Promise.all(keys.map(async key => {
