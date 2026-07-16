@@ -3,7 +3,7 @@ import {
   getCustomers, getAgents, IMPORT_PORTS, IMPORT_STATUS
 } from '../../../../src/firebase/importDb.js';
 import { toast } from '../../app.js';
-import { getCurrentProfile } from '../../../../src/firebase/auth.js';
+import { getCurrentProfile } from '../../app.js';
 
 let _shipments = [];
 let _customers = [];
