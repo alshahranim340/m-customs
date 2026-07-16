@@ -1,9 +1,9 @@
 import {
   getImportShipments, createImportShipment, updateImportShipment, deleteImportShipment,
   getCustomers, getAgents, IMPORT_PORTS, IMPORT_STATUS
-} from '../../../src/firebase/importDb.js';
-import { toast } from '../app.js';
-import { getCurrentProfile } from '../../../src/firebase/auth.js';
+} from '../../../../src/firebase/importDb.js';
+import { toast } from '../../app.js';
+import { getCurrentProfile } from '../../../../src/firebase/auth.js';
 
 let _shipments = [];
 let _customers = [];

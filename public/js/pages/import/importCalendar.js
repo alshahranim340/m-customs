@@ -1,4 +1,4 @@
-import { getImportShipments, IMPORT_STATUS } from '../../../src/firebase/importDb.js';
+import { getImportShipments, IMPORT_STATUS } from '../../../../src/firebase/importDb.js';
 
 let _shipments = [];
 let _viewDate  = new Date();

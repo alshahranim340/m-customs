@@ -1,5 +1,5 @@
-import { getImportShipments, getExpenses, IMPORT_STATUS } from '../../../src/firebase/importDb.js';
-import { navigate } from '../app.js';
+import { getImportShipments, getExpenses, IMPORT_STATUS } from '../../../../src/firebase/importDb.js';
+import { navigate } from '../../app.js';
 
 export async function renderImportDashboard(container) {
   container.innerHTML = `

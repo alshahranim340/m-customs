@@ -1,5 +1,5 @@
-import { getAgents, addAgent } from '../../../src/firebase/importDb.js';
-import { toast } from '../app.js';
+import { getAgents, addAgent } from '../../../../src/firebase/importDb.js';
+import { toast } from '../../app.js';
 
 let _agents = [];
 

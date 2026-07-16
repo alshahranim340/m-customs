@@ -1,5 +1,5 @@
-import { getCustomers, addCustomer, updateCustomer, deleteCustomer } from '../../../src/firebase/importDb.js';
-import { toast } from '../app.js';
+import { getCustomers, addCustomer, updateCustomer, deleteCustomer } from '../../../../src/firebase/importDb.js';
+import { toast } from '../../app.js';
 
 let _customers = [];
 

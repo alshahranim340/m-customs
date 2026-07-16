@@ -1,10 +1,10 @@
 import {
   getExpenses, createExpense, updateExpense, deleteExpense,
   getImportShipments, getCustomers, getFeeTypes, addFeeType
-} from '../../../src/firebase/importDb.js';
-import { toast } from '../app.js';
-import { fileToBase64 } from '../../../src/utils/fileUtils.js';
-import { downloadBytes, mergePDFs, base64ToUint8Array } from '../../../src/utils/fileUtils.js';
+} from '../../../../src/firebase/importDb.js';
+import { toast } from '../../app.js';
+import { fileToBase64 } from '../../../../src/utils/fileUtils.js';
+import { downloadBytes, mergePDFs, base64ToUint8Array } from '../../../../src/utils/fileUtils.js';
 
 let _expenses   = [];
 let _shipments  = [];
@@ -431,7 +431,7 @@ async function exportExpensePdf(id) {
     </table>
     <div class="footer">M-Customs — نظام التخليص الجمركي</div>`;
 
-  const { htmlToPdfBytes } = await import('../../../src/utils/fileUtils.js');
+  const { htmlToPdfBytes } = await import('../../../../src/utils/fileUtils.js');
   const bytes = await htmlToPdfBytes(html);
   downloadBytes(bytes, `فاتورة-${e.customer_name}-${e.shipment_bl}.pdf`);
 }
