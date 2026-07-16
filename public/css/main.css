@@ -503,3 +503,146 @@ body {
   background: #EBF4FF !important;
   border-color: var(--blue) !important;
 }
+/* ─────────────────────────────────────────────
+   SECTION SWITCHER — الصادر / الوارد
+───────────────────────────────────────────── */
+.section-switcher {
+  display: flex;
+  gap: 6px;
+  padding: 10px 14px;
+  background: rgba(0,0,0,0.15);
+  border-bottom: 0.5px solid rgba(255,255,255,0.08);
+}
+
+.section-btn {
+  flex: 1;
+  padding: 8px 6px;
+  border: 0.5px solid rgba(255,255,255,0.15);
+  border-radius: 8px;
+  background: transparent;
+  color: rgba(255,255,255,0.5);
+  font-family: 'Tajawal', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: all 0.2s;
+}
+
+.section-btn:hover {
+  background: rgba(255,255,255,0.08);
+  color: rgba(255,255,255,0.8);
+}
+
+.section-active {
+  background: rgba(37, 99, 168, 0.6) !important;
+  color: white !important;
+  border-color: rgba(37, 99, 168, 0.8) !important;
+}
+
+/* ─────────────────────────────────────────────
+   CALENDAR
+───────────────────────────────────────────── */
+.cal-grid-head {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  margin-bottom: 4px;
+}
+
+.cal-head-cell {
+  text-align: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--muted);
+  padding: 6px 2px;
+}
+
+.cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+}
+
+.cal-cell {
+  min-height: 72px;
+  border: 0.5px solid var(--border);
+  border-radius: 6px;
+  padding: 4px;
+  background: white;
+  transition: background 0.15s;
+}
+
+.cal-empty {
+  background: var(--surface);
+  border-color: transparent;
+}
+
+.cal-today {
+  border-color: var(--blue) !important;
+  background: #EFF6FF;
+}
+
+.cal-past-ships {
+  background: #FFF8F8;
+}
+
+.cal-day-num {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--navy);
+  margin-bottom: 2px;
+  text-align: center;
+}
+
+.cal-today-num {
+  background: var(--blue);
+  color: white;
+  border-radius: 50%;
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 2px;
+  font-size: 11px;
+}
+
+.cal-ship-chip {
+  font-size: 9px;
+  font-weight: 600;
+  padding: 2px 4px;
+  border-radius: 3px;
+  margin-bottom: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+}
+
+.cal-chip-active {
+  background: #DBEAFE;
+  color: #1D4ED8;
+}
+
+.cal-chip-late {
+  background: #FEE2E2;
+  color: #B91C1C;
+}
+
+.cal-chip-done {
+  background: #DCFCE7;
+  color: #166534;
+}
+
+/* ─────────────────────────────────────────────
+   IMPORT — general tweaks
+───────────────────────────────────────────── */
+.stats-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
