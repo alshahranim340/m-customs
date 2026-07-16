@@ -38,9 +38,6 @@ export async function renderShipments(container) {
       </div>
     </div>
     <div class="page-body">
-      <!-- Folder tabs -->
-      <div id="folder-tabs" class="folder-tabs-wrap"></div>
-
       <!-- Search bar -->
       <div style="margin-bottom:14px;">
         <input type="text" id="search-input"
@@ -52,6 +49,24 @@ export async function renderShipments(container) {
           onfocus="this.style.borderColor='var(--blue)'"
           onblur="this.style.borderColor='var(--border)'">
       </div>
+      <!-- Selection toolbar -->
+      <div id="selection-bar" style="display:none;align-items:center;gap:10px;
+        background:var(--navy);color:white;padding:10px 16px;border-radius:10px;margin-bottom:12px;">
+        <span id="sel-count" style="font-size:13px;font-weight:700;"></span>
+        <button class="btn btn-sm btn-gold" onclick="moveSelectedToFolder()">
+          <i class="ti ti-folder-plus"></i> نقل إلى مجلد
+        </button>
+        <button class="btn btn-sm btn-ghost" onclick="clearSelection()" style="background:rgba(255,255,255,0.1);color:white;border:none;">
+          إلغاء التحديد
+        </button>
+      </div>
+
+      <div style="display:flex;justify-content:flex-end;margin-bottom:10px;">
+        <button class="btn btn-sm btn-ghost" onclick="openNewFolder()">
+          <i class="ti ti-folder-plus"></i> مجلد جديد
+        </button>
+      </div>
+
       <div class="card">
         <div id="shipments-list"><div class="loader"><div class="spinner"></div></div></div>
       </div>
@@ -99,42 +114,23 @@ export async function renderShipments(container) {
 }
 
 // ─────────────────────────────────────────────
-// LIST — with numbering, sorting, folders
+// LIST — merged folders, checkboxes, sorting
 // ─────────────────────────────────────────────
 let _allShipments = [];
 let _folders      = [];
-let _currentFolder = 'all';  // 'all' or folder id
 let _sortField    = 'created';
 let _sortDir      = 'desc';
 let _searchQuery  = '';
+let _selected     = new Set();
+let _openFolders  = new Set();
 
 function searchShipments(query) {
   _searchQuery = query.toLowerCase().trim();
   applyFiltersAndRender();
 }
 
-function applyFiltersAndRender() {
-  let list = [..._allShipments];
-
-  // Filter by folder
-  if (_currentFolder !== 'all') {
-    list = list.filter(s => s.folder_id === _currentFolder);
-  }
-
-  // Filter by search
-  if (_searchQuery) {
-    list = list.filter(s =>
-      (s.declaration_no||'').toLowerCase().includes(_searchQuery) ||
-      (s.driver_snapshot?.name||'').toLowerCase().includes(_searchQuery) ||
-      (s.driver_snapshot?.plate||'').toLowerCase().includes(_searchQuery) ||
-      (s.exporter||'').toLowerCase().includes(_searchQuery) ||
-      (s.goods_description||'').toLowerCase().includes(_searchQuery) ||
-      (s.created_by?.name||'').toLowerCase().includes(_searchQuery)
-    );
-  }
-
-  // Sort
-  list.sort((a, b) => {
+function sortList(list) {
+  return list.sort((a, b) => {
     let av, bv;
     switch(_sortField) {
       case 'declaration_no': av = a.declaration_no||''; bv = b.declaration_no||''; break;
@@ -147,8 +143,16 @@ function applyFiltersAndRender() {
     if (av > bv) return _sortDir === 'asc' ? 1 : -1;
     return 0;
   });
+}
 
-  renderShipmentsList(list);
+function matchSearch(s) {
+  if (!_searchQuery) return true;
+  return (s.declaration_no||'').toLowerCase().includes(_searchQuery) ||
+    (s.driver_snapshot?.name||'').toLowerCase().includes(_searchQuery) ||
+    (s.driver_snapshot?.plate||'').toLowerCase().includes(_searchQuery) ||
+    (s.exporter||'').toLowerCase().includes(_searchQuery) ||
+    (s.goods_description||'').toLowerCase().includes(_searchQuery) ||
+    (s.created_by?.name||'').toLowerCase().includes(_searchQuery);
 }
 
 async function loadShipments() {
@@ -156,22 +160,21 @@ async function loadShipments() {
     getShipments(200),
     getFolders()
   ]);
-  renderFolderTabs();
   applyFiltersAndRender();
-  window.searchShipments = searchShipments;
-  window.setSortField    = setSortField;
-  window.selectFolder    = selectFolder;
-  window.openNewFolder   = openNewFolder;
-  window.deleteFolderFn  = deleteFolderFn;
+  window.searchShipments      = searchShipments;
+  window.setSortField         = setSortField;
+  window.openNewFolder        = openNewFolder;
+  window.toggleFolder         = toggleFolder;
+  window.deleteFolderFn       = deleteFolderFn;
+  window.toggleSelect         = toggleSelect;
+  window.clearSelection       = clearSelection;
+  window.moveSelectedToFolder = moveSelectedToFolder;
+  window.moveToFolder         = moveToFolder;
 }
 
 function setSortField(field) {
-  if (_sortField === field) {
-    _sortDir = _sortDir === 'asc' ? 'desc' : 'asc';
-  } else {
-    _sortField = field;
-    _sortDir = 'asc';
-  }
+  if (_sortField === field) _sortDir = _sortDir === 'asc' ? 'desc' : 'asc';
+  else { _sortField = field; _sortDir = 'asc'; }
   applyFiltersAndRender();
 }
 
@@ -182,74 +185,37 @@ function sortIcon(field) {
     : '<i class="ti ti-sort-descending" style="color:var(--blue);font-size:13px"></i>';
 }
 
-// ── FOLDER TABS ──
-function renderFolderTabs() {
-  const wrap = document.getElementById('folder-tabs');
-  if (!wrap) return;
-  wrap.innerHTML = `
-    <button class="folder-tab ${_currentFolder==='all'?'active':''}" onclick="selectFolder('all')">
-      <i class="ti ti-inbox"></i> الكل
-      <span class="folder-count">${_allShipments.length}</span>
-    </button>
-    ${_folders.map(f => {
-      const count = _allShipments.filter(s => s.folder_id === f.id).length;
-      return `<button class="folder-tab ${_currentFolder===f.id?'active':''}" onclick="selectFolder('${f.id}')">
-        <i class="ti ti-folder"></i> ${f.name}
-        <span class="folder-count">${count}</span>
-        <span class="folder-del" onclick="event.stopPropagation();deleteFolderFn('${f.id}','${f.name}')"><i class="ti ti-x"></i></span>
-      </button>`;
-    }).join('')}
-    <button class="folder-tab folder-add" onclick="openNewFolder()">
-      <i class="ti ti-plus"></i> مجلد جديد
-    </button>`;
-}
-
-function selectFolder(id) {
-  _currentFolder = id;
-  renderFolderTabs();
-  applyFiltersAndRender();
-}
-
-async function openNewFolder() {
-  const name = window.prompt('اسم المجلد الجديد:');
-  if (!name || !name.trim()) return;
-  await createFolder(name.trim());
-  _folders = await getFolders();
-  renderFolderTabs();
-  toast('✅ تم إنشاء المجلد', 'success');
-}
-
-async function deleteFolderFn(id, name) {
-  if (!window.confirm(`حذف مجلد "${name}"؟\nالشحنات بداخله لن تُحذف، ستعود للقائمة العامة.`)) return;
-  // Remove folder_id from shipments in this folder
-  const inFolder = _allShipments.filter(s => s.folder_id === id);
-  for (const s of inFolder) {
-    await updateShipment(s.id, { folder_id: null });
-    s.folder_id = null;
-  }
-  await deleteFolder(id);
-  _folders = await getFolders();
-  if (_currentFolder === id) _currentFolder = 'all';
-  renderFolderTabs();
-  applyFiltersAndRender();
-  toast('🗑️ تم حذف المجلد', 'success');
-}
-
-function renderShipmentsList(shipments) {
+function applyFiltersAndRender() {
   const list = document.getElementById('shipments-list');
   if (!list) return;
 
-  if (!shipments.length) {
-    list.innerHTML = `<div class="empty-state">
-      <div class="empty-icon">📭</div>
-      <div class="empty-title">لا توجد شحنات</div>
-    </div>`;
+  // Group shipments by folder
+  const inFolder = {};   // folderId -> [shipments]
+  const noFolder = [];
+  _folders.forEach(f => inFolder[f.id] = []);
+
+  _allShipments.filter(matchSearch).forEach(s => {
+    if (s.folder_id && inFolder[s.folder_id]) {
+      inFolder[s.folder_id].push(s);
+    } else {
+      noFolder.push(s);
+    }
+  });
+
+  // Sort each group
+  Object.keys(inFolder).forEach(k => sortList(inFolder[k]));
+  sortList(noFolder);
+
+  const totalShown = _allShipments.filter(matchSearch).length;
+  if (totalShown === 0) {
+    list.innerHTML = `<div class="empty-state"><div class="empty-icon">📭</div><div class="empty-title">لا توجد شحنات</div></div>`;
     return;
   }
 
-  // Sort header
-  const header = `
+  // Header
+  let html = `
     <div class="ship-header">
+      <div style="width:24px;"></div>
       <div class="sh-num">#</div>
       <div class="sh-col" onclick="setSortField('declaration_no')">البيان ${sortIcon('declaration_no')}</div>
       <div class="sh-col sh-flex" onclick="setSortField('driver')">السائق / المصدر ${sortIcon('driver')}</div>
@@ -258,9 +224,45 @@ function renderShipmentsList(shipments) {
       <div class="sh-col-actions">إجراءات</div>
     </div>`;
 
-  const rows = shipments.map((s, i) => `
-    <div class="ship-item">
-      <div class="ship-num">${i+1}</div>
+  let counter = { n: 0 };
+
+  // Render folders first
+  _folders.forEach(f => {
+    const items = inFolder[f.id] || [];
+    if (_searchQuery && items.length === 0) return; // hide empty folders during search
+    const isOpen = _openFolders.has(f.id);
+    html += `
+      <div class="folder-row" onclick="toggleFolder('${f.id}')">
+        <i class="ti ti-chevron-${isOpen?'down':'left'}" style="font-size:16px;"></i>
+        <i class="ti ti-folder${isOpen?'-open':''}" style="font-size:18px;color:var(--gold);"></i>
+        <span class="folder-name">${f.name}</span>
+        <span class="folder-badge">${items.length}</span>
+        <button class="folder-del-btn" onclick="event.stopPropagation();deleteFolderFn('${f.id}','${f.name}')" title="حذف المجلد">
+          <i class="ti ti-trash" style="font-size:13px"></i>
+        </button>
+      </div>`;
+    if (isOpen) {
+      html += `<div class="folder-content">`;
+      items.forEach(s => { counter.n++; html += renderShipRow(s, counter.n); });
+      if (items.length === 0) html += `<div style="padding:16px;text-align:center;color:var(--muted);font-size:12px;">المجلد فارغ</div>`;
+      html += `</div>`;
+    }
+  });
+
+  // Render shipments without folder
+  noFolder.forEach(s => { counter.n++; html += renderShipRow(s, counter.n); });
+
+  list.innerHTML = html;
+  updateSelectionBar();
+}
+
+function renderShipRow(s, num) {
+  const checked = _selected.has(s.id);
+  return `
+    <div class="ship-item ${checked?'selected':''}">
+      <input type="checkbox" class="ship-check" ${checked?'checked':''}
+        onchange="toggleSelect('${s.id}')" onclick="event.stopPropagation()">
+      <div class="ship-num">${num}</div>
       <div style="flex:1;">
         <div class="ship-no">بيان #${s.declaration_no||'—'}</div>
         <div class="ship-drv">👤 ${s.driver_snapshot?.name||'—'} &nbsp;|&nbsp; ${s.exporter||''}</div>
@@ -278,33 +280,99 @@ function renderShipmentsList(shipments) {
         <button class="icon-btn" title="تعديل" onclick="openEditModal('${s.id}')"><i class="ti ti-edit"></i></button>
         <button class="icon-btn" title="حذف" style="border-color:var(--red-light);" onclick="confirmDelete('${s.id}','${s.declaration_no||''}')"><i class="ti ti-trash" style="color:var(--red)"></i></button>
       </div>
-    </div>`).join('');
-
-  list.innerHTML = header + `<div class="ship-list">${rows}</div>`;
-
-  window.moveToFolder = moveToFolder;
+    </div>`;
 }
 
-// ── MOVE SHIPMENT TO FOLDER ──
-async function moveToFolder(shipmentId) {
-  if (!_folders.length) {
-    toast('أنشئ مجلداً أولاً', 'error');
-    return;
+// ── FOLDER TOGGLE ──
+function toggleFolder(id) {
+  if (_openFolders.has(id)) _openFolders.delete(id);
+  else _openFolders.add(id);
+  applyFiltersAndRender();
+}
+
+async function openNewFolder() {
+  const name = window.prompt('اسم المجلد الجديد:');
+  if (!name || !name.trim()) return;
+  const id = await createFolder(name.trim());
+  _folders = await getFolders();
+  _openFolders.add(id);
+  applyFiltersAndRender();
+  toast('✅ تم إنشاء المجلد', 'success');
+}
+
+async function deleteFolderFn(id, name) {
+  if (!window.confirm(`حذف مجلد "${name}"؟\nالشحنات بداخله ستعود للقائمة العامة.`)) return;
+  const inFolder = _allShipments.filter(s => s.folder_id === id);
+  for (const s of inFolder) {
+    await updateShipment(s.id, { folder_id: null });
+    s.folder_id = null;
   }
+  await deleteFolder(id);
+  _folders = await getFolders();
+  _openFolders.delete(id);
+  applyFiltersAndRender();
+  toast('🗑️ تم حذف المجلد', 'success');
+}
+
+// ── SELECTION ──
+function toggleSelect(id) {
+  if (_selected.has(id)) _selected.delete(id);
+  else _selected.add(id);
+  applyFiltersAndRender();
+}
+
+function clearSelection() {
+  _selected.clear();
+  applyFiltersAndRender();
+}
+
+function updateSelectionBar() {
+  const bar = document.getElementById('selection-bar');
+  const cnt = document.getElementById('sel-count');
+  if (!bar) return;
+  if (_selected.size > 0) {
+    bar.style.display = 'flex';
+    cnt.textContent = `تم تحديد ${_selected.size} شحنة`;
+  } else {
+    bar.style.display = 'none';
+  }
+}
+
+async function moveSelectedToFolder() {
+  if (_selected.size === 0) return;
+  if (!_folders.length) { toast('أنشئ مجلداً أولاً', 'error'); return; }
   const options = _folders.map((f, i) => `${i+1}. ${f.name}`).join('\n');
-  const choice = window.prompt(`انقل إلى مجلد (اكتب الرقم):\n0. إزالة من المجلد\n${options}`);
+  const choice = window.prompt(`نقل ${_selected.size} شحنة إلى:\n0. إزالة من المجلد\n${options}`);
   if (choice === null) return;
   const idx = parseInt(choice);
   let folderId = null;
-  if (idx > 0 && idx <= _folders.length) {
-    folderId = _folders[idx-1].id;
+  if (idx > 0 && idx <= _folders.length) folderId = _folders[idx-1].id;
+
+  for (const sid of _selected) {
+    await updateShipment(sid, { folder_id: folderId });
+    const ship = _allShipments.find(s => s.id === sid);
+    if (ship) ship.folder_id = folderId;
   }
+  if (folderId) _openFolders.add(folderId);
+  _selected.clear();
+  applyFiltersAndRender();
+  toast(folderId ? '✅ تم النقل للمجلد' : '✅ أُزيلت من المجلد', 'success');
+}
+
+async function moveToFolder(shipmentId) {
+  if (!_folders.length) { toast('أنشئ مجلداً أولاً', 'error'); return; }
+  const options = _folders.map((f, i) => `${i+1}. ${f.name}`).join('\n');
+  const choice = window.prompt(`نقل إلى مجلد:\n0. إزالة من المجلد\n${options}`);
+  if (choice === null) return;
+  const idx = parseInt(choice);
+  let folderId = null;
+  if (idx > 0 && idx <= _folders.length) folderId = _folders[idx-1].id;
   await updateShipment(shipmentId, { folder_id: folderId });
   const ship = _allShipments.find(s => s.id === shipmentId);
   if (ship) ship.folder_id = folderId;
-  renderFolderTabs();
+  if (folderId) _openFolders.add(folderId);
   applyFiltersAndRender();
-  toast(folderId ? '✅ تم النقل للمجلد' : '✅ أُزيل من المجلد', 'success');
+  toast(folderId ? '✅ تم النقل' : '✅ أُزيل من المجلد', 'success');
 }
 
 // ─────────────────────────────────────────────
