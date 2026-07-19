@@ -19,6 +19,9 @@ export async function renderUsers(container) {
         <div class="topbar-sub">إنشاء وإدارة حسابات الفريق</div>
       </div>
       <div class="topbar-actions">
+        <button class="btn btn-ghost" onclick="printUsersReport()">
+          <i class="ti ti-printer"></i> طباعة التقرير
+        </button>
         <button class="btn btn-primary" onclick="openAddUser()">
           <i class="ti ti-plus"></i> موظف جديد
         </button>
@@ -26,7 +29,14 @@ export async function renderUsers(container) {
     </div>
 
     <div class="page-body">
+      <div id="users-stats" style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px;"></div>
       <div class="card">
+        <div class="card-header">
+          <div class="card-title">قائمة الموظفين</div>
+          <input type="text" id="user-search" placeholder="🔍 بحث بالاسم أو البريد..."
+            style="padding:7px 12px;border:0.5px solid var(--border);border-radius:8px;
+            font-family:Tajawal,sans-serif;font-size:13px;outline:none;width:220px;">
+        </div>
         <div id="users-list"><div class="loader"><div class="spinner"></div></div></div>
       </div>
     </div>
@@ -35,18 +45,12 @@ export async function renderUsers(container) {
     <div id="user-modal" class="modal-overlay hidden">
       <div class="modal-box" style="max-width:440px;">
         <div class="modal-title">➕ إضافة حساب جديد</div>
-
         <div class="field"><label>الاسم الكامل *</label>
           <input type="text" id="u-name" placeholder="محمد أحمد"></div>
-
         <div class="field"><label>البريد الإلكتروني *</label>
-          <input type="email" id="u-email" placeholder="employee@sudais.com.sa"
-            style="direction:ltr;"></div>
-
+          <input type="email" id="u-email" placeholder="employee@sudais.com.sa" style="direction:ltr;"></div>
         <div class="field"><label>كلمة المرور *</label>
-          <input type="password" id="u-password" placeholder="6 أحرف على الأقل"
-            style="direction:ltr;"></div>
-
+          <input type="password" id="u-password" placeholder="6 أحرف على الأقل" style="direction:ltr;"></div>
         <div class="field">
           <label>الرتبة *</label>
           <select id="u-role">
@@ -54,10 +58,8 @@ export async function renderUsers(container) {
             <option value="supervisor">مشرف</option>
           </select>
         </div>
-
         <div id="user-error" style="display:none;background:var(--red-light);color:var(--red);
           border-radius:8px;padding:9px 12px;font-size:12px;margin-top:4px;"></div>
-
         <div class="modal-actions">
           <button class="btn btn-ghost" onclick="closeUserModal()">إلغاء</button>
           <button class="btn btn-primary" onclick="addUser()" id="btn-add-user">💾 إنشاء الحساب</button>
@@ -86,6 +88,8 @@ export async function renderUsers(container) {
 
   await loadUsers();
 
+  document.getElementById('user-search').oninput = e => filterUsers(e.target.value);
+
   window.openAddUser    = openAddUser;
   window.closeUserModal = closeUserModal;
   window.addUser        = addUser;
@@ -93,15 +97,55 @@ export async function renderUsers(container) {
   window.openRoleModal  = openRoleModal;
   window.closeRoleModal = closeRoleModal;
   window.saveRole       = saveRole;
+  window.filterUsers    = filterUsers;
+  window.printUsersReport = printUsersReport;
 }
+
+let _allUsers = [];
 
 // ─────────────────────────────────────────────
 // LOAD
 // ─────────────────────────────────────────────
 async function loadUsers() {
   const allUsers = await getAllUsers();
-  const users = allUsers.filter(u => u.name && u.name !== "undefined" && u.email && u.email !== "undefined");
-  const list  = document.getElementById('users-list');
+  _allUsers = allUsers.filter(u => u.name && u.name !== 'undefined' && u.email && u.email !== 'undefined');
+  renderStats();
+  renderUserList(_allUsers);
+}
+
+function renderStats() {
+  const total    = _allUsers.length;
+  const active   = _allUsers.filter(u => u.active !== false).length;
+  const inactive = _allUsers.filter(u => u.active === false).length;
+
+  const el = document.getElementById('users-stats');
+  if (!el) return;
+  el.innerHTML = `
+    <div class="stat-card">
+      <div class="stat-icon si-blue"><i class="ti ti-users" style="font-size:22px;color:var(--blue)"></i></div>
+      <div><div class="stat-num">${total}</div><div class="stat-label">إجمالي الحسابات</div></div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon si-green"><i class="ti ti-user-check" style="font-size:22px;color:var(--green)"></i></div>
+      <div><div class="stat-num">${active}</div><div class="stat-label">نشط</div></div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon si-red"><i class="ti ti-user-off" style="font-size:22px;color:var(--red)"></i></div>
+      <div><div class="stat-num">${inactive}</div><div class="stat-label">معطّل</div></div>
+    </div>`;
+}
+
+function filterUsers(search = '') {
+  if (!search) { renderUserList(_allUsers); return; }
+  const q = search.toLowerCase();
+  renderUserList(_allUsers.filter(u =>
+    u.name?.toLowerCase().includes(q) || u.email?.toLowerCase().includes(q)
+  ));
+}
+
+function renderUserList(users) {
+  const list = document.getElementById('users-list');
+  if (!list) return;
 
   if (!users.length) {
     list.innerHTML = `<div class="empty-state">
@@ -111,58 +155,208 @@ async function loadUsers() {
     return;
   }
 
-  list.innerHTML = `<div>${users.map(u => {
-    const role     = ROLES[u.role] || ROLES.employee;
-    const isAdmin  = u.role === 'admin';
-    const initials = u.name?.split(' ').map(w=>w[0]).join('').substring(0,2).toUpperCase() || '؟';
+  // Sort: admin first, then supervisor, then employee
+  const order = { admin: 0, supervisor: 1, employee: 2 };
+  const sorted = [...users].sort((a, b) => (order[a.role]||2) - (order[b.role]||2));
 
-    return `
-    <div style="display:flex;align-items:center;gap:14px;padding:14px 20px;
-      border-bottom:0.5px solid var(--border);">
+  list.innerHTML = `
+    <table style="width:100%;border-collapse:collapse;">
+      <thead>
+        <tr style="background:var(--surface);border-bottom:1px solid var(--border);">
+          <th style="padding:12px 18px;text-align:right;font-size:12px;font-weight:600;color:var(--muted);">الموظف</th>
+          <th style="padding:12px 18px;text-align:right;font-size:12px;font-weight:600;color:var(--muted);">البريد الإلكتروني</th>
+          <th style="padding:12px 18px;text-align:center;font-size:12px;font-weight:600;color:var(--muted);">الرتبة</th>
+          <th style="padding:12px 18px;text-align:center;font-size:12px;font-weight:600;color:var(--muted);">الحالة</th>
+          <th style="padding:12px 18px;text-align:center;font-size:12px;font-weight:600;color:var(--muted);">إجراءات</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${sorted.map(u => {
+          const role    = ROLES[u.role] || ROLES.employee;
+          const isAdm   = u.role === 'admin';
+          const initials = u.name?.split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase() || '؟';
+          const avatarBg = isAdm ? 'var(--gold)' : u.role === 'supervisor' ? 'var(--blue)' : 'var(--green)';
+          const isActive = u.active !== false;
 
-      <!-- Avatar -->
-      <div style="width:42px;height:42px;border-radius:50%;
-        background:${isAdmin?'var(--gold)':u.role==='supervisor'?'var(--blue)':'var(--green)'};
-        color:white;display:flex;align-items:center;justify-content:center;
-        font-size:15px;font-weight:700;flex-shrink:0;">
-        ${initials}
+          return `
+          <tr style="border-bottom:0.5px solid var(--border);transition:background .15s;"
+            onmouseover="this.style.background='var(--surface)'"
+            onmouseout="this.style.background=''">
+
+            <!-- Avatar + Name -->
+            <td style="padding:14px 18px;">
+              <div style="display:flex;align-items:center;gap:12px;">
+                <div style="width:40px;height:40px;border-radius:50%;background:${avatarBg};
+                  color:white;display:flex;align-items:center;justify-content:center;
+                  font-size:14px;font-weight:700;flex-shrink:0;">
+                  ${initials}
+                </div>
+                <div>
+                  <div style="font-weight:700;color:var(--navy);font-size:14px;">${u.name}</div>
+                  ${isAdm ? `<div style="font-size:10px;color:var(--muted);">حساب النظام</div>` : ''}
+                </div>
+              </div>
+            </td>
+
+            <!-- Email -->
+            <td style="padding:14px 18px;">
+              <div style="font-size:13px;color:var(--muted);direction:ltr;">${u.email}</div>
+            </td>
+
+            <!-- Role -->
+            <td style="padding:14px 18px;text-align:center;">
+              <span style="background:${role.color}20;color:${role.color};
+                font-size:11px;font-weight:700;padding:4px 12px;border-radius:20px;">
+                ${role.ar}
+              </span>
+            </td>
+
+            <!-- Status -->
+            <td style="padding:14px 18px;text-align:center;">
+              <span class="pill ${isActive ? 'pill-done' : 'pill-draft'}">
+                ${isActive ? '● نشط' : '● معطّل'}
+              </span>
+            </td>
+
+            <!-- Actions -->
+            <td style="padding:14px 18px;text-align:center;">
+              ${!isAdm ? `
+                <div style="display:flex;gap:6px;justify-content:center;">
+                  <button class="btn btn-sm btn-ghost" onclick="openRoleModal('${u.id}','${u.role}')"
+                    title="تعديل الرتبة">
+                    <i class="ti ti-shield"></i> الرتبة
+                  </button>
+                  <button class="btn btn-sm ${isActive ? 'btn-ghost' : 'btn-primary'}"
+                    onclick="toggleUser('${u.id}',${isActive})"
+                    title="${isActive ? 'تعطيل الحساب' : 'تفعيل الحساب'}">
+                    ${isActive
+                      ? '<i class="ti ti-ban"></i> تعطيل'
+                      : '<i class="ti ti-check"></i> تفعيل'}
+                  </button>
+                </div>
+              ` : `<span style="font-size:11px;color:var(--muted);">—</span>`}
+            </td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+    </table>`;
+}
+
+// ─────────────────────────────────────────────
+// PRINT REPORT
+// ─────────────────────────────────────────────
+function printUsersReport() {
+  const order = { admin: 0, supervisor: 1, employee: 2 };
+  const sorted = [..._allUsers].sort((a, b) => (order[a.role]||2) - (order[b.role]||2));
+  const now = new Date().toLocaleDateString('ar-SA', { year:'numeric', month:'long', day:'numeric' });
+  const total   = sorted.length;
+  const active  = sorted.filter(u => u.active !== false).length;
+  const inactive = sorted.filter(u => u.active === false).length;
+
+  const win = window.open('', '_blank');
+  win.document.write(`
+    <!DOCTYPE html>
+    <html lang="ar" dir="rtl">
+    <head>
+      <meta charset="UTF-8">
+      <title>تقرير الموظفين</title>
+      <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;600;700;800&display=swap" rel="stylesheet">
+      <style>
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body { font-family:'Tajawal',sans-serif; direction:rtl; color:#1C2D4E; background:white; padding:32px; }
+
+        .header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:24px; padding-bottom:16px; border-bottom:2px solid #1C2D4E; }
+        .header-title { font-size:22px; font-weight:800; color:#1C2D4E; }
+        .header-sub { font-size:13px; color:#5a7090; margin-top:4px; }
+        .header-date { font-size:12px; color:#5a7090; text-align:left; }
+
+        .stats { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-bottom:24px; }
+        .stat { background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:14px 16px; text-align:center; }
+        .stat-num { font-size:28px; font-weight:800; color:#1C2D4E; }
+        .stat-lbl { font-size:12px; color:#5a7090; margin-top:2px; }
+
+        table { width:100%; border-collapse:collapse; margin-top:8px; }
+        thead tr { background:#1C2D4E; color:white; }
+        th { padding:10px 14px; font-size:12px; font-weight:600; text-align:right; }
+        td { padding:11px 14px; font-size:13px; border-bottom:0.5px solid #e2e8f0; }
+        tr:nth-child(even) td { background:#f8fafc; }
+
+        .badge { display:inline-block; padding:3px 10px; border-radius:20px; font-size:11px; font-weight:700; }
+        .badge-admin    { background:#FEF3C7; color:#92400E; }
+        .badge-super    { background:#DBEAFE; color:#1D4ED8; }
+        .badge-employee { background:#DCFCE7; color:#166534; }
+        .badge-active   { background:#DCFCE7; color:#166534; }
+        .badge-inactive { background:#FEE2E2; color:#B91C1C; }
+
+        .footer { margin-top:32px; text-align:center; font-size:11px; color:#5a7090; border-top:1px solid #e2e8f0; padding-top:12px; }
+
+        @media print {
+          body { padding:16px; }
+          @page { margin:1cm; }
+        }
+      </style>
+    </head>
+    <body>
+      <div class="header">
+        <div>
+          <div class="header-title">👥 تقرير الموظفين</div>
+          <div class="header-sub">شركة عبدالرحمن عبدالعزيز السديس للخدمات اللوجستية</div>
+        </div>
+        <div class="header-date">
+          <div>تاريخ التقرير</div>
+          <div style="font-weight:700;margin-top:4px;">${now}</div>
+        </div>
       </div>
 
-      <!-- Info -->
-      <div style="flex:1;">
-        <div style="display:flex;align-items:center;gap:8px;">
-          <span style="font-size:14px;font-weight:700;color:var(--navy);">${u.name}</span>
-          <span style="background:${role.color}22;color:${role.color};
-            font-size:10px;font-weight:700;padding:2px 9px;border-radius:20px;">
-            ${role.ar}
-          </span>
-        </div>
-        <div style="font-size:11px;color:var(--muted);direction:ltr;text-align:right;margin-top:2px;">
-          ${u.email}
-        </div>
+      <div class="stats">
+        <div class="stat"><div class="stat-num">${total}</div><div class="stat-lbl">إجمالي الحسابات</div></div>
+        <div class="stat"><div class="stat-num" style="color:#166534;">${active}</div><div class="stat-lbl">نشط</div></div>
+        <div class="stat"><div class="stat-num" style="color:#B91C1C;">${inactive}</div><div class="stat-lbl">معطّل</div></div>
       </div>
 
-      <!-- Status -->
-      <span class="pill ${u.active!==false?'pill-done':'pill-draft'}">
-        ${u.active!==false?'نشط':'معطّل'}
-      </span>
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>اسم الموظف</th>
+            <th>البريد الإلكتروني</th>
+            <th>الرتبة</th>
+            <th>الحالة</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${sorted.map((u, i) => {
+            const roleBadge = u.role === 'admin'
+              ? `<span class="badge badge-admin">مدير</span>`
+              : u.role === 'supervisor'
+              ? `<span class="badge badge-super">مشرف</span>`
+              : `<span class="badge badge-employee">موظف تخليص</span>`;
+            const statusBadge = u.active !== false
+              ? `<span class="badge badge-active">نشط</span>`
+              : `<span class="badge badge-inactive">معطّل</span>`;
+            return `
+              <tr>
+                <td style="color:#5a7090;font-size:12px;">${i + 1}</td>
+                <td style="font-weight:700;">${u.name}</td>
+                <td style="direction:ltr;color:#5a7090;">${u.email}</td>
+                <td>${roleBadge}</td>
+                <td>${statusBadge}</td>
+              </tr>`;
+          }).join('')}
+        </tbody>
+      </table>
 
-      <!-- Actions (not for admin) -->
-      ${!isAdmin ? `
-        <button class="btn btn-sm btn-ghost" onclick="openRoleModal('${u.id}','${u.role}')">
-          <i class="ti ti-shield"></i> الرتبة
-        </button>
-        <button class="btn btn-sm ${u.active!==false?'btn-ghost':'btn-primary'}"
-          onclick="toggleUser('${u.id}',${u.active!==false})">
-          ${u.active!==false
-            ? '<i class="ti ti-ban"></i> تعطيل'
-            : '<i class="ti ti-check"></i> تفعيل'}
-        </button>
-      ` : `
-        <span style="font-size:11px;color:var(--muted);">حساب النظام</span>
-      `}
-    </div>`;
-  }).join('')}</div>`;
+      <div class="footer">
+        M-Customs — نظام التخليص الجمركي &nbsp;|&nbsp; شركة السديس للخدمات اللوجستية
+      </div>
+
+      <script>
+        window.onload = () => { window.print(); }
+      </script>
+    </body>
+    </html>
+  `);
+  win.document.close();
 }
 
 // ─────────────────────────────────────────────
