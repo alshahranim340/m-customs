@@ -34,8 +34,8 @@ function loadEmailJS() {
   return new Promise((resolve, reject) => {
     if (window.emailjs) { resolve(); return; }
     const script = document.createElement('script');
-    script.src = 'https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js';
-    script.onload = () => { window.emailjs.init(EMAILJS_PUBLIC_KEY); resolve(); };
+    script.src = 'https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js';
+    script.onload = () => { window.emailjs.init({ publicKey: EMAILJS_PUBLIC_KEY }); resolve(); };
     script.onerror = reject;
     document.head.appendChild(script);
   });
