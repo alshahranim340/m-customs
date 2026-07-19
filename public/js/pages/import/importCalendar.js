@@ -7,6 +7,8 @@ let _shipments = [];
 let _users     = [];
 let _viewDate  = new Date();
 
+const LAST_ALERT_KEY = 'mcustoms_last_alert_date';
+
 export async function renderImportCalendar(container) {
   container.innerHTML = `
     <div class="topbar">
@@ -15,8 +17,8 @@ export async function renderImportCalendar(container) {
         <div class="topbar-sub">متابعة مواعيد وصول الشحنات</div>
       </div>
       <div class="topbar-actions">
-        <button class="btn btn-primary" id="btn-send-alerts">
-          <i class="ti ti-mail"></i> إرسال تنبيهات ETA
+        <button class="btn btn-ghost" id="btn-send-alerts">
+          <i class="ti ti-mail"></i> إرسال تنبيه يدوي
         </button>
       </div>
     </div>
@@ -27,6 +29,8 @@ export async function renderImportCalendar(container) {
   try {
     [_shipments, _users] = await Promise.all([getImportShipments(), getAllUsers()]);
     _renderCalendar();
+    // تنبيه تلقائي مرة واحدة في اليوم
+    _autoSendAlerts();
   } catch(e) {
     document.getElementById('cal-content').innerHTML =
       `<div class="empty-state"><div class="empty-title">خطأ في التحميل</div></div>`;
@@ -39,22 +43,56 @@ export async function renderImportCalendar(container) {
   window.calToday = () => { _viewDate = new Date(); _renderCalendar(); };
 }
 
+// ─────────────────────────────────────────────
+// AUTO SEND — مرة واحدة في اليوم
+// ─────────────────────────────────────────────
+async function _autoSendAlerts() {
+  const today    = new Date().toISOString().split('T')[0];
+  const lastSent = localStorage.getItem(LAST_ALERT_KEY);
+
+  if (lastSent === today) return; // تم الإرسال اليوم مسبقاً
+
+  const alertShips = getAlertShipments(_shipments);
+  if (alertShips.length === 0) return; // لا توجد شحنات تحتاج تنبيه
+
+  try {
+    const result = await checkAndSendEtaAlerts(_shipments, _users);
+    if (result.sent > 0) {
+      localStorage.setItem(LAST_ALERT_KEY, today);
+      toast(`✅ تم إرسال تنبيهات ETA تلقائياً — ${result.shipments} شحنة`, 'success');
+    }
+  } catch(e) {
+    // صامت — لا نزعج المستخدم بأخطاء التلقائي
+  }
+}
+
+// ─────────────────────────────────────────────
+// MANUAL SEND
+// ─────────────────────────────────────────────
 async function sendAlerts() {
   const btn = document.getElementById('btn-send-alerts');
   btn.disabled = true;
   btn.innerHTML = '<i class="ti ti-loader"></i> جاري الإرسال...';
   try {
     const result = await checkAndSendEtaAlerts(_shipments, _users);
-    toast(result.sent > 0 ? `✅ ${result.message}` : `ℹ️ ${result.message}`, 'success');
+    if (result.sent > 0) {
+      localStorage.setItem(LAST_ALERT_KEY, new Date().toISOString().split('T')[0]);
+      toast(`✅ ${result.message}`, 'success');
+    } else {
+      toast(`ℹ️ ${result.message}`, 'success');
+    }
     if (result.errors?.length > 0) toast(`⚠️ فشل إرسال ${result.errors.length} تنبيه`, 'error');
   } catch(e) {
     toast('❌ خطأ في إرسال التنبيهات', 'error');
   } finally {
     btn.disabled = false;
-    btn.innerHTML = '<i class="ti ti-mail"></i> إرسال تنبيهات ETA';
+    btn.innerHTML = '<i class="ti ti-mail"></i> إرسال تنبيه يدوي';
   }
 }
 
+// ─────────────────────────────────────────────
+// RENDER CALENDAR
+// ─────────────────────────────────────────────
 function _renderCalendar() {
   const today = new Date(); today.setHours(0,0,0,0);
   const year  = _viewDate.getFullYear();
@@ -79,6 +117,9 @@ function _renderCalendar() {
   const firstDay    = new Date(year, month, 1).getDay();
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const dayNames    = ['أحد','اثنين','ثلاثاء','أربعاء','خميس','جمعة','سبت'];
+
+  const lastSent = localStorage.getItem(LAST_ALERT_KEY);
+  const sentToday = lastSent === new Date().toISOString().split('T')[0];
 
   let cells = '';
   for (let i = 0; i < firstDay; i++) cells += `<div class="cal-cell cal-empty"></div>`;
@@ -120,10 +161,22 @@ function _renderCalendar() {
       </div>
 
       <div style="display:flex;flex-direction:column;gap:12px;">
+
+        <!-- Alert status -->
+        <div style="background:${sentToday?'#f0fdf4':'#eff6ff'};border:1px solid ${sentToday?'#86efac':'#bfdbfe'};
+          border-radius:8px;padding:10px 14px;font-size:12px;display:flex;align-items:center;gap:8px;">
+          <span style="font-size:18px;">${sentToday?'✅':'🔔'}</span>
+          <span style="color:${sentToday?'#166534':'#1d4ed8'};font-weight:600;">
+            ${sentToday ? 'تم إرسال التنبيهات اليوم تلقائياً' : 'لم يتم إرسال التنبيهات اليوم بعد'}
+          </span>
+        </div>
+
+        <!-- Alert shipments -->
         <div class="card">
           <div class="card-header">
             <div class="card-title">🔔 تنبيهات الـ 5 أيام القادمة</div>
-            <span class="pill" style="background:${alertShips.length>0?'var(--red-light)':'var(--green-light)'};color:${alertShips.length>0?'var(--red)':'var(--green)'};">${alertShips.length}</span>
+            <span class="pill" style="background:${alertShips.length>0?'var(--red-light)':'var(--green-light)'};
+              color:${alertShips.length>0?'var(--red)':'var(--green)'};">${alertShips.length}</span>
           </div>
           ${alertShips.length === 0
             ? `<div style="padding:16px;text-align:center;color:var(--muted);font-size:13px;">✅ لا توجد شحنات خلال 5 أيام</div>`
@@ -142,12 +195,6 @@ function _renderCalendar() {
                   </div>
                 </div>
               </div>`).join('')}
-          ${alertShips.length > 0 ? `
-            <div style="padding:10px 16px;">
-              <button class="btn btn-primary" style="width:100%;" onclick="document.getElementById('btn-send-alerts').click()">
-                <i class="ti ti-mail"></i> إرسال تنبيه الآن
-              </button>
-            </div>` : ''}
         </div>
 
         ${overdue.length > 0 ? `
@@ -165,6 +212,7 @@ function _renderCalendar() {
               <div style="font-size:11px;color:var(--red);font-weight:600;">${_fmtShort(s.eta)}</div>
             </div>`).join('')}
         </div>` : ''}
+
       </div>
     </div>`;
 }
