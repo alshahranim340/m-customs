@@ -19,6 +19,9 @@ export async function renderImportExpenses(container) {
         <div class="topbar-sub">فواتير مصاريف العملاء</div>
       </div>
       <div class="topbar-actions">
+        <button class="btn btn-ghost" id="btn-print-expenses" onclick="openExpensesReportModal()">
+          <i class="ti ti-printer"></i> طباعة تقرير
+        </button>
         <button class="btn btn-primary" id="btn-new-expense">
           <i class="ti ti-plus"></i> فاتورة جديدة
         </button>
@@ -59,6 +62,8 @@ export async function renderImportExpenses(container) {
   document.getElementById('btn-new-expense').onclick = () => openExpenseModal();
   document.getElementById('exp-search').oninput = e => _renderList(e.target.value);
 
+  window.openExpensesReportModal = openExpensesReportModal;
+  window.printExpensesReport     = printExpensesReport;
   window.openExpenseModal  = openExpenseModal;
   window.closeExpenseModal = closeExpenseModal;
   window.saveExpense       = saveExpense;
@@ -439,4 +444,226 @@ async function exportExpensePdf(id) {
 function _fmtDate(d) {
   if (!d) return '—';
   return new Date(d).toLocaleDateString('ar-SA', { year:'numeric', month:'short', day:'numeric' });
+}
+
+// ─────────────────────────────────────────────
+// EXPENSES REPORT MODAL
+// ─────────────────────────────────────────────
+function openExpensesReportModal() {
+  // Build customer options
+  const custSet = [...new Set(_expenses.map(e => e.customer_name).filter(Boolean))];
+  const custOptions = custSet.map(c => `<option value="${c}">${c}</option>`).join('');
+
+  // Create modal if not exists
+  let modal = document.getElementById('exp-report-modal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'exp-report-modal';
+    modal.className = 'modal-overlay hidden';
+    modal.innerHTML = `
+      <div class="modal-box" style="max-width:420px;">
+        <div class="modal-title">🖨️ طباعة تقرير المصاريف</div>
+
+        <div class="field">
+          <label>نوع التقرير</label>
+          <select id="rpt-type" onchange="toggleReportType(this.value)">
+            <option value="all">تقرير شامل — جميع العملاء</option>
+            <option value="customer">تقرير عميل محدد</option>
+          </select>
+        </div>
+
+        <div class="field" id="rpt-cust-field" style="display:none;">
+          <label>اختر العميل</label>
+          <select id="rpt-customer">
+            <option value="">— اختر —</option>
+            ${custOptions}
+          </select>
+        </div>
+
+        <div class="field">
+          <label>الحالة</label>
+          <select id="rpt-status">
+            <option value="all">الكل</option>
+            <option value="paid">مدفوع فقط</option>
+            <option value="unpaid">غير مدفوع فقط</option>
+          </select>
+        </div>
+
+        <div class="modal-actions">
+          <button class="btn btn-ghost" onclick="document.getElementById('exp-report-modal').classList.add('hidden')">إلغاء</button>
+          <button class="btn btn-primary" onclick="printExpensesReport()">
+            <i class="ti ti-printer"></i> طباعة
+          </button>
+        </div>
+      </div>`;
+    document.body.appendChild(modal);
+    window.toggleReportType = (v) => {
+      document.getElementById('rpt-cust-field').style.display = v === 'customer' ? 'block' : 'none';
+    };
+  }
+  modal.classList.remove('hidden');
+}
+
+function printExpensesReport() {
+  const type     = document.getElementById('rpt-type')?.value || 'all';
+  const custName = document.getElementById('rpt-customer')?.value || '';
+  const status   = document.getElementById('rpt-status')?.value || 'all';
+
+  // Filter expenses
+  let list = [..._expenses];
+  if (type === 'customer' && custName) list = list.filter(e => e.customer_name === custName);
+  if (status === 'paid')   list = list.filter(e => e.paid);
+  if (status === 'unpaid') list = list.filter(e => !e.paid);
+
+  if (list.length === 0) {
+    toast('لا توجد بيانات لطباعتها', 'error');
+    return;
+  }
+
+  document.getElementById('exp-report-modal').classList.add('hidden');
+
+  const now        = new Date().toLocaleDateString('ar-SA', { year:'numeric', month:'long', day:'numeric' });
+  const fmt        = n => parseFloat(n||0).toLocaleString('ar-SA', { minimumFractionDigits: 2 });
+  const totalAll   = list.reduce((s, e) => s + _totalOf(e), 0);
+  const totalPaid  = list.filter(e => e.paid).reduce((s, e) => s + _totalOf(e), 0);
+  const totalUnpaid = totalAll - totalPaid;
+
+  // Group by customer for summary
+  const byCustomer = {};
+  list.forEach(e => {
+    if (!byCustomer[e.customer_name]) byCustomer[e.customer_name] = { total: 0, paid: 0, count: 0 };
+    byCustomer[e.customer_name].total += _totalOf(e);
+    if (e.paid) byCustomer[e.customer_name].paid += _totalOf(e);
+    byCustomer[e.customer_name].count++;
+  });
+
+  const reportTitle = type === 'customer' && custName
+    ? `تقرير مصاريف — ${custName}`
+    : 'تقرير مصاريف شامل';
+
+  const win = window.open('', '_blank');
+  win.document.write(`
+    <!DOCTYPE html>
+    <html lang="ar" dir="rtl">
+    <head>
+      <meta charset="UTF-8">
+      <title>${reportTitle}</title>
+      <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;600;700;800&display=swap" rel="stylesheet">
+      <style>
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body { font-family:'Tajawal',sans-serif; direction:rtl; color:#1C2D4E; padding:28px; }
+
+        .header { display:flex; justify-content:space-between; align-items:flex-start;
+          padding-bottom:14px; border-bottom:3px solid #1C2D4E; margin-bottom:20px; }
+        .co-name { font-size:15px; font-weight:800; }
+        .co-sub  { font-size:11px; color:#5a7090; margin-top:3px; }
+        .report-title { font-size:20px; font-weight:800; text-align:center; margin-bottom:18px; }
+        .date { font-size:12px; color:#5a7090; text-align:left; }
+
+        .stats { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-bottom:20px; }
+        .stat  { background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:12px; text-align:center; }
+        .stat-num { font-size:22px; font-weight:800; }
+        .stat-lbl { font-size:11px; color:#5a7090; margin-top:3px; }
+
+        .section-title { font-size:13px; font-weight:800; margin:18px 0 8px;
+          padding-bottom:5px; border-bottom:1px solid #e2e8f0; }
+
+        /* Summary table */
+        .summary-table { width:100%; border-collapse:collapse; margin-bottom:20px; font-size:12px; }
+        .summary-table thead tr { background:#1C2D4E; color:white; }
+        .summary-table th { padding:8px 12px; text-align:right; }
+        .summary-table td { padding:8px 12px; border-bottom:0.5px solid #e2e8f0; }
+        .summary-table tr:nth-child(even) td { background:#f8fafc; }
+
+        /* Detail cards */
+        .exp-card { border:1px solid #e2e8f0; border-radius:8px; margin-bottom:14px; overflow:hidden; page-break-inside:avoid; }
+        .exp-card-head { background:#1C2D4E; color:white; padding:10px 14px;
+          display:flex; justify-content:space-between; align-items:center; }
+        .exp-card-head .title { font-size:13px; font-weight:700; }
+        .exp-card-head .meta  { font-size:11px; opacity:.7; }
+        .exp-card-body { padding:0; }
+        .fee-row { display:flex; justify-content:space-between; padding:8px 14px;
+          border-bottom:0.5px solid #f0f0f0; font-size:12px; }
+        .fee-row:last-child { border:none; }
+        .total-row { background:#f0f9ff; font-weight:800; font-size:13px; padding:10px 14px;
+          display:flex; justify-content:space-between; border-top:1px solid #e2e8f0; }
+        .badge { display:inline-block; padding:2px 10px; border-radius:12px; font-size:11px; font-weight:700; }
+        .b-paid   { background:#dcfce7; color:#166534; }
+        .b-unpaid { background:#fef3c7; color:#92400e; }
+
+        .footer { margin-top:28px; text-align:center; font-size:11px; color:#5a7090;
+          border-top:1px solid #e2e8f0; padding-top:10px; }
+        @media print { body { padding:16px; } @page { margin:1cm; } }
+      </style>
+    </head>
+    <body>
+      <div class="header">
+        <div>
+          <div class="co-name">شركة عبدالرحمن عبدالعزيز السديس للخدمات اللوجستية</div>
+          <div class="co-sub">ABDULRAHMAN ABDULAZIZ AL-SUDAIS LOGISTICS SERVICES CO.</div>
+        </div>
+        <div class="date"><div>تاريخ التقرير</div><div style="font-weight:700;margin-top:3px;">${now}</div></div>
+      </div>
+
+      <div class="report-title">💰 ${reportTitle}</div>
+
+      <!-- Stats -->
+      <div class="stats">
+        <div class="stat"><div class="stat-num">${fmt(totalAll)}</div><div class="stat-lbl">الإجمالي (ر.س)</div></div>
+        <div class="stat"><div class="stat-num" style="color:#166534;">${fmt(totalPaid)}</div><div class="stat-lbl">المدفوع (ر.س)</div></div>
+        <div class="stat"><div class="stat-num" style="color:#b91c1c;">${fmt(totalUnpaid)}</div><div class="stat-lbl">المتبقي (ر.س)</div></div>
+      </div>
+
+      ${type === 'all' ? `
+      <!-- Customer Summary -->
+      <div class="section-title">📊 ملخص حسب العميل</div>
+      <table class="summary-table">
+        <thead><tr>
+          <th>#</th><th>العميل</th><th>عدد الفواتير</th>
+          <th>الإجمالي (ر.س)</th><th>المدفوع (ر.س)</th><th>المتبقي (ر.س)</th>
+        </tr></thead>
+        <tbody>
+          ${Object.entries(byCustomer).map(([name, d], i) => `
+            <tr>
+              <td style="color:#5a7090;">${i+1}</td>
+              <td style="font-weight:700;">${name}</td>
+              <td style="text-align:center;">${d.count}</td>
+              <td style="font-weight:700;">${fmt(d.total)}</td>
+              <td style="color:#166534;font-weight:700;">${fmt(d.paid)}</td>
+              <td style="color:#b91c1c;font-weight:700;">${fmt(d.total - d.paid)}</td>
+            </tr>`).join('')}
+        </tbody>
+      </table>` : ''}
+
+      <!-- Detail -->
+      <div class="section-title">📋 تفاصيل الفواتير</div>
+      ${list.map(e => `
+        <div class="exp-card">
+          <div class="exp-card-head">
+            <div>
+              <div class="title">🏢 ${e.customer_name||'—'}</div>
+              <div class="meta">📦 ${e.shipment_bl||'—'} &nbsp;|&nbsp; 📅 ${_fmtDate(e.invoice_date)}</div>
+            </div>
+            <span class="badge ${e.paid?'b-paid':'b-unpaid'}">${e.paid?'✅ مدفوع':'⏳ لم يتم الدفع'}</span>
+          </div>
+          <div class="exp-card-body">
+            ${(e.items||[]).map(i => `
+              <div class="fee-row">
+                <span>${i.fee_type||'—'}</span>
+                <span style="color:#5a7090;font-size:11px;">${_fmtDate(i.date)}</span>
+                <span style="font-weight:700;">${fmt(i.amount)} ر.س</span>
+              </div>`).join('')}
+            <div class="total-row">
+              <span>الإجمالي</span>
+              <span>${fmt(_totalOf(e))} ر.س</span>
+            </div>
+          </div>
+        </div>`).join('')}
+
+      <div class="footer">M-Customs — نظام التخليص الجمركي &nbsp;|&nbsp; شركة السديس للخدمات اللوجستية</div>
+      <script>window.onload = () => window.print();</script>
+    </body>
+    </html>
+  `);
+  win.document.close();
 }
