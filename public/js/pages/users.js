@@ -99,7 +99,8 @@ export async function renderUsers(container) {
 // LOAD
 // ─────────────────────────────────────────────
 async function loadUsers() {
-  const users = await getAllUsers();
+  const allUsers = await getAllUsers();
+  const users = allUsers.filter(u => u.name && u.name !== "undefined" && u.email && u.email !== "undefined");
   const list  = document.getElementById('users-list');
 
   if (!users.length) {
