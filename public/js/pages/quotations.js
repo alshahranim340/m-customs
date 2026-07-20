@@ -399,230 +399,269 @@ async function changeQuotStatus(id, status) {
 // ─────────────────────────────────────────────
 // PRINT PDF
 // ─────────────────────────────────────────────
-function printQuotation(id) {
+function printQuotation(id, lang = null) {
   const q = _quotations.find(x => x.id === id);
   if (!q) return;
 
+  // If no language chosen, show picker
+  if (!lang) {
+    _showLangPicker(id);
+    return;
+  }
+
   const total = (parseFloat(q.customs_price)||0) + (parseFloat(q.transport_price)||0);
   const fmt   = n => parseFloat(n||0).toLocaleString('en-US', { minimumFractionDigits:2, maximumFractionDigits:2 });
-  const typeIcon = PORT_ICONS[q.port_type] || '';
+  const typeIcon = q.port_type === 'air' ? '✈' : q.port_type === 'sea' ? '🚢' : '🚛';
   const dateFormatted = q.date
     ? new Date(q.date).toLocaleDateString('en-GB', { day:'2-digit', month:'2-digit', year:'numeric' })
     : new Date().toLocaleDateString('en-GB');
-
-  // Short quotation number: QT-26-0001
   const shortNum = q.number || 'QT-26-0001';
+  const isAr = lang === 'ar';
+
+  // Labels
+  const L = isAr ? {
+    dir:'rtl', align:'right', alignOpp:'left',
+    title:'عرض سعر',
+    quotNo:'رقم العرض',
+    date:'التاريخ',
+    client:'اسم العميل',
+    quotDate:'تاريخ العرض',
+    port:'المنفذ / نقطة الدخول',
+    city:'مدينة التوصيل',
+    sn:'م',
+    desc:'الوصف',
+    amount:'المبلغ (ر.س)',
+    customs:'التخليص الجمركي',
+    customsSub:'معالجة وتوثيق التخليص الجمركي للاستيراد',
+    transport:'النقل',
+    transportSub:'توصيل من',
+    net:'الإجمالي',
+    grand:'★ الإجمالي الكلي / Grand Total',
+    notesTitle:'الشروط والملاحظات',
+    note1:'يتم احتساب <strong>150 ريال سعودي</strong> لكل حاوية إضافية في نفس الشحنة.',
+    note2:'في حال احتاجت الشحنة إلى ساحة تخزين:',
+    note3:'— حاوية 40 قدم: <strong>150 ريال</strong> لأول 10 أيام، ثم <strong>60 ريال/يوم</strong> بعدها.',
+    note4:'— حاوية 20 قدم: <strong>100 ريال</strong> لأول 10 أيام، ثم <strong>50 ريال/يوم</strong> بعدها.',
+    manager:'مدير قسم التخليص الجمركي',
+    sig:'التوقيع المعتمد',
+    lic:'رقم الترخيص 4605',
+    coName:'شركة السديس للخدمات اللوجستية',
+    coSub:'عبدالرحمن عبدالعزيز السديس',
+    coAddr:'جدة – حي الجوهرة – المملكة العربية السعودية',
+    quot:'عرض سعر',
+    page:'صفحة 1 / 1',
+    portVal: q.port_label || q.port,
+  } : {
+    dir:'ltr', align:'left', alignOpp:'right',
+    title:'QUOTATION',
+    quotNo:'QUOTATION NO.',
+    date:'Date',
+    client:'CLIENT NAME',
+    quotDate:'QUOTATION DATE',
+    port:'PORT / ENTRY POINT',
+    city:'DELIVERY CITY',
+    sn:'SN',
+    desc:'DESCRIPTION',
+    amount:'AMOUNT (SAR)',
+    customs:'Customs Clearance',
+    customsSub:'Import customs processing & documentation',
+    transport:'Transportation',
+    transportSub:'Door delivery:',
+    net:'Net Total / الإجمالي',
+    grand:'★ Grand Total / الإجمالي الكلي',
+    notesTitle:'Terms, Conditions & Notes / الشروط والملاحظات',
+    note1:'An additional fee of <strong>SAR 150</strong> applies per extra container in the same shipment.',
+    note2:'Storage fees (if applicable):',
+    note3:'— 40ft container: <strong>SAR 150</strong> for the first 10 days, then <strong>SAR 60/day</strong> thereafter.',
+    note4:'— 20ft container: <strong>SAR 100</strong> for the first 10 days, then <strong>SAR 50/day</strong> thereafter.',
+    manager:'Customs Clearance Department Manager',
+    sig:'Authorized Signature / التوقيع المعتمد',
+    lic:'License No. 4605 | رقم الترخيص 4605',
+    coName:'AL SUDAIS Logistics Services Co.',
+    coSub:'Abdulrahman Abdulaziz Al-Sudais',
+    coAddr:'Jeddah – Al Jawhara District – KSA',
+    quot:'Quotation',
+    page:'Page 1 / 1',
+    portVal: q.port_label_en || q.port_label || q.port,
+  };
 
   const win = window.open('', '_blank');
   win.document.write(`
     <!DOCTYPE html>
-    <html lang="en">
+    <html lang="${isAr ? 'ar' : 'en'}" dir="${L.dir}">
     <head>
       <meta charset="UTF-8">
-      <title>Quotation — ${shortNum}</title>
+      <title>${L.quot} — ${shortNum}</title>
       <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;600;700;800&display=swap" rel="stylesheet">
       <style>
         * { margin:0; padding:0; box-sizing:border-box; }
-        body { font-family:'Tajawal',Arial,sans-serif; background:white; color:#1a1a1a; font-size:12px; line-height:1.5; }
+        body { font-family:'Tajawal',Arial,sans-serif; background:white; color:#1a1a1a; font-size:12px; line-height:1.5; direction:${L.dir}; }
         .page { max-width:740px; margin:0 auto; }
-
         .header { display:flex; justify-content:space-between; align-items:center; padding:18px 24px; border-bottom:3px solid #1C4B8E; }
         .logo-area { display:flex; align-items:center; gap:14px; }
-        .logo-box { width:60px; height:60px; object-fit:contain; }
-        .co-name { font-size:15px; font-weight:800; color:#1C4B8E; letter-spacing:.3px; }
+        .logo-box { width:58px; height:58px; object-fit:contain; }
+        .co-name { font-size:15px; font-weight:800; color:#1C4B8E; }
         .co-sub  { font-size:11px; color:#2E8B57; font-weight:600; margin-top:2px; }
         .co-addr { font-size:10px; color:#999; margin-top:2px; }
-        .quot-no-area { text-align:right; }
-        .quot-no-lbl  { font-size:10px; color:#999; letter-spacing:.5px; text-transform:uppercase; }
-        .quot-no-val  { font-size:22px; font-weight:800; color:#CC2229; margin-top:2px; }
-
+        .quot-no-area { text-align:${L.alignOpp}; }
+        .quot-no-lbl { font-size:10px; color:#999; letter-spacing:.5px; text-transform:uppercase; }
+        .quot-no-val { font-size:22px; font-weight:800; color:#1C4B8E; margin-top:2px; }
         .title-bar { background:#1C4B8E; padding:8px 24px; display:flex; justify-content:space-between; align-items:center; }
-        .title-bar .t { color:white; font-size:13px; font-weight:700; letter-spacing:2px; }
-        .title-bar .d { color:rgba(255,255,255,.65); font-size:11px; }
-
+        .title-t { color:white; font-size:13px; font-weight:700; letter-spacing:2px; }
+        .title-d { color:rgba(255,255,255,.65); font-size:11px; }
         .info-row { display:grid; border-bottom:0.5px solid #e0e0e0; }
-        .info-row.cols3 { grid-template-columns:1fr 1fr 1fr; }
-        .info-row.cols2 { grid-template-columns:1fr 1fr; }
-        .info-cell { padding:10px 16px; border-right:0.5px solid #e0e0e0; }
-        .info-cell:last-child { border-right:none; }
+        .cols3 { grid-template-columns:1fr 1fr 1fr; }
+        .cols2 { grid-template-columns:1fr 1fr; }
+        .info-cell { padding:10px 16px; border-${isAr?'left':'right'}:0.5px solid #e0e0e0; }
+        .info-cell:last-child { border:none; }
         .info-lbl { font-size:9px; font-weight:700; color:#1C4B8E; letter-spacing:.5px; text-transform:uppercase; margin-bottom:3px; }
-        .info-lbl.red { color:#CC2229; }
         .info-val { font-size:12px; font-weight:700; }
-        .info-val.red { color:#CC2229; }
-
         table { width:100%; border-collapse:collapse; }
         thead tr { background:#1C4B8E; }
-        th { padding:9px 16px; color:white; font-size:10px; font-weight:700; letter-spacing:.3px; text-transform:uppercase; }
-        th.left { text-align:left; }
-        th.right { text-align:right; }
+        th { padding:9px 16px; color:white; font-size:10px; font-weight:700; letter-spacing:.3px; text-transform:uppercase; text-align:${L.align}; }
+        th.r { text-align:${L.alignOpp}; }
         td { padding:11px 16px; border-bottom:0.5px solid #ebebeb; font-size:12px; vertical-align:top; }
         tr.alt td { background:#f9fafb; }
-        .sn { font-size:12px; font-weight:700; color:#CC2229; width:32px; }
-        .svc-name { font-size:12px; font-weight:700; color:#1a1a1a; }
+        .sn { font-size:12px; font-weight:700; color:#CC2229; width:36px; }
+        .svc-name { font-size:12px; font-weight:700; }
         .svc-sub  { font-size:10px; color:#888; margin-top:2px; }
-        .amt { text-align:right; font-size:13px; font-weight:700; }
+        .amt { text-align:${L.alignOpp}; font-size:13px; font-weight:700; }
         .net-row td { border-top:0.5px solid #ddd; font-size:11px; color:#555; font-weight:600; }
-        .net-row .amt { font-size:12px; font-weight:700; color:#1a1a1a; }
+        .net-amt { text-align:${L.alignOpp}; font-size:12px; font-weight:700; }
         .grand-row td { background:#1C4B8E; color:white; font-size:12px; font-weight:700; padding:10px 16px; border:none; }
-        .grand-row .amt { font-size:16px; font-weight:800; color:white; }
-
-        .notes-section { border-top:2px solid #2E8B57; padding:12px 18px; background:#fafffe; }
-        .notes-title { font-size:10px; font-weight:800; color:#1C4B8E; letter-spacing:.3px; margin-bottom:8px; }
-        .notes-en { font-size:10px; color:#333; line-height:1.75; margin-bottom:8px; }
-        .notes-ar { font-size:10px; color:#333; line-height:1.75; direction:rtl; text-align:right; }
-
-        .sig-area { border-top:0.5px solid #ddd; padding:12px 24px; display:flex; justify-content:space-between; align-items:flex-end; }
+        .grand-amt { text-align:${L.alignOpp}; font-size:16px; font-weight:800; color:white; }
+        .notes-section { border-top:2px solid #2E8B57; padding:13px 18px; background:#fafffe; }
+        .notes-title { font-size:10px; font-weight:800; color:#1C4B8E; margin-bottom:9px; }
+        .notes-body { font-size:10px; color:#333; line-height:1.85; }
+        .sig-area { border-top:0.5px solid #ddd; padding:13px 24px; display:flex; justify-content:space-between; align-items:flex-end; }
         .sig-name { font-size:12px; font-weight:700; color:#1C4B8E; }
         .sig-role { font-size:10px; color:#666; margin-top:2px; }
-        .sig-line { margin-top:14px; width:120px; border-top:0.5px solid #aaa; padding-top:3px; }
-        .sig-line-lbl { font-size:9px; color:#999; }
-        .contact { text-align:right; font-size:10px; color:#666; line-height:1.7; }
+        .sig-line { margin-top:14px; width:120px; border-top:0.5px solid #aaa; padding-top:3px; font-size:9px; color:#999; }
+        .contact { text-align:${L.alignOpp}; font-size:10px; color:#666; line-height:1.75; }
         .contact .lic { font-size:10px; font-weight:700; color:#1C4B8E; margin-bottom:3px; }
-
         .footer { background:#1C4B8E; padding:7px 24px; display:flex; justify-content:space-between; align-items:center; }
         .footer span { font-size:9px; color:rgba(255,255,255,.55); }
         .footer-dots { display:flex; gap:5px; }
         .dot { width:7px; height:7px; border-radius:50%; }
-
-        @media print {
-          body { print-color-adjust:exact; -webkit-print-color-adjust:exact; }
-          @page { margin:.5cm; size:A4; }
-        }
+        @media print { body{print-color-adjust:exact;-webkit-print-color-adjust:exact;} @page{margin:.5cm;size:A4;} }
       </style>
     </head>
     <body>
     <div class="page">
 
-      <!-- Header -->
       <div class="header">
         <div class="logo-area">
-          <img src="${LOGO_B64}" class="logo-box" alt="Al Sudais Logo">
+          <img src="${LOGO_B64}" class="logo-box" alt="Logo">
           <div>
-            <div class="co-name">AL SUDAIS</div>
-            <div class="co-sub">Logistics Services Co.</div>
-            <div class="co-addr">Abdulrahman Abdulaziz Al-Sudais &nbsp;|&nbsp; Jeddah – Al Jawhara – KSA</div>
+            <div class="co-name">${L.coName}</div>
+            <div class="co-sub">${L.coSub}</div>
+            <div class="co-addr">${L.coAddr}</div>
           </div>
         </div>
         <div class="quot-no-area">
-          <div class="quot-no-lbl">Quotation No.</div>
+          <div class="quot-no-lbl">${L.quotNo}</div>
           <div class="quot-no-val">${shortNum}</div>
         </div>
       </div>
 
-      <!-- Title bar -->
       <div class="title-bar">
-        <div class="t">QUOTATION</div>
-        <div class="d">Date: ${dateFormatted}</div>
+        <div class="title-t">${L.title}</div>
+        <div class="title-d">${L.date}: ${dateFormatted}</div>
       </div>
 
-      <!-- Info row 1 -->
       <div class="info-row cols3">
         <div class="info-cell">
-          <div class="info-lbl">Client Name</div>
+          <div class="info-lbl">${L.client}</div>
           <div class="info-val">${q.customer_name}</div>
         </div>
         <div class="info-cell">
-          <div class="info-lbl">Quotation Date</div>
+          <div class="info-lbl">${L.quotDate}</div>
           <div class="info-val">${dateFormatted}</div>
         </div>
         <div class="info-cell">
-          <div class="info-lbl red">Quotation No.</div>
-          <div class="info-val red">${shortNum}</div>
+          <div class="info-lbl" style="color:#2E8B57;">${isAr ? 'الوكيل / Agent' : 'Agent / الوكيل'}</div>
+          <div class="info-val">${q.agent_name || '—'}</div>
         </div>
       </div>
-
-      <!-- Info row 2 -->
-      <div class="info-row cols2" style="border-bottom:1px solid #ddd;margin-bottom:0;">
+      <div class="info-row cols2" style="border-bottom:1px solid #ddd;">
         <div class="info-cell">
-          <div class="info-lbl">Port / Entry Point</div>
-          <div class="info-val">${typeIcon} ${q.port_label_en || q.port_label}</div>
+          <div class="info-lbl">${L.port}</div>
+          <div class="info-val">${typeIcon} ${L.portVal}</div>
         </div>
         <div class="info-cell">
-          <div class="info-lbl">Delivery City</div>
+          <div class="info-lbl">${L.city}</div>
           <div class="info-val">${q.city}</div>
         </div>
       </div>
 
-      <!-- Services Table -->
-      <table style="margin-top:0;">
+      <table>
         <thead>
           <tr>
-            <th class="left" style="width:36px;">SN</th>
-            <th class="left">Description</th>
-            <th class="right">Amount (SAR)</th>
+            <th style="width:36px;">${L.sn}</th>
+            <th>${L.desc}</th>
+            <th class="r">${L.amount}</th>
           </tr>
         </thead>
         <tbody>
           <tr>
             <td class="sn">1</td>
             <td>
-              <div class="svc-name">Customs Clearance</div>
-              <div class="svc-sub">Import customs processing & documentation — ${q.port_label_en || q.port_label}</div>
+              <div class="svc-name">${L.customs}</div>
+              <div class="svc-sub">${L.customsSub} — ${L.portVal}</div>
             </td>
             <td class="amt">${fmt(q.customs_price)}</td>
           </tr>
           <tr class="alt">
             <td class="sn">2</td>
             <td>
-              <div class="svc-name">Transportation</div>
-              <div class="svc-sub">Door delivery: ${q.port_label_en || q.port_label} → ${q.city}</div>
+              <div class="svc-name">${L.transport}</div>
+              <div class="svc-sub">${L.transportSub} ${L.portVal} → ${q.city}</div>
             </td>
             <td class="amt">${fmt(q.transport_price)}</td>
           </tr>
           <tr class="net-row">
-            <td colspan="2" style="text-align:right;padding-right:16px;">Net Total / الإجمالي</td>
-            <td class="amt">${fmt(total)}</td>
+            <td colspan="2" style="text-align:${L.alignOpp};padding-${L.alignOpp}:16px;">${L.net}</td>
+            <td class="net-amt">${fmt(total)}</td>
           </tr>
           <tr class="grand-row">
-            <td colspan="2" style="text-align:right;padding-right:16px;">★ Grand Total / الإجمالي الكلي</td>
-            <td class="amt">${fmt(total)} SAR</td>
+            <td colspan="2" style="text-align:${L.alignOpp};padding-${L.alignOpp}:16px;">${L.grand}</td>
+            <td class="grand-amt">${fmt(total)} SAR</td>
           </tr>
         </tbody>
       </table>
 
-      <!-- Notes -->
       <div class="notes-section">
-        <div class="notes-title">Terms, Conditions & Notes / الشروط والملاحظات</div>
-        <div class="notes-en">
-          • An additional fee of <strong>SAR 150</strong> applies per extra container in the same shipment.<br>
-          • Storage fees (if applicable):<br>
-          &nbsp;&nbsp;— 40ft container: <strong>SAR 150</strong> for the first 10 days, then <strong>SAR 60/day</strong> thereafter.<br>
-          &nbsp;&nbsp;— 20ft container: <strong>SAR 100</strong> for the first 10 days, then <strong>SAR 50/day</strong> thereafter.
-        </div>
-        <div class="notes-ar">
-          • يتم احتساب <strong>150 ريال سعودي</strong> لكل حاوية إضافية في نفس الشحنة<br>
-          • في حال احتاجت الشحنة إلى ساحة تخزين:<br>
-          &nbsp;&nbsp;— حاوية 40 قدم: <strong>150 ريال</strong> لأول 10 أيام، ثم <strong>60 ريال/يوم</strong><br>
-          &nbsp;&nbsp;— حاوية 20 قدم: <strong>100 ريال</strong> لأول 10 أيام، ثم <strong>50 ريال/يوم</strong>
+        <div class="notes-title">${L.notesTitle}</div>
+        <div class="notes-body">
+          • ${L.note1}<br>
+          • ${L.note2}<br>
+          &nbsp;&nbsp;${L.note3}<br>
+          &nbsp;&nbsp;${L.note4}
         </div>
       </div>
 
-      <!-- Signature -->
       <div class="sig-area">
         <div>
           <div class="sig-name">${q.employee_name || '—'}</div>
-          <div class="sig-role">Customs Clearance Department Manager</div>
-          <div class="sig-role">مدير قسم التخليص الجمركي</div>
-          <div class="sig-line"><div class="sig-line-lbl">Authorized Signature / التوقيع المعتمد</div></div>
+          <div class="sig-role">${L.manager}</div>
+          <div class="sig-line">${L.sig}</div>
         </div>
         <div class="contact">
-          <div class="lic">License No. 4605 &nbsp;|&nbsp; رقم الترخيص 4605</div>
+          <div class="lic">${L.lic}</div>
           <div>9200 08305</div>
           <div>info@sudais.com.sa</div>
           <div>www.sudais.com.sa</div>
-          <div>Jeddah – Al Jawhara District – KSA</div>
         </div>
       </div>
 
-      <!-- Footer -->
       <div class="footer">
-        <span>AL SUDAIS Logistics Services Co.</span>
+        <span>${L.coName}</span>
         <div class="footer-dots">
           <div class="dot" style="background:#CC2229;"></div>
           <div class="dot" style="background:rgba(255,255,255,.4);"></div>
           <div class="dot" style="background:#2E8B57;"></div>
         </div>
-        <span>Page 1 / 1</span>
+        <span>${L.page}</span>
       </div>
 
     </div>
@@ -632,6 +671,40 @@ function printQuotation(id) {
   `);
   win.document.close();
 }
+
+function _showLangPicker(id) {
+  const existing = document.getElementById('lang-picker-modal');
+  if (existing) existing.remove();
+
+  const modal = document.createElement('div');
+  modal.id = 'lang-picker-modal';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;z-index:9999;';
+  modal.innerHTML = `
+    <div style="background:white;border-radius:12px;padding:28px 32px;width:320px;text-align:center;font-family:Tajawal,sans-serif;">
+      <div style="font-size:16px;font-weight:700;color:#1C4B8E;margin-bottom:6px;">اختر لغة الطباعة</div>
+      <div style="font-size:13px;color:#888;margin-bottom:20px;">Choose print language</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <button onclick="printQuotation('${id}','en');document.getElementById('lang-picker-modal').remove();"
+          style="padding:14px;border:1.5px solid #1C4B8E;border-radius:8px;background:white;cursor:pointer;font-family:Tajawal,sans-serif;font-size:13px;font-weight:700;color:#1C4B8E;transition:all .2s;"
+          onmouseover="this.style.background='#1C4B8E';this.style.color='white'"
+          onmouseout="this.style.background='white';this.style.color='#1C4B8E'">
+          🇬🇧 English
+        </button>
+        <button onclick="printQuotation('${id}','ar');document.getElementById('lang-picker-modal').remove();"
+          style="padding:14px;border:1.5px solid #2E8B57;border-radius:8px;background:white;cursor:pointer;font-family:Tajawal,sans-serif;font-size:13px;font-weight:700;color:#2E8B57;transition:all .2s;"
+          onmouseover="this.style.background='#2E8B57';this.style.color='white'"
+          onmouseout="this.style.background='white';this.style.color='#2E8B57'">
+          🇸🇦 عربي
+        </button>
+      </div>
+      <button onclick="document.getElementById('lang-picker-modal').remove();"
+        style="margin-top:14px;background:none;border:none;color:#aaa;font-size:12px;cursor:pointer;font-family:Tajawal,sans-serif;">
+        إلغاء / Cancel
+      </button>
+    </div>`;
+  document.body.appendChild(modal);
+}
+
 
 // ─────────────────────────────────────────────
 // HELPERS
