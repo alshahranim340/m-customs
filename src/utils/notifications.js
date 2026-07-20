@@ -4,7 +4,7 @@
 
 const EMAILJS_SERVICE_ID  = 'service_jcy91bd';
 const EMAILJS_TEMPLATE_ID = 'template_avl8usm';
-const EMAILJS_PUBLIC_KEY  = 'TyzJxtsfIDRYSTZ9P';
+const EMAILJS_PUBLIC_KEY  = 'TyzJxtsflDRYSTZ9P';
 const ALERT_DAYS          = 5;
 const LAST_ALERT_KEY      = 'mcustoms_last_alert_date';
 
