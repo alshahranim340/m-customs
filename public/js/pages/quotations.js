@@ -3,6 +3,7 @@ import {
   generateQuotationNumber, QUOTATION_PORTS, QUOTATION_STATUS, KSA_CITIES, PORT_ICONS
 } from '../../../src/firebase/quotationsDb.js';
 import { getExporters } from '../../../src/firebase/exporters.js';
+import { getCustomers as getImportCustomers } from '../../../src/firebase/importDb.js';
 import { getCurrentProfile } from '../app.js';
 import { LOGO_B64 } from '../../../src/utils/assets.js';
 import { toast } from '../app.js';
@@ -44,10 +45,16 @@ export async function renderQuotations(container) {
     </div>`;
 
   try {
-    [_quotations, _customers] = await Promise.all([
+    const [quotRes, exportRes, importRes] = await Promise.all([
       getQuotations(),
       getExporters().catch(() => []),
+      getImportCustomers().catch(() => []),
     ]);
+    _quotations = quotRes;
+    // Merge exporters (have .name) and import customers (have .company_name)
+    const exportList = exportRes.map(c => ({ id: c.id, display: c.name }));
+    const importList = importRes.map(c => ({ id: c.id, display: c.company_name }));
+    _customers = [...exportList, ...importList].filter(c => c.display);
     _renderStats();
     _renderList();
   } catch(e) {
@@ -285,7 +292,7 @@ async function openQuotModal(quotation = null) {
     const manual = document.getElementById('quot-manual-field');
     manual.style.display = this.value === '__manual__' ? 'block' : 'none';
   };
-  if (q.customer_name && !_customers.find(c => (c.name||c.id) === q.customer_name)) {
+  if (q.customer_name && !_customers.find(c => c.display === q.customer_name)) {
     document.getElementById('quot-customer').value = '__manual__';
     document.getElementById('quot-manual-field').style.display = 'block';
   }
@@ -569,7 +576,7 @@ function printQuotation(id, lang = null) {
         <div class="title-d">${L.date}: ${dateFormatted}</div>
       </div>
 
-      <div class="info-row cols3">
+      <div class="info-row cols2">
         <div class="info-cell">
           <div class="info-lbl">${L.client}</div>
           <div class="info-val">${q.customer_name}</div>
@@ -577,10 +584,6 @@ function printQuotation(id, lang = null) {
         <div class="info-cell">
           <div class="info-lbl">${L.quotDate}</div>
           <div class="info-val">${dateFormatted}</div>
-        </div>
-        <div class="info-cell">
-          <div class="info-lbl" style="color:#2E8B57;">${isAr ? 'الوكيل / Agent' : 'Agent / الوكيل'}</div>
-          <div class="info-val">${q.agent_name || '—'}</div>
         </div>
       </div>
       <div class="info-row cols2" style="border-bottom:1px solid #ddd;">
