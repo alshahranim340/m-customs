@@ -11,7 +11,7 @@ export async function generateQuotationNumber() {
   const year = new Date().getFullYear();
   const snap = await getDocs(collection(db, 'quotations'));
   const count = snap.docs.filter(d => d.data().number?.startsWith(`QT-${year}`)).length;
-  return `QT-${year}-${String(count + 1).padStart(4, '0')}`;
+  return `QTN-${String(count + 1).padStart(4, '0')}`;
 }
 
 // ─────────────────────────────────────────────
