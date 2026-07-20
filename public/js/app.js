@@ -3,6 +3,7 @@ import { onAuthChange, ensureAdminProfile, getUserProfile, logOut, isAdmin, getC
 import { renderDashboard }      from './pages/dashboard.js';
 import { renderNewShipment }    from './pages/newShipment.js';
 import { renderShipments }      from './pages/shipments.js';
+import { renderQuotations }    from './pages/quotations.js';
 import { renderDrivers }        from './pages/drivers.js';
 import { renderShipmentView }   from './pages/shipmentView.js';
 import { renderUsers }          from './pages/users.js';
@@ -26,6 +27,7 @@ const PAGES = {
   'new-shipment':     renderNewShipment,
   'shipments':        renderShipments,
   'drivers':          renderDrivers,
+  'quotations':       renderQuotations,
   'shipment-view':    renderShipmentView,
   'users':            renderUsers,
   // Import
@@ -239,6 +241,9 @@ function renderAppShell(profile) {
           <a class="nav-item" data-page="shipments" onclick="navigate('shipments')">
             <i class="ti ti-list"></i> سجل الشحنات
             <span class="nav-badge" id="badge-shipments">—</span>
+          </a>
+          <a class="nav-item" data-page="quotations" onclick="navigate('quotations')">
+            <i class="ti ti-file-text"></i> عروض الأسعار
           </a>
           <a class="nav-item" data-page="drivers" onclick="navigate('drivers')">
             <i class="ti ti-user"></i> السائقون
