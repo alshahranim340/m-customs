@@ -19,6 +19,9 @@ export async function renderQuotations(container) {
         <div class="topbar-sub">إدارة عروض أسعار التخليص والنقل</div>
       </div>
       <div class="topbar-actions">
+        <button class="btn btn-ghost" id="btn-quot-report" onclick="openQuotReport()">
+          <i class="ti ti-chart-bar"></i> تقرير العروض
+        </button>
         <button class="btn btn-primary" id="btn-new-quotation">
           <i class="ti ti-plus"></i> عرض سعر جديد
         </button>
@@ -52,9 +55,17 @@ export async function renderQuotations(container) {
     ]);
     _quotations = quotRes;
     // Merge exporters (have .name) and import customers (have .company_name)
-    const exportList = exportRes.map(c => ({ id: c.id, display: c.name }));
-    const importList = importRes.map(c => ({ id: c.id, display: c.company_name }));
-    _customers = [...exportList, ...importList].filter(c => c.display);
+    // exporters: name field OR id (which is name with underscores)
+    const exportList = exportRes.map(c => ({
+      id: c.id,
+      display: c.name || c.id?.replace(/_/g, ' ')
+    }));
+    // import customers: company_name field
+    const importList = importRes.map(c => ({
+      id: c.id,
+      display: c.company_name
+    }));
+    _customers = [...exportList, ...importList].filter(c => c.display && c.display !== 'undefined');
     _renderStats();
     _renderList();
   } catch(e) {
@@ -66,6 +77,7 @@ export async function renderQuotations(container) {
   document.getElementById('quot-search').oninput = e => _renderList(e.target.value);
 
   window.openQuotModal    = openQuotModal;
+  window.openQuotReport   = openQuotReport;
   window.closeQuotModal   = closeQuotModal;
   window.saveQuotation    = saveQuotation;
   window.editQuotation    = editQuotation;
@@ -720,4 +732,291 @@ function _getPortLabel(type, value) {
 function _getPortLabelEn(type, value) {
   if (!type || !value) return '—';
   return QUOTATION_PORTS[type]?.find(p => p.value === value)?.en || value;
+}
+
+// ─────────────────────────────────────────────
+// QUOTATION REPORT
+// ─────────────────────────────────────────────
+function openQuotReport() {
+  const existing = document.getElementById('quot-report-modal');
+  if (existing) existing.remove();
+
+  const currentYear  = new Date().getFullYear();
+  const months = ['يناير','فبراير','مارس','أبريل','مايو','يونيو',
+                  'يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+
+  const modal = document.createElement('div');
+  modal.id = 'quot-report-modal';
+  modal.className = 'modal-overlay';
+  modal.innerHTML = `
+    <div class="modal-box" style="max-width:460px;">
+      <div class="modal-title">📊 تقرير عروض الأسعار</div>
+
+      <div class="field">
+        <label>نوع التقرير</label>
+        <select id="rpt-period">
+          <option value="all">جميع العروض</option>
+          <option value="year">سنوي</option>
+          <option value="month">شهري</option>
+        </select>
+      </div>
+
+      <div id="rpt-year-field" class="field" style="display:none;">
+        <label>السنة</label>
+        <select id="rpt-year">
+          ${[currentYear, currentYear-1, currentYear-2].map(y =>
+            `<option value="${y}">${y}</option>`).join('')}
+        </select>
+      </div>
+
+      <div id="rpt-month-field" style="display:none;">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+          <div class="field">
+            <label>السنة</label>
+            <select id="rpt-month-year">
+              ${[currentYear, currentYear-1].map(y =>
+                `<option value="${y}">${y}</option>`).join('')}
+            </select>
+          </div>
+          <div class="field">
+            <label>الشهر</label>
+            <select id="rpt-month">
+              ${months.map((m,i) =>
+                `<option value="${i}" ${i===new Date().getMonth()?'selected':''}>${m}</option>`
+              ).join('')}
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-actions">
+        <button class="btn btn-ghost" onclick="document.getElementById('quot-report-modal').remove()">إلغاء</button>
+        <button class="btn btn-primary" onclick="printQuotReport()">
+          <i class="ti ti-printer"></i> طباعة التقرير
+        </button>
+      </div>
+    </div>`;
+
+  document.getElementById('quot-report-modal').remove?.();
+  document.body.appendChild(modal);
+
+  document.getElementById('rpt-period').onchange = function() {
+    document.getElementById('rpt-year-field').style.display  = this.value === 'year'  ? 'block' : 'none';
+    document.getElementById('rpt-month-field').style.display = this.value === 'month' ? 'block' : 'none';
+  };
+
+  window.printQuotReport = printQuotReport;
+}
+
+function printQuotReport() {
+  const period   = document.getElementById('rpt-period')?.value || 'all';
+  const year     = parseInt(document.getElementById('rpt-year')?.value || new Date().getFullYear());
+  const monthYear= parseInt(document.getElementById('rpt-month-year')?.value || new Date().getFullYear());
+  const month    = parseInt(document.getElementById('rpt-month')?.value ?? new Date().getMonth());
+
+  const months = ['January','February','March','April','May','June',
+                  'July','August','September','October','November','December'];
+  const monthsAr= ['يناير','فبراير','مارس','أبريل','مايو','يونيو',
+                   'يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+
+  // Filter quotations
+  let list = [..._quotations];
+  let periodLabel = 'جميع العروض';
+
+  if (period === 'year') {
+    list = list.filter(q => q.date?.startsWith(year.toString()));
+    periodLabel = `سنة ${year}`;
+  } else if (period === 'month') {
+    list = list.filter(q => {
+      if (!q.date) return false;
+      const d = new Date(q.date);
+      return d.getFullYear() === monthYear && d.getMonth() === month;
+    });
+    periodLabel = `${monthsAr[month]} ${monthYear}`;
+  }
+
+  if (list.length === 0) { toast('لا توجد بيانات لهذه الفترة', 'error'); return; }
+
+  document.getElementById('quot-report-modal')?.remove();
+
+  const fmt = n => parseFloat(n||0).toLocaleString('en-US', { minimumFractionDigits:2 });
+
+  const total    = list.length;
+  const accepted = list.filter(q => q.status === 'accepted');
+  const pending  = list.filter(q => q.status === 'pending');
+  const rejected = list.filter(q => q.status === 'rejected');
+
+  const totalAmt    = list.reduce((s,q) => s + (q.total||0), 0);
+  const acceptedAmt = accepted.reduce((s,q) => s + (q.total||0), 0);
+  const pendingAmt  = pending.reduce((s,q) => s + (q.total||0), 0);
+  const rejectedAmt = rejected.reduce((s,q) => s + (q.total||0), 0);
+
+  const acceptRate = total > 0 ? Math.round((accepted.length / total) * 100) : 0;
+
+  // Group by month if yearly
+  let monthlyBreakdown = '';
+  if (period === 'year') {
+    const byMonth = {};
+    list.forEach(q => {
+      if (!q.date) return;
+      const m = new Date(q.date).getMonth();
+      if (!byMonth[m]) byMonth[m] = { count:0, accepted:0, total:0 };
+      byMonth[m].count++;
+      if (q.status === 'accepted') byMonth[m].accepted++;
+      byMonth[m].total += q.total || 0;
+    });
+    monthlyBreakdown = `
+      <div style="margin-bottom:20px;">
+        <div style="font-size:13px;font-weight:700;color:#1C4B8E;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid #e0e0e0;">
+          التوزيع الشهري — Monthly Breakdown
+        </div>
+        <table style="width:100%;border-collapse:collapse;font-size:12px;">
+          <thead><tr style="background:#1C4B8E;color:white;">
+            <th style="padding:8px 12px;text-align:right;">الشهر</th>
+            <th style="padding:8px 12px;text-align:center;">العروض</th>
+            <th style="padding:8px 12px;text-align:center;">مقبول</th>
+            <th style="padding:8px 12px;text-align:right;">الإجمالي (ر.س)</th>
+          </tr></thead>
+          <tbody>
+            ${Object.entries(byMonth).sort((a,b)=>a[0]-b[0]).map(([m,d]) => `
+              <tr style="border-bottom:0.5px solid #e8e8e8;">
+                <td style="padding:8px 12px;">${monthsAr[m]}</td>
+                <td style="padding:8px 12px;text-align:center;">${d.count}</td>
+                <td style="padding:8px 12px;text-align:center;color:#2E8B57;font-weight:600;">${d.accepted}</td>
+                <td style="padding:8px 12px;text-align:right;font-weight:600;">${fmt(d.total)}</td>
+              </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>`;
+  }
+
+  const now = new Date().toLocaleDateString('ar-SA', { year:'numeric', month:'long', day:'numeric' });
+
+  const win = window.open('', '_blank');
+  win.document.write(`
+    <!DOCTYPE html>
+    <html lang="ar" dir="rtl">
+    <head>
+      <meta charset="UTF-8">
+      <title>تقرير عروض الأسعار</title>
+      <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;600;700;800&display=swap" rel="stylesheet">
+      <style>
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body { font-family:'Tajawal',sans-serif; direction:rtl; color:#1a1a1a; padding:28px; background:white; }
+        .header { display:flex; justify-content:space-between; align-items:flex-start; padding-bottom:14px; border-bottom:3px solid #1C4B8E; margin-bottom:20px; }
+        .co-name { font-size:15px; font-weight:800; color:#1C4B8E; }
+        .co-sub  { font-size:11px; color:#2E8B57; font-weight:600; margin-top:2px; }
+        .report-title { font-size:20px; font-weight:800; text-align:center; color:#1C4B8E; margin-bottom:4px; }
+        .report-period { text-align:center; font-size:13px; color:#666; margin-bottom:20px; }
+        .stats { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-bottom:20px; }
+        .stat { border:1px solid #e0e0e0; border-radius:8px; padding:14px; text-align:center; }
+        .stat-num { font-size:24px; font-weight:800; }
+        .stat-lbl { font-size:11px; color:#666; margin-top:3px; }
+        .finance { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-bottom:20px; }
+        .fin-card { border-radius:8px; padding:14px; text-align:center; }
+        .fin-num { font-size:20px; font-weight:800; }
+        .fin-lbl { font-size:11px; margin-top:3px; }
+        .section-title { font-size:13px; font-weight:800; color:#1C4B8E; margin:18px 0 8px; padding-bottom:5px; border-bottom:1px solid #e0e0e0; }
+        table { width:100%; border-collapse:collapse; font-size:12px; margin-bottom:16px; }
+        thead tr { background:#1C4B8E; color:white; }
+        th { padding:8px 12px; text-align:right; font-weight:600; }
+        td { padding:9px 12px; border-bottom:0.5px solid #ebebeb; }
+        tr:nth-child(even) td { background:#f9f9f9; }
+        .pill { display:inline-block; padding:2px 10px; border-radius:12px; font-size:11px; font-weight:700; }
+        .p-acc { background:#dcfce7; color:#166534; }
+        .p-pen { background:#fef3c7; color:#92400e; }
+        .p-rej { background:#fee2e2; color:#b91c1c; }
+        .footer { margin-top:24px; text-align:center; font-size:11px; color:#999; border-top:1px solid #e0e0e0; padding-top:10px; }
+        @media print { body{padding:16px;} @page{margin:.5cm;} }
+      </style>
+    </head>
+    <body>
+      <div class="header">
+        <div>
+          <div class="co-name">شركة عبدالرحمن عبدالعزيز السديس للخدمات اللوجستية</div>
+          <div class="co-sub">AL SUDAIS Logistics Services Co.</div>
+        </div>
+        <div style="text-align:left;font-size:11px;color:#666;">
+          <div>تاريخ التقرير</div>
+          <div style="font-weight:700;margin-top:2px;">${now}</div>
+        </div>
+      </div>
+
+      <div class="report-title">📋 تقرير عروض الأسعار</div>
+      <div class="report-period">الفترة: ${periodLabel}</div>
+
+      <!-- Stats -->
+      <div class="stats">
+        <div class="stat">
+          <div class="stat-num" style="color:#1C4B8E;">${total}</div>
+          <div class="stat-lbl">إجمالي العروض</div>
+        </div>
+        <div class="stat">
+          <div class="stat-num" style="color:#2E8B57;">${accepted.length}</div>
+          <div class="stat-lbl">مقبول</div>
+        </div>
+        <div class="stat">
+          <div class="stat-num" style="color:#92400e;">${pending.length}</div>
+          <div class="stat-lbl">قيد الانتظار</div>
+        </div>
+        <div class="stat">
+          <div class="stat-num" style="color:#b91c1c;">${rejected.length}</div>
+          <div class="stat-lbl">مرفوض</div>
+        </div>
+      </div>
+
+      <!-- Finance -->
+      <div class="finance">
+        <div class="fin-card" style="background:#EFF6FF;">
+          <div class="fin-num" style="color:#1C4B8E;">${fmt(totalAmt)}</div>
+          <div class="fin-lbl" style="color:#1C4B8E;">إجمالي العروض (ر.س)</div>
+        </div>
+        <div class="fin-card" style="background:#f0fdf4;">
+          <div class="fin-num" style="color:#2E8B57;">${fmt(acceptedAmt)}</div>
+          <div class="fin-lbl" style="color:#2E8B57;">قيمة الموافقات (ر.س)</div>
+        </div>
+        <div class="fin-card" style="background:#f9fafb;border:1px solid #e0e0e0;">
+          <div class="fin-num" style="color:#1C4B8E;">${acceptRate}%</div>
+          <div class="fin-lbl" style="color:#666;">نسبة القبول</div>
+        </div>
+      </div>
+
+      ${monthlyBreakdown}
+
+      <!-- Detail table -->
+      <div class="section-title">📋 تفاصيل العروض</div>
+      <table>
+        <thead><tr>
+          <th>رقم العرض</th>
+          <th>العميل</th>
+          <th>المنفذ</th>
+          <th>التاريخ</th>
+          <th style="text-align:center;">الحالة</th>
+          <th style="text-align:left;">الإجمالي (ر.س)</th>
+        </tr></thead>
+        <tbody>
+          ${list.map(q => `
+            <tr>
+              <td style="font-weight:700;color:#1C4B8E;">${q.number||'—'}</td>
+              <td>${q.customer_name||'—'}</td>
+              <td style="font-size:11px;color:#666;">${q.port_label||'—'}</td>
+              <td style="font-size:11px;">${q.date||'—'}</td>
+              <td style="text-align:center;">
+                <span class="pill ${q.status==='accepted'?'p-acc':q.status==='rejected'?'p-rej':'p-pen'}">
+                  ${q.status==='accepted'?'مقبول':q.status==='rejected'?'مرفوض':'قيد الانتظار'}
+                </span>
+              </td>
+              <td style="text-align:left;font-weight:700;">${fmt(q.total||0)}</td>
+            </tr>`).join('')}
+        </tbody>
+      </table>
+
+      <div class="footer">
+        M-Customs — نظام التخليص الجمركي &nbsp;|&nbsp; شركة السديس للخدمات اللوجستية
+      </div>
+      <script>window.onload = () => window.print();</script>
+    </body>
+    </html>
+  `);
+  win.document.close();
 }
