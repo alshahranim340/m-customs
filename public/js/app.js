@@ -44,7 +44,7 @@ const PAGES = {
 // ─────────────────────────────────────────────
 export function navigate(page, params = {}) {
   // Determine which section this page belongs to
-  const isImportPage = page.startsWith('import-');
+  const isImportPage = page.startsWith('import-') || page === 'quotations';
   _activeSection = isImportPage ? 'import' : 'export';
 
   // Update section switcher
@@ -242,9 +242,6 @@ function renderAppShell(profile) {
             <i class="ti ti-list"></i> سجل الشحنات
             <span class="nav-badge" id="badge-shipments">—</span>
           </a>
-          <a class="nav-item" data-page="quotations" onclick="navigate('quotations')">
-            <i class="ti ti-file-text"></i> عروض الأسعار
-          </a>
           <a class="nav-item" data-page="drivers" onclick="navigate('drivers')">
             <i class="ti ti-user"></i> السائقون
           </a>
@@ -265,7 +262,9 @@ function renderAppShell(profile) {
             <i class="ti ti-package"></i> الشحنات
           </a>
           <a class="nav-item" data-page="import-expenses" onclick="navigate('import-expenses')">
-            <i class="ti ti-receipt"></i> المصاريف
+            <i class="ti ti-receipt"></i> المصاريف</a>
+          <a class="nav-item" data-page="quotations" onclick="navigate('quotations')">
+            <i class="ti ti-file-text"></i> عروض الأسعار
           </a>
           <a class="nav-item" data-page="import-calendar" onclick="navigate('import-calendar')">
             <i class="ti ti-calendar"></i> التقويم والتنبيهات
