@@ -2,7 +2,7 @@ import {
   getQuotations, createQuotation, updateQuotation, deleteQuotation,
   generateQuotationNumber, QUOTATION_PORTS, QUOTATION_STATUS, KSA_CITIES, PORT_ICONS
 } from '../../../src/firebase/quotationsDb.js';
-import { getCustomers as getExportCustomers } from '../../../src/firebase/exporters.js';
+import { getExporters } from '../../../src/firebase/exporters.js';
 import { getCurrentProfile } from '../app.js';
 import { LOGO_B64 } from '../../../src/utils/assets.js';
 import { toast } from '../app.js';
@@ -46,7 +46,7 @@ export async function renderQuotations(container) {
   try {
     [_quotations, _customers] = await Promise.all([
       getQuotations(),
-      getExportCustomers().catch(() => []),
+      getExporters().catch(() => []),
     ]);
     _renderStats();
     _renderList();
@@ -182,7 +182,7 @@ async function openQuotModal(quotation = null) {
   const number = isEdit ? q.number : await generateQuotationNumber();
 
   const custOptions = _customers.map(c =>
-    `<option value="${c.name||c.id}" ${q.customer_name===(c.name||c.id)?'selected':''}>${c.name||c.id}</option>`
+    `<option value="${c.name}" ${q.customer_name===c.name?'selected':''}>${c.name}</option>`
   ).join('');
 
   const cityOptions = KSA_CITIES.map(c =>
