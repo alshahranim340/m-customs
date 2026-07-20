@@ -8,6 +8,8 @@ service cloud.firestore {
     match /exporters/{id}   { allow read, write: if request.auth != null; }
     match /users/{id}       { allow read, write: if request.auth != null; }
     match /folders/{id}     { allow read, write: if request.auth != null; }
+    // ── Quotations ──
+    match /quotations/{id}        { allow read, write: if request.auth != null; }
     // ── Import ──
     match /import_customers/{id}  { allow read, write: if request.auth != null; }
     match /import_agents/{id}     { allow read, write: if request.auth != null; }
