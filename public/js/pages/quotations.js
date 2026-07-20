@@ -1,10 +1,10 @@
 import {
   getQuotations, createQuotation, updateQuotation, deleteQuotation,
   generateQuotationNumber, QUOTATION_PORTS, QUOTATION_STATUS, KSA_CITIES, PORT_ICONS
-} from '../../src/firebase/quotationsDb.js';
-import { getCustomers as getExportCustomers } from '../../src/firebase/exporters.js';
+} from '../../../src/firebase/quotationsDb.js';
+import { getCustomers as getExportCustomers } from '../../../src/firebase/exporters.js';
 import { getCurrentProfile } from '../app.js';
-import { LOGO_B64 } from '../../src/utils/assets.js';
+import { LOGO_B64 } from '../../../src/utils/assets.js';
 import { toast } from '../app.js';
 
 let _quotations = [];
