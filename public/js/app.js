@@ -8,6 +8,7 @@ import { renderShipmentView }   from './pages/shipmentView.js';
 import { renderUsers }          from './pages/users.js';
 
 // ── Import section ──
+import { autoAlertOnLogin } from '../../src/utils/notifications.js';
 import { renderImportDashboard } from './pages/import/importDashboard.js';
 import { renderImportShipments } from './pages/import/importShipments.js';
 import { renderImportExpenses }  from './pages/import/importExpenses.js';
@@ -326,7 +327,23 @@ export async function initApp() {
     if (_currentProfile?.active === false) { await logOut(); return; }
 
     renderAppShell(_currentProfile);
+    // Auto alert on login
+    _triggerAutoAlert();
   });
 }
 
 export function getCurrentProfile() { return _currentProfile; }
+
+// ─────────────────────────────────────────────
+// AUTO ALERT TRIGGER
+// ─────────────────────────────────────────────
+async function _triggerAutoAlert() {
+  try {
+    const { getImportShipments } = await import('../../src/firebase/importDb.js');
+    const { getAllUsers } = await import('../../src/firebase/auth.js');
+    const [shipments, users] = await Promise.all([getImportShipments(), getAllUsers()]);
+    await autoAlertOnLogin(shipments, users);
+  } catch(e) {
+    console.log('Auto alert skipped:', e.message);
+  }
+}
