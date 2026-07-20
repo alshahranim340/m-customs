@@ -633,9 +633,6 @@ function printQuotation(id) {
   win.document.close();
 }
 
-  win.document.close();
-}
-
 // ─────────────────────────────────────────────
 // HELPERS
 // ─────────────────────────────────────────────
