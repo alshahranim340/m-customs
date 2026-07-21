@@ -1,17 +1,9 @@
-
-// Fetch import customers directly
-async function _fetchImportCustomers() {
-  const { db } = await import('../../../src/firebase/config.js');
-  const { getDocs, collection } = await import('firebase/firestore');
-  const snap = await getDocs(collection(db, 'import_customers'));
-  return snap.docs.map(d => ({ id: d.id, ...d.data() }));
-}
-
 import {
   getQuotations, createQuotation, updateQuotation, deleteQuotation,
   generateQuotationNumber, QUOTATION_PORTS, QUOTATION_STATUS, KSA_CITIES, PORT_ICONS
 } from '../../../src/firebase/quotationsDb.js';
 import { getExporters } from '../../../src/firebase/exporters.js';
+import { getCustomers as getImportCustomers } from '../../../src/firebase/importDb.js';
 
 import { getCurrentProfile } from '../app.js';
 import { LOGO_B64 } from '../../../src/utils/assets.js';
