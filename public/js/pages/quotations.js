@@ -202,7 +202,7 @@ async function openQuotModal(quotation = null) {
   const number = isEdit ? q.number : await generateQuotationNumber();
 
   const custOptions = _customers.map(c =>
-    `<option value="${c.name}" ${q.customer_name===c.name?'selected':''}>${c.name}</option>`
+    `<option value="${c.display}" ${q.customer_name===c.display?'selected':''}>${c.display}</option>`
   ).join('');
 
   const cityOptions = KSA_CITIES.map(c =>
