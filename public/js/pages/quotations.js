@@ -63,7 +63,7 @@ export async function renderQuotations(container) {
     // import customers: company_name field
     const importList = importRes.map(c => ({
       id: c.id,
-      display: c.company_name
+      display: c.company_name || c.name || ''
     }));
     _customers = [...exportList, ...importList].filter(c => c.display && c.display !== 'undefined');
     _renderStats();
@@ -797,7 +797,6 @@ function openQuotReport() {
       </div>
     </div>`;
 
-  document.getElementById('quot-report-modal').remove?.();
   document.body.appendChild(modal);
 
   document.getElementById('rpt-period').onchange = function() {
