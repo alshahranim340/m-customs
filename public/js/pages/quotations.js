@@ -656,7 +656,7 @@ function printQuotation(id, lang = null) {
         </div>
         <div class="info-cell">
           <div class="info-lbl">${L.city}</div>
-          <div class="info-val">${q.city}</div>
+          <div class="info-val">${(q.transport_rows && q.transport_rows.length > 0 ? q.transport_rows.map(r => r.city).join('، ') : q.city) || '—'}</div>
         </div>
       </div>
 
@@ -677,14 +677,18 @@ function printQuotation(id, lang = null) {
             </td>
             <td class="amt">${fmt(q.customs_price)}</td>
           </tr>
-          <tr class="alt">
-            <td class="sn">2</td>
-            <td>
-              <div class="svc-name">${L.transport}</div>
-              <div class="svc-sub">${L.transportSub} ${L.portVal} → ${q.city}</div>
-            </td>
-            <td class="amt">${fmt(q.transport_price)}</td>
-          </tr>
+${(() => {
+            const rows = (q.transport_rows && q.transport_rows.length > 0)
+              ? q.transport_rows
+              : [{ city: q.city, price: q.transport_price }];
+            return rows.map((r, i) => {
+              const cls = i % 2 === 0 ? 'alt' : '';
+              return '<tr class="' + cls + '"><td class="sn">' + (i+2) + '</td><td>' +
+                '<div class="svc-name">' + L.transport + ' — ' + r.city + '</div>' +
+                '<div class="svc-sub">' + L.transportSub + ' ' + L.portVal + ' → ' + r.city + '</div>' +
+                '</td><td class="amt">' + fmt(r.price) + '</td></tr>';
+            }).join('');
+          })()}
           <tr class="net-row">
             <td colspan="2" style="text-align:${L.alignOpp};padding-${L.alignOpp}:16px;">${L.net}</td>
             <td class="net-amt">${fmt(total)}</td>
