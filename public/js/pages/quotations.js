@@ -165,7 +165,10 @@ function _renderList(search = '') {
             <td style="padding:11px 14px;font-weight:600;">${q.customer_name||'—'}</td>
             <td style="padding:11px 14px;color:var(--muted);">${PORT_ICONS[q.port_type]||''} ${portLabel}</td>
             <td style="padding:11px 14px;color:var(--muted);font-size:11px;">
-            \${(q.transport_rows||[{city:q.city}]).map(r=>r.city).join('، ')||'—'}
+            ${(q.transport_rows && q.transport_rows.length > 0
+              ? q.transport_rows.map(r => r.city)
+              : [q.city]
+            ).filter(Boolean).join('، ') || '—'}
           </td>
             <td style="padding:11px 14px;text-align:center;font-weight:600;">${q.customs_price ? q.customs_price+' ر.س' : '—'}</td>
             <td style="padding:11px 14px;text-align:center;font-weight:600;">${q.transport_price ? q.transport_price+' ر.س' : '—'}</td>
