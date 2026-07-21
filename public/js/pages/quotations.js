@@ -78,6 +78,8 @@ export async function renderQuotations(container) {
   document.getElementById('quot-search').oninput = e => _renderList(e.target.value);
 
   window.openQuotModal    = openQuotModal;
+  window.addCityRow       = addCityRow;
+  window.removeCityRow    = removeCityRow;
   window.openQuotReport   = openQuotReport;
   window.closeQuotModal   = closeQuotModal;
   window.saveQuotation    = saveQuotation;
@@ -162,7 +164,9 @@ function _renderList(search = '') {
             <td style="padding:11px 14px;font-weight:700;color:var(--navy);font-size:12px;">${q.number||'—'}</td>
             <td style="padding:11px 14px;font-weight:600;">${q.customer_name||'—'}</td>
             <td style="padding:11px 14px;color:var(--muted);">${PORT_ICONS[q.port_type]||''} ${portLabel}</td>
-            <td style="padding:11px 14px;color:var(--muted);">${q.city||'—'}</td>
+            <td style="padding:11px 14px;color:var(--muted);font-size:11px;">
+            \${(q.transport_rows||[{city:q.city}]).map(r=>r.city).join('، ')||'—'}
+          </td>
             <td style="padding:11px 14px;text-align:center;font-weight:600;">${q.customs_price ? q.customs_price+' ر.س' : '—'}</td>
             <td style="padding:11px 14px;text-align:center;font-weight:600;">${q.transport_price ? q.transport_price+' ر.س' : '—'}</td>
             <td style="padding:11px 14px;text-align:center;">
@@ -259,27 +263,35 @@ async function openQuotModal(quotation = null) {
       </div>
     </div>
 
-    <div class="field">
-      <label>مدينة التوصيل *</label>
-      <select id="quot-city">
-        <option value="">— اختر المدينة —</option>
-        ${cityOptions}
-      </select>
-    </div>
-
     <div style="background:var(--surface);border-radius:8px;padding:14px;margin-bottom:12px;">
-      <div style="font-size:12px;font-weight:700;color:var(--navy);margin-bottom:12px;border-bottom:1px solid var(--border);padding-bottom:6px;">
+      <div style="font-size:12px;font-weight:700;color:var(--navy);margin-bottom:10px;border-bottom:1px solid var(--border);padding-bottom:6px;">
         💰 الأسعار
       </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
-        <div class="field" style="margin:0;">
-          <label>Customs Clearance (ر.س) *</label>
-          <input type="number" id="quot-customs" placeholder="300" value="${q.customs_price||''}">
-        </div>
-        <div class="field" style="margin:0;">
-          <label>Transportation (ر.س) *</label>
-          <input type="number" id="quot-transport" placeholder="750" value="${q.transport_price||''}">
-        </div>
+      <div class="field" style="margin-bottom:12px;">
+        <label>Customs Clearance (ر.س) *</label>
+        <input type="number" id="quot-customs" placeholder="300" value="${q.customs_price||''}">
+      </div>
+      <div style="font-size:11px;font-weight:700;color:var(--navy);margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;">
+        <span>🚛 Transportation — مدن التوصيل</span>
+        <button type="button" class="btn btn-sm btn-ghost" onclick="addCityRow()" style="font-size:11px;">
+          <i class="ti ti-plus"></i> إضافة مدينة
+        </button>
+      </div>
+      <div id="quot-cities">
+        ${(q.transport_rows && q.transport_rows.length > 0
+          ? q.transport_rows
+          : [{ city: q.city||'', price: q.transport_price||'' }]
+        ).map((r,i) => `
+          <div class="city-row" data-idx="${i}" style="display:grid;grid-template-columns:1fr 120px 36px;gap:8px;margin-bottom:8px;align-items:center;">
+            <select class="city-sel" style="padding:8px;border:0.5px solid var(--border);border-radius:8px;font-family:Tajawal,sans-serif;font-size:13px;">
+              <option value="">— المدينة —</option>
+              ${KSA_CITIES.map(c => `<option value="${c}" ${r.city===c?'selected':''}>${c}</option>`).join('')}
+            </select>
+            <input type="number" class="city-price" placeholder="السعر" value="${r.price||''}"
+              style="padding:8px;border:0.5px solid var(--border);border-radius:8px;font-family:Tajawal,sans-serif;font-size:13px;text-align:center;">
+            <button type="button" onclick="removeCityRow(${i})"
+              style="background:var(--red-light);color:var(--red);border:none;border-radius:8px;width:36px;height:36px;cursor:pointer;font-size:16px;">×</button>
+          </div>`).join('')}
       </div>
     </div>
 
@@ -324,6 +336,31 @@ function onQuotTypeChange(type) {
   }
 }
 
+function addCityRow() {
+  const rows  = document.getElementById('quot-cities');
+  const i     = rows.querySelectorAll('.city-row').length;
+  const cityOpts = KSA_CITIES.map(c => `<option value="${c}">${c}</option>`).join('');
+  const div = document.createElement('div');
+  div.className = 'city-row';
+  div.dataset.idx = i;
+  div.style.cssText = 'display:grid;grid-template-columns:1fr 120px 36px;gap:8px;margin-bottom:8px;align-items:center;';
+  div.innerHTML = `
+    <select class="city-sel" style="padding:8px;border:0.5px solid var(--border);border-radius:8px;font-family:Tajawal,sans-serif;font-size:13px;">
+      <option value="">— المدينة —</option>
+      ${cityOpts}
+    </select>
+    <input type="number" class="city-price" placeholder="السعر"
+      style="padding:8px;border:0.5px solid var(--border);border-radius:8px;font-family:Tajawal,sans-serif;font-size:13px;text-align:center;">
+    <button type="button" onclick="removeCityRow(${i})"
+      style="background:var(--red-light);color:var(--red);border:none;border-radius:8px;width:36px;height:36px;cursor:pointer;font-size:16px;">×</button>`;
+  rows.appendChild(div);
+}
+
+function removeCityRow(i) {
+  const row = document.querySelector(`.city-row[data-idx="${i}"]`);
+  if (row && document.querySelectorAll('.city-row').length > 1) row.remove();
+}
+
 function closeQuotModal() {
   document.getElementById('quot-modal').classList.add('hidden');
 }
@@ -335,19 +372,25 @@ async function saveQuotation() {
   const custSel  = document.getElementById('quot-customer');
   const portType = document.getElementById('quot-type')?.value;
   const port     = document.getElementById('quot-port')?.value;
-  const city     = document.getElementById('quot-city')?.value;
   const customs  = document.getElementById('quot-customs')?.value;
-  const transport= document.getElementById('quot-transport')?.value;
   const notes    = document.getElementById('quot-notes')?.value;
   const errEl    = document.getElementById('quot-error');
   const btn      = document.getElementById('quot-save-btn');
+
+  // Collect transport rows
+  const transportRows = [];
+  document.querySelectorAll('.city-row').forEach(row => {
+    const city  = row.querySelector('.city-sel')?.value;
+    const price = row.querySelector('.city-price')?.value;
+    if (city && price) transportRows.push({ city, price: parseFloat(price) });
+  });
 
   let customerName = custSel?.value === '__manual__'
     ? document.getElementById('quot-customer-manual')?.value.trim()
     : custSel?.value;
 
-  if (!customerName || !portType || !port || !city || !customs || !transport) {
-    errEl.textContent = 'يرجى تعبئة جميع الحقول المطلوبة *';
+  if (!customerName || !portType || !port || !customs || transportRows.length === 0) {
+    errEl.textContent = 'يرجى تعبئة جميع الحقول وإضافة مدينة توصيل واحدة على الأقل *';
     errEl.style.display = 'block';
     return;
   }
@@ -359,11 +402,15 @@ async function saveQuotation() {
   const portLabel = _getPortLabel(portType, port);
   const portLabelEn = _getPortLabelEn(portType, port);
 
+  const transportTotal = transportRows.reduce((s, r) => s + r.price, 0);
   const data = {
     number, date, customer_name: customerName,
     port_type: portType, port, port_label: portLabel, port_label_en: portLabelEn,
-    city, customs_price: parseFloat(customs), transport_price: parseFloat(transport),
-    total: parseFloat(customs) + parseFloat(transport),
+    city: transportRows[0]?.city || '',
+    transport_rows: transportRows,
+    customs_price: parseFloat(customs),
+    transport_price: transportTotal,
+    total: parseFloat(customs) + transportTotal,
     notes: notes || '',
     employee_name: profile?.name || '—',
     employee_role: profile?.role || '—',
