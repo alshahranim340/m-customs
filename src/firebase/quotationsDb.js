@@ -8,10 +8,18 @@ import { db } from './config.js';
 // AUTO NUMBER — QT-YYYY-XXXX
 // ─────────────────────────────────────────────
 export async function generateQuotationNumber() {
-  const year = new Date().getFullYear();
   const snap = await getDocs(collection(db, 'quotations'));
-  const count = snap.docs.filter(d => d.data().number?.startsWith(`QT-${year}`)).length;
-  return `QTN-${String(count + 1).padStart(4, '0')}`;
+  if (snap.empty) return 'QTN-0001';
+  let maxNum = 0;
+  snap.docs.forEach(d => {
+    const num = d.data().number || '';
+    const m = num.match(/QTN-(\d+)/);
+    if (m) {
+      const n = parseInt(m[1]);
+      if (n > maxNum) maxNum = n;
+    }
+  });
+  return `QTN-${String(maxNum + 1).padStart(4, '0')}`;
 }
 
 // ─────────────────────────────────────────────
