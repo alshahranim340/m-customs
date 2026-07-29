@@ -1,5 +1,5 @@
 import {
-  collection, doc, setDoc, getDocs, deleteDoc, serverTimestamp
+  collection, doc, setDoc, updateDoc, getDocs, deleteDoc, serverTimestamp
 } from 'firebase/firestore';
 import { db } from './config.js';
 
@@ -20,6 +20,13 @@ export async function createFolder(name) {
     created_at: serverTimestamp()
   });
   return id;
+}
+
+export async function updateFolder(id, data) {
+  await updateDoc(doc(db, 'folders', id), {
+    ...data,
+    updated_at: serverTimestamp()
+  });
 }
 
 export async function deleteFolder(id) {
