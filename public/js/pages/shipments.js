@@ -361,7 +361,7 @@ function openFolderMenu(id, name) {
 async function renameFolderFn(id, oldName) {
   const newName = window.prompt('الاسم الجديد للمجلد:', oldName);
   if (!newName || !newName.trim() || newName.trim() === oldName) return;
-  const { updateFolder } = await import('../../src/firebase/folders.js');
+  const { updateFolder } = await import('../../../src/firebase/folders.js');
   await updateFolder(id, { name: newName.trim() });
   _folders = await getFolders();
   applyFiltersAndRender();
