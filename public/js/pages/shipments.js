@@ -28,54 +28,73 @@ let _brokerReplyFile = null;
 
 export async function renderShipments(container) {
   container.innerHTML = `
-    <div class="page-body" style="padding:20px 24px;">
-      <!-- Premium Header -->
-      <div class="premium-header">
-        <div style="display:flex;justify-content:space-between;align-items:center;">
+    <div class="page-body" style="padding:20px 24px;background:#F5F7FA;">
+      <div class="modern-page">
+
+        <!-- Header -->
+        <div class="modern-header">
+          <div class="modern-header-brand">
+            <div class="modern-header-icon"><i class="ti ti-package"></i></div>
+            <div>
+              <div class="modern-header-title">سجل الشحنات</div>
+              <div class="modern-header-sub" id="header-sub">جميع الشحنات المسجلة</div>
+            </div>
+          </div>
+          <div class="modern-header-actions">
+            <button class="modern-btn" onclick="openNewFolder()">
+              <i class="ti ti-folder-plus"></i> مجلد جديد
+            </button>
+            <button class="modern-btn modern-btn-primary" onclick="navigate('new-shipment')">
+              <i class="ti ti-plus"></i> شحنة جديدة
+            </button>
+          </div>
+        </div>
+
+        <!-- Stats -->
+        <div class="modern-stats">
           <div>
-            <div class="ph-title-eyebrow">Al Sudais · Shipments Archive</div>
-            <div class="ph-title">سجل الشحنات</div>
+            <div class="modern-stat-lbl">إجمالي الشحنات</div>
+            <div class="modern-stat-val" id="stat-total">0</div>
+            <div class="modern-stat-hint" id="stat-hint-total">شحنة</div>
           </div>
-          <div class="ph-actions">
-            <button class="ph-btn-ghost" onclick="openNewFolder()">
-              <i class="ti ti-folder-plus" style="font-size:15px;vertical-align:-2px;margin-left:4px;"></i> مجلد جديد
-            </button>
-            <button class="ph-btn-primary" onclick="navigate('new-shipment')">
-              <i class="ti ti-plus" style="font-size:15px;vertical-align:-2px;margin-left:4px;"></i> شحنة جديدة
-            </button>
+          <div>
+            <div class="modern-stat-lbl">المجلدات</div>
+            <div class="modern-stat-val" id="stat-folders">0</div>
+            <div class="modern-stat-hint">نشطة</div>
+          </div>
+          <div>
+            <div class="modern-stat-lbl">تحتاج تصنيف</div>
+            <div class="modern-stat-val danger" id="stat-unassigned">0</div>
+            <div class="modern-stat-hint alert">تنبيه</div>
           </div>
         </div>
-        <div class="ph-stats" id="ph-stats-strip">
-          <div class="ph-stat"><div class="ph-stat-num" id="stat-total">0</div><div class="ph-stat-lbl">إجمالي الشحنات</div></div>
-          <div class="ph-stat"><div class="ph-stat-num" id="stat-folders">0</div><div class="ph-stat-lbl">مجلد</div></div>
-          <div class="ph-stat"><div class="ph-stat-num danger" id="stat-unassigned">0</div><div class="ph-stat-lbl">غير مصنفة</div></div>
+
+        <!-- Search -->
+        <div class="modern-search-bar">
+          <div class="modern-search-wrap">
+            <i class="ti ti-search modern-search-icon"></i>
+            <input type="text" id="search-input" class="modern-search-input"
+              placeholder="ابحث برقم البيان، اسم السائق، المصدر، رقم اللوحة..."
+              oninput="searchShipments(this.value)">
+          </div>
         </div>
-      </div>
 
-      <!-- Search Bar -->
-      <div class="premium-search-bar">
-        <div class="premium-search-wrap">
-          <i class="ti ti-search premium-search-icon"></i>
-          <input type="text" id="search-input" class="premium-search-input"
-            placeholder="ابحث برقم البيان، اسم السائق، المصدر، رقم اللوحة..."
-            oninput="searchShipments(this.value)">
+        <!-- Selection toolbar -->
+        <div id="selection-bar" style="display:none;align-items:center;gap:10px;
+          background:#1C4B8E;color:white;padding:10px 16px;margin:12px 24px 0;border-radius:10px;">
+          <span id="sel-count" style="font-size:13px;font-weight:600;"></span>
+          <button class="modern-btn" onclick="moveSelectedToFolder()" style="background:rgba(255,255,255,0.15);color:white;border-color:rgba(255,255,255,0.2);">
+            <i class="ti ti-folder-plus"></i> نقل إلى مجلد
+          </button>
+          <button class="modern-btn" onclick="clearSelection()" style="background:rgba(255,255,255,0.08);color:white;border-color:transparent;">
+            إلغاء
+          </button>
         </div>
-      </div>
 
-      <!-- Selection toolbar -->
-      <div id="selection-bar" style="display:none;align-items:center;gap:10px;
-        background:var(--sudais-blue,#1C4B8E);color:white;padding:10px 16px;border-radius:10px;margin-bottom:16px;">
-        <span id="sel-count" style="font-size:13px;font-weight:600;"></span>
-        <button class="ph-btn-ghost" onclick="moveSelectedToFolder()" style="background:rgba(255,255,255,0.15);border-color:rgba(255,255,255,0.2);">
-          <i class="ti ti-folder-plus"></i> نقل إلى مجلد
-        </button>
-        <button class="ph-btn-ghost" onclick="clearSelection()" style="background:rgba(255,255,255,0.08);">
-          إلغاء التحديد
-        </button>
-      </div>
+        <!-- List -->
+        <div id="shipments-list"><div class="loader"><div class="spinner"></div></div></div>
 
-      <!-- List area -->
-      <div id="shipments-list"><div class="loader"><div class="spinner"></div></div></div>
+      </div>
     </div>
 
     <!-- EDIT MODAL -->
@@ -220,32 +239,35 @@ function applyFiltersAndRender() {
   const elTotal = document.getElementById('stat-total');
   const elFolders = document.getElementById('stat-folders');
   const elUnassigned = document.getElementById('stat-unassigned');
+  const elSub = document.getElementById('header-sub');
   if (elTotal) elTotal.textContent = totalAll;
   if (elFolders) elFolders.textContent = totalFolders;
   if (elUnassigned) elUnassigned.textContent = totalUnassigned;
+  if (elSub) elSub.textContent = `${totalAll} شحنة · ${totalFolders} مجلد`;
 
   const totalShown = _allShipments.filter(matchSearch).length;
   if (totalShown === 0) {
-    list.innerHTML = `<div class="empty-state"><div class="empty-icon">📭</div><div class="empty-title">لا توجد شحنات</div></div>`;
+    list.innerHTML = `<div class="empty-state" style="padding:40px;text-align:center;"><div class="empty-icon" style="font-size:32px;">📭</div><div class="empty-title" style="margin-top:8px;color:#697386;">لا توجد شحنات</div></div>`;
     return;
   }
 
   let html = '';
 
-  // Section 1: Unassigned shipments (spotlight at top)
+  // Section 1: Unassigned shipments
   if (noFolder.length > 0) {
     html += `
-      <div class="premium-section-header">
-        <div class="psh-bar danger"></div>
-        <div class="psh-title">تحتاج تصنيف</div>
-        <div class="psh-divider"></div>
-        <div class="psh-badge">${noFolder.length} ${noFolder.length === 1 ? 'شحنة' : 'شحنات'}</div>
+      <div class="modern-section">
+        <div class="modern-section-title">
+          <i class="ti ti-file-alert" style="font-size:14px;color:#CC2229;"></i>
+          تحتاج تصنيف
+          <span class="badge">${noFolder.length}</span>
+        </div>
       </div>
-      <div class="premium-list">`;
+      <div class="modern-list">`;
     let counter = 0;
     noFolder.forEach(s => {
       counter++;
-      html += renderPremiumRow(s, counter, true);
+      html += renderModernRow(s, counter, true);
     });
     html += `</div>`;
   }
@@ -253,55 +275,49 @@ function applyFiltersAndRender() {
   // Section 2: Folders
   if (_folders.length > 0) {
     html += `
-      <div class="premium-section-header">
-        <div class="psh-bar"></div>
-        <div class="psh-title">المجلدات</div>
-        <div class="psh-divider"></div>
-        <div class="psh-count">${_folders.length} مجلد</div>
+      <div class="modern-section">
+        <div class="modern-section-title">
+          <i class="ti ti-folders" style="font-size:14px;color:#1C4B8E;"></i>
+          المجلدات <span style="color:#697386;font-weight:500;letter-spacing:0;text-transform:none;font-size:11px;">· ${_folders.length}</span>
+        </div>
       </div>
-      <div class="premium-folders-grid">`;
+      <div class="modern-folders-grid">`;
 
     _folders.forEach(f => {
       const items = inFolder[f.id] || [];
       if (_searchQuery && items.length === 0) return;
-      const lastUpdate = items.length > 0
-        ? (items[0].date || 'اليوم')
-        : '—';
       html += `
-        <div class="premium-folder-card" onclick="toggleFolder('${f.id}')">
-          <div class="pfc-head">
-            <div class="pfc-icon-box"><i class="ti ti-folder"></i></div>
-            <button class="pfc-menu-btn" onclick="event.stopPropagation();openFolderMenu('${f.id}','${(f.name||'').replace(/'/g,'&#39;')}')" title="خيارات">
-              <i class="ti ti-dots" style="font-size:16px;"></i>
-            </button>
+        <div class="modern-folder-card" onclick="toggleFolder('${f.id}')">
+          <div class="modern-folder-icon"><i class="ti ti-folder"></i></div>
+          <div class="modern-folder-body">
+            <div class="modern-folder-name">${f.name}</div>
+            <div class="modern-folder-meta">${items.length} ${items.length === 1 ? 'شحنة' : 'شحنات'}</div>
           </div>
-          <div class="pfc-body">
-            <div class="pfc-name">${f.name}</div>
-            <div class="pfc-meta">${items.length} ${items.length === 1 ? 'شحنة' : 'شحنات'} · ${lastUpdate}</div>
-          </div>
+          <button class="modern-folder-menu" onclick="event.stopPropagation();openFolderMenu('${f.id}','${(f.name||'').replace(/'/g,"&#39;")}')" title="خيارات">
+            <i class="ti ti-dots" style="font-size:15px;"></i>
+          </button>
         </div>`;
     });
     html += `</div>`;
 
-    // Show folder contents for opened folders
+    // Show open folders content
     _folders.forEach(f => {
       if (!_openFolders.has(f.id)) return;
       const items = inFolder[f.id] || [];
       html += `
-        <div class="premium-section-header">
-          <div class="psh-bar"></div>
-          <div class="psh-title">📂 ${f.name}</div>
-          <div class="psh-divider"></div>
-          <button class="pfc-menu-btn" onclick="toggleFolder('${f.id}')" style="font-size:12px;color:var(--sudais-blue,#1C4B8E);">
-            إغلاق ×
-          </button>
+        <div class="modern-section">
+          <div class="modern-section-title">
+            <i class="ti ti-folder-open" style="font-size:14px;color:#2E8B57;"></i>
+            ${f.name}
+            <button onclick="toggleFolder('${f.id}')" style="margin-right:auto;background:none;border:none;color:#1C4B8E;font-size:11px;cursor:pointer;font-family:inherit;">إغلاق ×</button>
+          </div>
         </div>
-        <div class="premium-list">`;
+        <div class="modern-list">`;
       if (items.length === 0) {
-        html += `<div style="padding:20px;text-align:center;color:#94A3B8;font-size:13px;">المجلد فارغ</div>`;
+        html += `<div style="padding:20px;text-align:center;color:#697386;font-size:12px;">المجلد فارغ</div>`;
       } else {
         let counter = 0;
-        items.forEach(s => { counter++; html += renderPremiumRow(s, counter, false); });
+        items.forEach(s => { counter++; html += renderModernRow(s, counter, false); });
       }
       html += `</div>`;
     });
@@ -311,51 +327,52 @@ function applyFiltersAndRender() {
   updateSelectionBar();
 }
 
-function renderPremiumRow(s, num, isUnassigned) {
+function renderModernRow(s, num, isUnassigned) {
   const checked = _selected.has(s.id);
   const st = STATUS[s.status] || { ar: s.status, class: 'pill-draft' };
-  const badgeClass = st.class === 'pill-done' ? 'premium-badge-done'
-    : st.class === 'pill-sent' ? 'premium-badge-sent'
-    : st.class === 'pill-replied' ? 'premium-badge-replied'
-    : 'premium-badge-draft';
-  const iconClass = isUnassigned ? 'danger' : '';
-  const iconName = isUnassigned ? 'ti-file-alert' : 'ti-file';
+
+  // Badge color
+  let badgeClass = 'gray';
+  if (st.class === 'pill-done') badgeClass = 'green';
+  else if (st.class === 'pill-sent') badgeClass = 'blue';
+  else if (st.class === 'pill-replied') badgeClass = 'amber';
+  else if (isUnassigned) badgeClass = 'gray';
+
+  const iconColor = isUnassigned ? 'red'
+    : (st.class === 'pill-done' ? 'green' : 'blue');
+  const iconName = isUnassigned ? 'ti-file-alert'
+    : (st.class === 'pill-done' ? 'ti-truck-delivery' : 'ti-file');
 
   return `
-    <div class="premium-row ${checked?'selected':''}">
-      <input type="checkbox" ${checked?'checked':''}
-        onchange="toggleSelect('${s.id}')" onclick="event.stopPropagation()"
-        style="width:16px;height:16px;cursor:pointer;accent-color:var(--sudais-blue,#1C4B8E);">
-      <div style="display:flex;align-items:center;gap:12px;min-width:0;">
-        <div class="premium-row-icon ${iconClass}"><i class="ti ${iconName}"></i></div>
-        <div style="min-width:0;flex:1;">
-          <div class="premium-row-title">بيان #${s.declaration_no||'—'}</div>
-          <div class="premium-row-sub">
-            <i class="ti ti-user" style="font-size:11px;vertical-align:-1px;"></i> ${s.driver_snapshot?.name||'—'}
-            ${s.driver_snapshot?.plate ? ` · ${s.driver_snapshot.plate}` : ''}
-            ${s.exporter ? ` · ${s.exporter}` : ''}
-          </div>
+    <div class="modern-row">
+      <input type="checkbox" class="modern-row-check" ${checked?'checked':''}
+        onchange="toggleSelect('${s.id}')" onclick="event.stopPropagation()">
+      <div class="modern-row-icon ${iconColor}"><i class="ti ${iconName}"></i></div>
+      <div class="modern-row-body">
+        <div class="modern-row-title">
+          #${s.declaration_no||'—'}
+          <span class="muted">· ${s.driver_snapshot?.name||'—'}</span>
+        </div>
+        <div class="modern-row-sub">
+          ${s.exporter ? s.exporter + ' · ' : ''}${s.goods_description || 'بضاعة'}
         </div>
       </div>
-      <div class="premium-row-meta">${DEST[s.destination]||'—'}</div>
-      <span class="premium-badge ${badgeClass}">${st.ar}</span>
-      <div class="premium-row-meta">${s.date||'—'}</div>
-      <div class="premium-actions">
-        <button class="premium-icon-btn" title="نقل لمجلد" onclick="moveToFolder('${s.id}')"><i class="ti ti-folder-plus" style="font-size:14px;"></i></button>
-        <button class="premium-icon-btn" title="عرض" onclick="navigate('shipment-view',{id:'${s.id}'})"><i class="ti ti-eye" style="font-size:14px;"></i></button>
-        <button class="premium-icon-btn" title="تعديل" onclick="openEditModal('${s.id}')"><i class="ti ti-edit" style="font-size:14px;"></i></button>
-        <button class="premium-icon-btn danger" title="حذف" onclick="confirmDelete('${s.id}','${s.declaration_no||''}')"><i class="ti ti-trash" style="font-size:14px;"></i></button>
+      <span class="modern-badge gray">${DEST[s.destination] || '—'}</span>
+      <span class="modern-badge ${badgeClass}">${st.ar}</span>
+      <span class="modern-row-date">${s.date || '—'}</span>
+      <div class="modern-row-actions">
+        <button class="modern-icon-btn" title="نقل لمجلد" onclick="moveToFolder('${s.id}')"><i class="ti ti-folder-plus"></i></button>
+        <button class="modern-icon-btn" title="عرض" onclick="navigate('shipment-view',{id:'${s.id}'})"><i class="ti ti-eye"></i></button>
+        <button class="modern-icon-btn" title="تعديل" onclick="openEditModal('${s.id}')"><i class="ti ti-edit"></i></button>
+        <button class="modern-icon-btn danger" title="حذف" onclick="confirmDelete('${s.id}','${s.declaration_no||''}')"><i class="ti ti-trash"></i></button>
       </div>
     </div>`;
 }
 
 function openFolderMenu(id, name) {
-  const choice = window.prompt(`المجلد: ${name}\n\nاكتب:\n1 لتعديل الاسم\n2 لحذف المجلد`);
-  if (choice === '1') {
-    renameFolderFn(id, name);
-  } else if (choice === '2') {
-    deleteFolderFn(id, name);
-  }
+  const choice = window.prompt(`المجلد: ${name}\n\n1 - تعديل الاسم\n2 - حذف المجلد`);
+  if (choice === '1') renameFolderFn(id, name);
+  else if (choice === '2') deleteFolderFn(id, name);
 }
 
 async function renameFolderFn(id, oldName) {
