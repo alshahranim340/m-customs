@@ -13,31 +13,40 @@ export async function renderUsers(container) {
   }
 
   container.innerHTML = `
-    <div class="topbar">
-      <div>
-        <div class="topbar-title">👥 إدارة الموظفين</div>
-        <div class="topbar-sub">إنشاء وإدارة حسابات الفريق</div>
-      </div>
-      <div class="topbar-actions">
-        <button class="btn btn-ghost" onclick="printUsersReport()">
-          <i class="ti ti-printer"></i> طباعة التقرير
-        </button>
-        <button class="btn btn-primary" onclick="openAddUser()">
-          <i class="ti ti-plus"></i> موظف جديد
-        </button>
-      </div>
-    </div>
-
-    <div class="page-body">
-      <div id="users-stats" style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px;"></div>
-      <div class="card">
-        <div class="card-header">
-          <div class="card-title">قائمة الموظفين</div>
-          <input type="text" id="user-search" placeholder="🔍 بحث بالاسم أو البريد..."
-            style="padding:7px 12px;border:0.5px solid var(--border);border-radius:8px;
-            font-family:Tajawal,sans-serif;font-size:13px;outline:none;width:220px;">
+    <div class="page-body" style="padding:20px 24px;background:#F5F7FA;">
+      <div class="modern-page">
+        <!-- Header -->
+        <div class="modern-header">
+          <div class="modern-header-brand">
+            <div class="modern-header-icon"><i class="ti ti-users"></i></div>
+            <div>
+              <div class="modern-header-title">إدارة الموظفين</div>
+              <div class="modern-header-sub">إنشاء وإدارة حسابات الفريق</div>
+            </div>
+          </div>
+          <div class="modern-header-actions">
+            <button class="modern-btn" onclick="printUsersReport()">
+              <i class="ti ti-printer"></i> طباعة التقرير
+            </button>
+            <button class="modern-btn modern-btn-primary" onclick="openAddUser()">
+              <i class="ti ti-plus"></i> موظف جديد
+            </button>
+          </div>
         </div>
-        <div id="users-list"><div class="loader"><div class="spinner"></div></div></div>
+
+        <!-- Stats -->
+        <div id="users-stats"></div>
+
+        <!-- Search -->
+        <div class="modern-search-bar">
+          <div class="modern-search-wrap">
+            <i class="ti ti-search modern-search-icon"></i>
+            <input type="text" id="user-search" class="modern-search-input"
+              placeholder="ابحث بالاسم أو البريد الإلكتروني...">
+          </div>
+        </div>
+
+        <div id="users-list" style="padding:0 24px 20px;"><div class="loader"><div class="spinner"></div></div></div>
       </div>
     </div>
 
@@ -121,17 +130,22 @@ function renderStats() {
   const el = document.getElementById('users-stats');
   if (!el) return;
   el.innerHTML = `
-    <div class="stat-card">
-      <div class="stat-icon si-blue"><i class="ti ti-users" style="font-size:22px;color:var(--blue)"></i></div>
-      <div><div class="stat-num">${total}</div><div class="stat-label">إجمالي الحسابات</div></div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-icon si-green"><i class="ti ti-user-check" style="font-size:22px;color:var(--green)"></i></div>
-      <div><div class="stat-num">${active}</div><div class="stat-label">نشط</div></div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-icon si-red"><i class="ti ti-user-off" style="font-size:22px;color:var(--red)"></i></div>
-      <div><div class="stat-num">${inactive}</div><div class="stat-label">معطّل</div></div>
+    <div style="padding:18px 24px;display:grid;grid-template-columns:repeat(3,1fr);gap:20px;background:#FAFBFC;border-bottom:1px solid #F0F1F5;">
+      <div>
+        <div style="font-size:11px;color:#697386;font-weight:600;letter-spacing:.3px;text-transform:uppercase;">إجمالي الحسابات</div>
+        <div style="font-size:26px;font-weight:700;color:#0A2540;margin-top:4px;letter-spacing:-0.5px;">${total}</div>
+        <div style="font-size:11px;color:#697386;margin-top:2px;display:flex;align-items:center;gap:4px;"><span style="width:6px;height:6px;border-radius:50%;background:#1C4B8E;"></span> مسجل</div>
+      </div>
+      <div>
+        <div style="font-size:11px;color:#697386;font-weight:600;letter-spacing:.3px;text-transform:uppercase;">نشط</div>
+        <div style="font-size:26px;font-weight:700;color:#2E8B57;margin-top:4px;letter-spacing:-0.5px;">${active}</div>
+        <div style="font-size:11px;color:#2E8B57;margin-top:2px;display:flex;align-items:center;gap:4px;"><span style="width:6px;height:6px;border-radius:50%;background:#2E8B57;"></span> فعّال</div>
+      </div>
+      <div>
+        <div style="font-size:11px;color:#697386;font-weight:600;letter-spacing:.3px;text-transform:uppercase;">معطّل</div>
+        <div style="font-size:26px;font-weight:700;color:#CC2229;margin-top:4px;letter-spacing:-0.5px;">${inactive}</div>
+        <div style="font-size:11px;color:#CC2229;margin-top:2px;display:flex;align-items:center;gap:4px;"><span style="width:6px;height:6px;border-radius:50%;background:#CC2229;"></span> غير نشط</div>
+      </div>
     </div>`;
 }
 
