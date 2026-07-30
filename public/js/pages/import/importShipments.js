@@ -14,36 +14,45 @@ export async function renderImportShipments(container, params = {}) {
   _filter = params.filter || 'all';
 
   container.innerHTML = `
-    <div class="topbar">
-      <div>
-        <div class="topbar-title">📦 شحنات الوارد</div>
-        <div class="topbar-sub">إدارة الشحنات الواردة</div>
-      </div>
-      <div class="topbar-actions">
-        <button class="btn btn-primary" id="btn-new-import-shipment">
-          <i class="ti ti-plus"></i> شحنة جديدة
-        </button>
-      </div>
-    </div>
-    <div class="page-body">
-      <!-- Filters -->
-      <div class="card" style="padding:12px 16px;margin-bottom:12px;">
-        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-          <input type="text" id="imp-ship-search" placeholder="🔍 بحث برقم البوليصة أو العميل..."
-            style="flex:1;min-width:200px;padding:8px 12px;border:0.5px solid var(--border);border-radius:8px;font-family:Tajawal,sans-serif;font-size:13px;outline:none;">
-          <div style="display:flex;gap:6px;">
-            ${Object.entries({all:'الكل',...Object.fromEntries(Object.entries(IMPORT_STATUS).map(([k,v])=>[k,v.ar]))})
-              .map(([k,v]) => `
-                <button class="btn btn-sm ${_filter===k?'btn-primary':'btn-ghost'}" 
-                  data-filter="${k}" onclick="setImportFilter('${k}')">
-                  ${v}
-                </button>`).join('')}
+    <div class="page-body" style="padding:20px 24px;background:#F5F7FA;">
+      <div class="modern-page">
+        <!-- Header -->
+        <div class="modern-header">
+          <div class="modern-header-brand">
+            <div class="modern-header-icon"><i class="ti ti-package"></i></div>
+            <div>
+              <div class="modern-header-title">شحنات الوارد</div>
+              <div class="modern-header-sub" id="imp-ship-sub">إدارة الشحنات الواردة</div>
+            </div>
+          </div>
+          <div class="modern-header-actions">
+            <button class="modern-btn modern-btn-primary" id="btn-new-import-shipment">
+              <i class="ti ti-plus"></i> شحنة جديدة
+            </button>
           </div>
         </div>
-      </div>
-      <!-- List -->
-      <div class="card">
-        <div id="imp-ship-list"><div class="loader"><div class="spinner"></div></div></div>
+
+        <!-- Search + Filters -->
+        <div class="modern-search-bar" style="flex-wrap:wrap;">
+          <div class="modern-search-wrap">
+            <i class="ti ti-search modern-search-icon"></i>
+            <input type="text" id="imp-ship-search" class="modern-search-input"
+              placeholder="ابحث برقم البوليصة أو العميل...">
+          </div>
+        </div>
+
+        <!-- Filter tabs -->
+        <div style="padding:0 24px 16px;display:flex;gap:6px;flex-wrap:wrap;">
+          ${Object.entries({all:'الكل',...Object.fromEntries(Object.entries(IMPORT_STATUS).map(([k,v])=>[k,v.ar]))})
+            .map(([k,v]) => `
+              <button data-filter="${k}" onclick="setImportFilter('${k}')"
+                style="padding:6px 14px;border-radius:20px;font-family:Tajawal,sans-serif;font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;border:1px solid ${_filter===k?'#1C4B8E':'#E3E8EE'};background:${_filter===k?'#1C4B8E':'white'};color:${_filter===k?'white':'#425466'};">
+                ${v}
+              </button>`).join('')}
+        </div>
+
+        <!-- List -->
+        <div id="imp-ship-list" style="padding:0 24px 20px;"><div class="loader"><div class="spinner"></div></div></div>
       </div>
     </div>
 
@@ -85,12 +94,12 @@ export async function renderImportShipments(container, params = {}) {
 
 function setImportFilter(f) {
   _filter = f;
-  document.querySelectorAll('[data-filter]').forEach(btn =>
-    btn.classList.toggle('btn-primary', btn.dataset.filter === f)
-  );
-  document.querySelectorAll('[data-filter]').forEach(btn =>
-    btn.classList.toggle('btn-ghost', btn.dataset.filter !== f)
-  );
+  document.querySelectorAll('[data-filter]').forEach(btn => {
+    const active = btn.dataset.filter === f;
+    btn.style.background = active ? '#1C4B8E' : 'white';
+    btn.style.color = active ? 'white' : '#425466';
+    btn.style.borderColor = active ? '#1C4B8E' : '#E3E8EE';
+  });
   _renderList(document.getElementById('imp-ship-search')?.value || '');
 }
 
@@ -110,65 +119,64 @@ function _renderList(search = '') {
   if (!el) return;
 
   if (list.length === 0) {
-    el.innerHTML = `<div class="empty-state">
-      <div class="empty-icon">📦</div>
-      <div class="empty-title">لا توجد شحنات</div>
-      <div class="empty-sub">ابدأ بإضافة شحنة جديدة</div>
+    el.innerHTML = `<div style="text-align:center;padding:40px;background:#FAFBFC;border-radius:10px;">
+      <div style="font-size:36px;margin-bottom:8px;">📦</div>
+      <div style="font-size:14px;font-weight:600;color:#0A2540;">لا توجد شحنات</div>
+      <div style="font-size:12px;color:#697386;margin-top:4px;">ابدأ بإضافة شحنة جديدة</div>
     </div>`;
     return;
   }
 
-  el.innerHTML = `
-    <table style="width:100%;border-collapse:collapse;font-size:13px;">
-      <thead>
-        <tr style="background:var(--surface);border-bottom:1px solid var(--border);">
-          <th style="padding:10px 14px;text-align:right;font-weight:600;color:var(--muted);">رقم البوليصة</th>
-          <th style="padding:10px 14px;text-align:right;font-weight:600;color:var(--muted);">الرقم الداخلي</th>
-          <th style="padding:10px 14px;text-align:right;font-weight:600;color:var(--muted);">العميل</th>
-          <th style="padding:10px 14px;text-align:right;font-weight:600;color:var(--muted);">النوع</th>
-          <th style="padding:10px 14px;text-align:right;font-weight:600;color:var(--muted);">ETA</th>
-          <th style="padding:10px 14px;text-align:right;font-weight:600;color:var(--muted);">الحالة</th>
-          <th style="padding:10px 14px;text-align:center;font-weight:600;color:var(--muted);">إجراءات</th>
-        </tr>
-      </thead>
-      <tbody>
-        ${list.map(s => {
-          const st = IMPORT_STATUS[s.status] || IMPORT_STATUS.waiting;
-          const typeIcon = s.type === 'air' ? '✈️' : s.type === 'sea' ? '🚢' : '🚛';
-          const etaDate  = s.eta ? new Date(s.eta) : null;
-          const isLate   = etaDate && etaDate < new Date() && s.status !== 'delivered';
-          return `
-          <tr style="border-bottom:0.5px solid var(--border);transition:background .15s;"
-            onmouseover="this.style.background='var(--surface)'" 
-            onmouseout="this.style.background=''">
-            <td style="padding:12px 14px;font-weight:700;color:var(--navy);">${s.bl_number || '—'}</td>
-            <td style="padding:12px 14px;color:var(--muted);">${s.internal_no || '—'}</td>
-            <td style="padding:12px 14px;">${s.customer_name || '—'}</td>
-            <td style="padding:12px 14px;">${typeIcon} ${s.type === 'air' ? 'جوي' : s.type === 'sea' ? 'بحري' : 'بري'}</td>
-            <td style="padding:12px 14px;${isLate?'color:var(--red);font-weight:600;':''}">${_fmtDate(s.eta)}</td>
-            <td style="padding:12px 14px;">
-              <select class="pill ${st.class}" onchange="changeImportStatus('${s.id}',this.value)"
-                style="border:none;background:transparent;font-family:Tajawal,sans-serif;font-size:12px;cursor:pointer;padding:2px 6px;">
-                ${Object.entries(IMPORT_STATUS).map(([k,v]) =>
-                  `<option value="${k}" ${s.status===k?'selected':''}>${v.ar}</option>`
-                ).join('')}
-              </select>
-            </td>
-            <td style="padding:12px 14px;text-align:center;">
-              <div style="display:flex;gap:6px;justify-content:center;">
-                <button class="btn btn-sm btn-ghost" onclick="editImportShipment('${s.id}')">
-                  <i class="ti ti-edit"></i>
-                </button>
-                <button class="btn btn-sm btn-ghost" onclick="deleteImportShipment('${s.id}')"
-                  style="color:var(--red);">
-                  <i class="ti ti-trash"></i>
-                </button>
-              </div>
-            </td>
-          </tr>`;
-        }).join('')}
-      </tbody>
-    </table>`;
+  const subEl = document.getElementById('imp-ship-sub');
+  if (subEl) subEl.textContent = `${_shipments.length} شحنة · ${list.length} معروضة`;
+
+  el.innerHTML = list.map(s => {
+    const st = IMPORT_STATUS[s.status] || IMPORT_STATUS.waiting;
+    const typeName = s.type === 'air' ? 'جوي' : s.type === 'sea' ? 'بحري' : 'بري';
+    const etaDate  = s.eta ? new Date(s.eta) : null;
+    const isLate   = etaDate && etaDate < new Date() && s.status !== 'delivered';
+
+    // Badge color
+    let badgeClass = 'gray';
+    if (st.class === 'pill-done') badgeClass = 'green';
+    else if (st.class === 'pill-sent') badgeClass = 'blue';
+    else if (st.class === 'pill-replied') badgeClass = 'amber';
+
+    // Icon color
+    const iconColor = st.class === 'pill-done' ? 'green' : (isLate ? 'red' : 'blue');
+    const iconName = s.type === 'air' ? 'ti-plane' : s.type === 'sea' ? 'ti-ship' : 'ti-truck';
+
+    return `
+      <div style="background:white;border:1px solid #E3E8EE;border-radius:10px;padding:14px 16px;margin-bottom:8px;display:grid;grid-template-columns:auto 1fr auto auto auto auto;gap:14px;align-items:center;transition:all 0.15s;" onmouseover="this.style.borderColor='#1C4B8E'" onmouseout="this.style.borderColor='#E3E8EE'">
+        <div class="modern-row-icon ${iconColor}"><i class="ti ${iconName}"></i></div>
+        <div style="min-width:0;">
+          <div style="font-size:13px;font-weight:600;color:#0A2540;">
+            ${s.bl_number || '—'}
+            <span style="color:#697386;font-weight:400;font-size:12px;">· ${s.internal_no || '—'}</span>
+          </div>
+          <div style="font-size:11px;color:#697386;margin-top:3px;">
+            🏢 ${s.customer_name || '—'} · ${typeName}
+          </div>
+        </div>
+        <div style="font-size:11px;color:${isLate?'#CC2229':'#697386'};font-weight:${isLate?'600':'400'};white-space:nowrap;">
+          ${isLate ? '⚠ ' : ''}${_fmtDate(s.eta)}
+        </div>
+        <select onchange="changeImportStatus('${s.id}',this.value)"
+          style="background:${badgeClass==='green'?'#E7F5EE':badgeClass==='blue'?'#E3F0FF':badgeClass==='amber'?'#FFF7ED':'#F0F1F5'};color:${badgeClass==='green'?'#2E8B57':badgeClass==='blue'?'#0055CC':badgeClass==='amber'?'#C2410C':'#425466'};border:none;border-radius:12px;font-family:Tajawal,sans-serif;font-size:11px;font-weight:600;padding:4px 10px;cursor:pointer;">
+          ${Object.entries(IMPORT_STATUS).map(([k,v]) =>
+            `<option value="${k}" ${s.status===k?'selected':''}>${v.ar}</option>`
+          ).join('')}
+        </select>
+        <div style="display:flex;gap:4px;">
+          <button class="modern-icon-btn" title="تعديل" onclick="editImportShipment('${s.id}')">
+            <i class="ti ti-edit"></i>
+          </button>
+          <button class="modern-icon-btn danger" title="حذف" onclick="deleteImportShipment('${s.id}')">
+            <i class="ti ti-trash"></i>
+          </button>
+        </div>
+      </div>`;
+  }).join('');
 }
 
 // ─────────────────────────────────────────────
