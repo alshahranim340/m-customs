@@ -6,22 +6,27 @@ let _expenses  = [];
 
 export async function renderImportDashboard(container) {
   container.innerHTML = `
-    <div class="topbar">
-      <div>
-        <div class="topbar-title">📥 لوحة تحكم الوارد</div>
-        <div class="topbar-sub">نظرة عامة على الشحنات الواردة</div>
+    <div class="page-body" style="padding:20px 24px;background:#F5F7FA;">
+      <div class="modern-page">
+        <div class="modern-header">
+          <div class="modern-header-brand">
+            <div class="modern-header-icon"><i class="ti ti-package-import"></i></div>
+            <div>
+              <div class="modern-header-title">لوحة تحكم الوارد</div>
+              <div class="modern-header-sub">نظرة عامة على الشحنات الواردة</div>
+            </div>
+          </div>
+          <div class="modern-header-actions">
+            <button class="modern-btn" onclick="printImportReport()">
+              <i class="ti ti-printer"></i> طباعة التقرير
+            </button>
+            <button class="modern-btn modern-btn-primary" onclick="navigate('import-shipments', {action:'new'})">
+              <i class="ti ti-plus"></i> شحنة جديدة
+            </button>
+          </div>
+        </div>
+        <div id="import-dash-content"><div class="loader"><div class="spinner"></div></div></div>
       </div>
-      <div class="topbar-actions">
-        <button class="btn btn-ghost" onclick="printImportReport()">
-          <i class="ti ti-printer"></i> طباعة التقرير
-        </button>
-        <button class="btn btn-primary" onclick="navigate('import-shipments', {action:'new'})">
-          <i class="ti ti-plus"></i> شحنة جديدة
-        </button>
-      </div>
-    </div>
-    <div class="page-body">
-      <div id="import-dash-content"><div class="loader"><div class="spinner"></div></div></div>
     </div>`;
 
   try {
@@ -59,68 +64,104 @@ function _render(shipments, expenses) {
   const fmt = n => n.toLocaleString('ar-SA', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
   document.getElementById('import-dash-content').innerHTML = `
-    <div class="stats-row">
-      <div class="stat-card" onclick="navigate('import-shipments')" style="cursor:pointer;">
-        <div class="stat-icon si-blue"><i class="ti ti-ship" style="font-size:22px;color:var(--blue)"></i></div>
-        <div><div class="stat-num">${total}</div><div class="stat-label">إجمالي الشحنات</div></div>
+    <div style="padding:18px 24px;display:grid;grid-template-columns:repeat(4,1fr);gap:20px;background:#FAFBFC;border-bottom:1px solid #F0F1F5;">
+      <div onclick="navigate('import-shipments')" style="cursor:pointer;">
+        <div style="font-size:11px;color:#697386;font-weight:600;letter-spacing:.3px;text-transform:uppercase;">إجمالي الشحنات</div>
+        <div style="font-size:26px;font-weight:700;color:#0A2540;margin-top:4px;letter-spacing:-0.5px;">${total}</div>
+        <div style="font-size:11px;color:#697386;margin-top:2px;display:flex;align-items:center;gap:4px;"><span style="width:6px;height:6px;border-radius:50%;background:#1C4B8E;"></span> إجمالي</div>
       </div>
-      <div class="stat-card" onclick="navigate('import-shipments',{filter:'waiting'})" style="cursor:pointer;">
-        <div class="stat-icon si-amber"><i class="ti ti-clock" style="font-size:22px;color:var(--amber)"></i></div>
-        <div><div class="stat-num">${waiting}</div><div class="stat-label">قيد الانتظار</div></div>
+      <div onclick="navigate('import-shipments',{filter:'waiting'})" style="cursor:pointer;">
+        <div style="font-size:11px;color:#697386;font-weight:600;letter-spacing:.3px;text-transform:uppercase;">قيد الانتظار</div>
+        <div style="font-size:26px;font-weight:700;color:#C2410C;margin-top:4px;letter-spacing:-0.5px;">${waiting}</div>
+        <div style="font-size:11px;color:#C2410C;margin-top:2px;display:flex;align-items:center;gap:4px;"><span style="width:6px;height:6px;border-radius:50%;background:#C2410C;"></span> بانتظار</div>
       </div>
-      <div class="stat-card" onclick="navigate('import-shipments',{filter:'clearance'})" style="cursor:pointer;">
-        <div class="stat-icon" style="background:#EEF2FF;"><i class="ti ti-file-check" style="font-size:22px;color:#6366f1"></i></div>
-        <div><div class="stat-num">${clearance}</div><div class="stat-label">قيد التخليص</div></div>
+      <div onclick="navigate('import-shipments',{filter:'clearance'})" style="cursor:pointer;">
+        <div style="font-size:11px;color:#697386;font-weight:600;letter-spacing:.3px;text-transform:uppercase;">قيد التخليص</div>
+        <div style="font-size:26px;font-weight:700;color:#6366F1;margin-top:4px;letter-spacing:-0.5px;">${clearance}</div>
+        <div style="font-size:11px;color:#6366F1;margin-top:2px;display:flex;align-items:center;gap:4px;"><span style="width:6px;height:6px;border-radius:50%;background:#6366F1;"></span> جمركي</div>
       </div>
-      <div class="stat-card" onclick="navigate('import-shipments',{filter:'delivered'})" style="cursor:pointer;">
-        <div class="stat-icon si-green"><i class="ti ti-circle-check" style="font-size:22px;color:var(--green)"></i></div>
-        <div><div class="stat-num">${delivered}</div><div class="stat-label">تم التسليم</div></div>
-      </div>
-    </div>
-
-    <div class="stats-row" style="margin-top:0;">
-      <div class="stat-card" onclick="navigate('import-expenses')" style="cursor:pointer;">
-        <div class="stat-icon" style="background:#FFF7ED;"><i class="ti ti-receipt" style="font-size:22px;color:#f97316"></i></div>
-        <div><div class="stat-num" style="font-size:18px;">${fmt(totalAmount)}</div><div class="stat-label">إجمالي الفواتير (ر.س)</div></div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-icon si-green"><i class="ti ti-cash" style="font-size:22px;color:var(--green)"></i></div>
-        <div><div class="stat-num" style="font-size:18px;color:var(--green);">${fmt(paidAmount)}</div><div class="stat-label">المدفوع (ر.س)</div></div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-icon si-red"><i class="ti ti-alert-circle" style="font-size:22px;color:var(--red)"></i></div>
-        <div><div class="stat-num" style="font-size:18px;color:var(--red);">${fmt(unpaidAmount)}</div><div class="stat-label">المتبقي (ر.س)</div></div>
+      <div onclick="navigate('import-shipments',{filter:'delivered'})" style="cursor:pointer;">
+        <div style="font-size:11px;color:#697386;font-weight:600;letter-spacing:.3px;text-transform:uppercase;">تم التسليم</div>
+        <div style="font-size:26px;font-weight:700;color:#2E8B57;margin-top:4px;letter-spacing:-0.5px;">${delivered}</div>
+        <div style="font-size:11px;color:#2E8B57;margin-top:2px;display:flex;align-items:center;gap:4px;"><span style="width:6px;height:6px;border-radius:50%;background:#2E8B57;"></span> مكتمل</div>
       </div>
     </div>
 
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
-      <div class="card">
-        <div class="card-header">
-          <div class="card-title">📅 شحنات هذا الأسبوع (ETA)</div>
-          <span class="pill" style="background:var(--blue-light);color:var(--blue);">${thisWeek.length}</span>
-        </div>
-        ${thisWeek.length === 0
-          ? `<div class="empty-state" style="padding:24px;"><div class="empty-icon" style="font-size:28px;">✅</div><div class="empty-title" style="font-size:13px;">لا توجد شحنات هذا الأسبوع</div></div>`
-          : `<div class="ship-list">${thisWeek.slice(0,5).map(s => `
-              <div class="ship-item" onclick="navigate('import-shipments',{open:'${s.id}'})" style="cursor:pointer;">
-                <div><div class="ship-no">${s.bl_number||'—'}</div><div class="ship-drv">🏢 ${s.customer_name||'—'}</div></div>
-                <div style="font-size:12px;color:var(--muted);">${_formatDate(s.eta)}</div>
-                <span class="pill ${IMPORT_STATUS[s.status]?.class||'pill-draft'}">${IMPORT_STATUS[s.status]?.ar||s.status}</span>
-              </div>`).join('')}</div>`}
+    <div style="padding:18px 24px;display:grid;grid-template-columns:repeat(3,1fr);gap:20px;border-bottom:1px solid #F0F1F5;">
+      <div onclick="navigate('import-expenses')" style="cursor:pointer;">
+        <div style="font-size:11px;color:#697386;font-weight:600;letter-spacing:.3px;text-transform:uppercase;">إجمالي الفواتير</div>
+        <div style="font-size:22px;font-weight:700;color:#0A2540;margin-top:4px;letter-spacing:-0.5px;">${fmt(totalAmount)} <span style="font-size:12px;color:#697386;font-weight:500;">ر.س</span></div>
       </div>
-      <div class="card">
-        <div class="card-header">
-          <div class="card-title">⚠️ شحنات متأخرة</div>
-          <span class="pill" style="background:var(--red-light);color:var(--red);">${overdue.length}</span>
+      <div>
+        <div style="font-size:11px;color:#697386;font-weight:600;letter-spacing:.3px;text-transform:uppercase;">المدفوع</div>
+        <div style="font-size:22px;font-weight:700;color:#2E8B57;margin-top:4px;letter-spacing:-0.5px;">${fmt(paidAmount)} <span style="font-size:12px;color:#697386;font-weight:500;">ر.س</span></div>
+      </div>
+      <div>
+        <div style="font-size:11px;color:#697386;font-weight:600;letter-spacing:.3px;text-transform:uppercase;">المتبقي</div>
+        <div style="font-size:22px;font-weight:700;color:#CC2229;margin-top:4px;letter-spacing:-0.5px;">${fmt(unpaidAmount)} <span style="font-size:12px;color:#697386;font-weight:500;">ر.س</span></div>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;padding:20px 24px;">
+      <!-- This Week -->
+      <div style="background:white;border:1px solid #E3E8EE;border-radius:10px;overflow:hidden;">
+        <div style="padding:14px 18px;border-bottom:1px solid #F0F1F5;display:flex;justify-content:space-between;align-items:center;">
+          <div style="font-size:12px;font-weight:700;color:#697386;letter-spacing:.5px;text-transform:uppercase;display:flex;align-items:center;gap:8px;">
+            <i class="ti ti-calendar-event" style="font-size:14px;color:#1C4B8E;"></i>
+            شحنات هذا الأسبوع (ETA)
+          </div>
+          <span class="modern-badge blue">${thisWeek.length}</span>
         </div>
-        ${overdue.length === 0
-          ? `<div class="empty-state" style="padding:24px;"><div class="empty-icon" style="font-size:28px;">✅</div><div class="empty-title" style="font-size:13px;">لا توجد شحنات متأخرة</div></div>`
-          : `<div class="ship-list">${overdue.slice(0,5).map(s => `
-              <div class="ship-item" onclick="navigate('import-shipments',{open:'${s.id}'})" style="cursor:pointer;">
-                <div><div class="ship-no">${s.bl_number||'—'}</div><div class="ship-drv">🏢 ${s.customer_name||'—'}</div></div>
-                <div style="font-size:12px;color:var(--red);font-weight:600;">${_formatDate(s.eta)}</div>
-                <span class="pill ${IMPORT_STATUS[s.status]?.class||'pill-draft'}">${IMPORT_STATUS[s.status]?.ar||s.status}</span>
-              </div>`).join('')}</div>`}
+        <div style="padding:8px 12px;">
+          ${thisWeek.length === 0
+            ? `<div style="text-align:center;padding:24px;color:#697386;font-size:12px;"><div style="font-size:28px;margin-bottom:4px;">✅</div>لا توجد شحنات هذا الأسبوع</div>`
+            : thisWeek.slice(0,5).map(s => {
+              const st = IMPORT_STATUS[s.status] || { ar: s.status, class: 'pill-draft' };
+              let badgeClass = 'gray';
+              if (st.class === 'pill-done') badgeClass = 'green';
+              else if (st.class === 'pill-sent') badgeClass = 'blue';
+              else if (st.class === 'pill-replied') badgeClass = 'amber';
+              return `
+              <div onclick="navigate('import-shipments',{open:'${s.id}'})" style="cursor:pointer;padding:10px;border-radius:8px;display:grid;grid-template-columns:1fr auto auto;gap:12px;align-items:center;transition:background .1s;" onmouseover="this.style.background='#FAFBFC'" onmouseout="this.style.background=''">
+                <div style="min-width:0;">
+                  <div style="font-size:13px;font-weight:600;color:#0A2540;">${s.bl_number||'—'}</div>
+                  <div style="font-size:11px;color:#697386;margin-top:2px;">🏢 ${s.customer_name||'—'}</div>
+                </div>
+                <span style="font-size:11px;color:#697386;">${_formatDate(s.eta)}</span>
+                <span class="modern-badge ${badgeClass}">${st.ar}</span>
+              </div>`;
+            }).join('')}
+        </div>
+      </div>
+
+      <!-- Overdue -->
+      <div style="background:white;border:1px solid #E3E8EE;border-radius:10px;overflow:hidden;">
+        <div style="padding:14px 18px;border-bottom:1px solid #F0F1F5;display:flex;justify-content:space-between;align-items:center;">
+          <div style="font-size:12px;font-weight:700;color:#697386;letter-spacing:.5px;text-transform:uppercase;display:flex;align-items:center;gap:8px;">
+            <i class="ti ti-alert-triangle" style="font-size:14px;color:#CC2229;"></i>
+            شحنات متأخرة
+          </div>
+          <span class="modern-badge red">${overdue.length}</span>
+        </div>
+        <div style="padding:8px 12px;">
+          ${overdue.length === 0
+            ? `<div style="text-align:center;padding:24px;color:#697386;font-size:12px;"><div style="font-size:28px;margin-bottom:4px;">✅</div>لا توجد شحنات متأخرة</div>`
+            : overdue.slice(0,5).map(s => {
+              const st = IMPORT_STATUS[s.status] || { ar: s.status, class: 'pill-draft' };
+              let badgeClass = 'gray';
+              if (st.class === 'pill-done') badgeClass = 'green';
+              else if (st.class === 'pill-sent') badgeClass = 'blue';
+              return `
+              <div onclick="navigate('import-shipments',{open:'${s.id}'})" style="cursor:pointer;padding:10px;border-radius:8px;display:grid;grid-template-columns:1fr auto auto;gap:12px;align-items:center;" onmouseover="this.style.background='#FEF2F2'" onmouseout="this.style.background=''">
+                <div style="min-width:0;">
+                  <div style="font-size:13px;font-weight:600;color:#0A2540;">${s.bl_number||'—'}</div>
+                  <div style="font-size:11px;color:#697386;margin-top:2px;">🏢 ${s.customer_name||'—'}</div>
+                </div>
+                <span style="font-size:11px;color:#CC2229;font-weight:600;">${_formatDate(s.eta)}</span>
+                <span class="modern-badge ${badgeClass}">${st.ar}</span>
+              </div>`;
+            }).join('')}
+        </div>
       </div>
     </div>`;
 }
