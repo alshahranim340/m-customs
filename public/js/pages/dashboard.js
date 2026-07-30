@@ -80,35 +80,6 @@ export async function renderDashboard(container) {
           </div>
         </div>
 
-        <!-- Workflow -->
-        <div style="padding:20px 24px;border-bottom:1px solid #F0F1F5;">
-          <div style="font-size:11px;font-weight:700;color:#697386;letter-spacing:.5px;text-transform:uppercase;margin-bottom:14px;display:flex;align-items:center;gap:8px;">
-            <i class="ti ti-git-branch" style="font-size:14px;color:#1C4B8E;"></i>
-            تدفق العمل
-          </div>
-          <div style="display:flex;gap:6px;overflow-x:auto;">
-            ${[
-              {n:1, icon:'ti-edit',        lbl:'تعبئة البيانات',  sub:'يدوي',      color:'#2E8B57'},
-              {n:2, icon:'ti-file-text',   lbl:'توليد الفورمات', sub:'PDF تلقائي', color:'#2E8B57'},
-              {n:3, icon:'ti-paperclip',   lbl:'رفع المرفقات',   sub:'6 ملفات',   color:'#C2410C'},
-              {n:4, icon:'ti-file-stack',  lbl:'دمج PDF',        sub:'ملف واحد',  color:'#1C4B8E'},
-              {n:5, icon:'ti-send',        lbl:'إرسال المخلص',   sub:'واتساب',    color:'#1C4B8E'},
-              {n:6, icon:'ti-mail-check',  lbl:'رد المخلص',      sub:'PDF جاهز',  color:'#1C4B8E'},
-              {n:7, icon:'ti-truck',       lbl:'إرسال السائق',   sub:'+ موعد',    color:'#0F3564'},
-            ].map((s,i,arr) => `
-              <div style="flex:1;min-width:80px;text-align:center;position:relative;">
-                <div style="width:36px;height:36px;border-radius:10px;background:${s.color}20;color:${s.color};display:flex;align-items:center;justify-content:center;margin:0 auto 8px;position:relative;">
-                  <i class="ti ${s.icon}" style="font-size:16px;"></i>
-                  <span style="position:absolute;top:-4px;right:-4px;background:${s.color};color:white;font-size:9px;font-weight:700;width:16px;height:16px;border-radius:50%;display:flex;align-items:center;justify-content:center;">${s.n}</span>
-                </div>
-                <div style="font-size:11px;font-weight:600;color:#0A2540;">${s.lbl}</div>
-                <div style="font-size:10px;color:#697386;margin-top:2px;">${s.sub}</div>
-                ${i < arr.length-1 ? '<div style="position:absolute;top:18px;left:-3px;color:#E3E8EE;font-size:14px;">›</div>' : ''}
-              </div>
-            `).join('')}
-          </div>
-        </div>
-
         <!-- Recent Shipments -->
         <div style="padding:16px 24px 20px;">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
