@@ -22,108 +22,141 @@ export async function renderDashboard(container) {
   const done    = _shipments.filter(s => s.status === 'done').length;
   const recent  = _shipments.slice(0, 8);
 
+  const uaeCount = _shipments.filter(s=>s.destination==='uae').length;
+  const bahCount = _shipments.filter(s=>s.destination==='bahrain').length;
+  const omanCount = _shipments.filter(s=>s.destination==='oman').length;
+
   container.innerHTML = `
-    <div class="topbar">
-      <div>
-        <div class="topbar-title">لوحة التحكم — الصادر</div>
-        <div class="topbar-sub">نظرة عامة على عمليات التخليص</div>
-      </div>
-      <div class="topbar-actions">
-        <button class="btn btn-ghost" onclick="printExportReport()">
-          <i class="ti ti-printer"></i> طباعة التقرير
-        </button>
-        <button class="btn btn-primary" onclick="navigate('new-shipment')">
-          <i class="ti ti-plus"></i> شحنة جديدة
-        </button>
-      </div>
-    </div>
+<style>
+.modern-page .modern-row[onclick] {
+  grid-template-columns: auto 1fr auto auto auto !important;
+  gap: 14px;
+}
+</style>
 
-    <div class="page-body">
+    <div class="page-body" style="padding:20px 24px;background:#F5F7FA;">
+      <div class="modern-page">
 
-      <!-- Stats -->
-      <div class="stats-row">
-        <div class="stat-card">
-          <div class="stat-icon si-blue"><i class="ti ti-truck" style="font-size:22px;color:var(--blue)"></i></div>
-          <div><div class="stat-num">${total}</div><div class="stat-label">إجمالي الشحنات</div></div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-icon si-green"><i class="ti ti-circle-check" style="font-size:22px;color:var(--green)"></i></div>
-          <div><div class="stat-num">${done}</div><div class="stat-label">مكتملة</div></div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-icon si-amber"><i class="ti ti-clock" style="font-size:22px;color:var(--amber)"></i></div>
-          <div><div class="stat-num">${pending}</div><div class="stat-label">قيد التجهيز</div></div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-icon si-red"><i class="ti ti-flag" style="font-size:22px;color:var(--red)"></i></div>
-          <div><div class="stat-num">${_shipments.filter(s=>s.destination==='uae').length}</div><div class="stat-label">شحنات الإمارات</div></div>
-        </div>
-      </div>
-
-      <!-- Flow -->
-      <div class="card" style="margin-bottom:16px;">
-        <div class="card-header">
-          <div class="card-title">تدفق العمل — من البيانات إلى السائق</div>
-        </div>
-        <div style="display:flex;overflow-x:auto;padding:16px;">
-          ${[
-            {n:'١', icon:'📝', lbl:'تعبئة البيانات',   sub:'يدوي'},
-            {n:'٢', icon:'🖨️', lbl:'توليد الفورمات',  sub:'PDF تلقائي'},
-            {n:'٣', icon:'📎', lbl:'رفع المرفقات',     sub:'٦ ملفات'},
-            {n:'٤', icon:'📦', lbl:'دمج PDF',          sub:'ملف واحد'},
-            {n:'٥', icon:'📤', lbl:'إرسال المخلص 🇦🇪', sub:'واتساب/إيميل'},
-            {n:'٦', icon:'📩', lbl:'رد المخلص',        sub:'PDF جاهز'},
-            {n:'٧', icon:'📤', lbl:'إرسال السائق',     sub:'+ موعد'},
-          ].map((s,i) => `
-            <div style="flex:1;min-width:90px;text-align:center;padding:10px 6px;border-left:1px solid var(--border);">
-              <div style="width:26px;height:26px;border-radius:50%;
-                background:${i<2?'var(--green)':i===2?'var(--gold)':'var(--navy)'};
-                color:white;font-size:11px;font-weight:700;display:flex;align-items:center;
-                justify-content:center;margin:0 auto 8px;">${s.n}</div>
-              <div style="font-size:18px;margin-bottom:4px;">${s.icon}</div>
-              <div style="font-size:11px;font-weight:600;color:var(--navy);">${s.lbl}</div>
-              <div style="font-size:10px;color:var(--muted);margin-top:2px;">${s.sub}</div>
+        <!-- Header -->
+        <div class="modern-header">
+          <div class="modern-header-brand">
+            <div class="modern-header-icon"><i class="ti ti-layout-dashboard"></i></div>
+            <div>
+              <div class="modern-header-title">لوحة التحكم — الصادر</div>
+              <div class="modern-header-sub">نظرة عامة على عمليات التخليص</div>
             </div>
-          `).join('')}
-        </div>
-      </div>
-
-      <!-- Recent Shipments -->
-      <div class="card">
-        <div class="card-header">
-          <div class="card-title">📋 آخر الشحنات</div>
-          <button class="btn btn-ghost btn-sm" onclick="navigate('shipments')">عرض الكل</button>
-        </div>
-        ${recent.length === 0 ? `
-          <div class="empty-state">
-            <div class="empty-icon">📭</div>
-            <div class="empty-title">لا توجد شحنات بعد</div>
-            <div class="empty-sub">ابدأ بإنشاء أول شحنة</div><br>
-            <button class="btn btn-primary" onclick="navigate('new-shipment')">
+          </div>
+          <div class="modern-header-actions">
+            <button class="modern-btn" onclick="printExportReport()">
+              <i class="ti ti-printer"></i> طباعة التقرير
+            </button>
+            <button class="modern-btn modern-btn-primary" onclick="navigate('new-shipment')">
               <i class="ti ti-plus"></i> شحنة جديدة
             </button>
           </div>
-        ` : `
-          <div class="ship-list">
-            ${recent.map(s => `
-              <div class="ship-item" onclick="navigate('shipments', {open:'${s.id}'})">
-                <div>
-                  <div class="ship-no">بيان #${s.declaration_no || '—'}</div>
-                  <div class="ship-drv">👤 ${s.driver_snapshot?.name || '—'}</div>
+        </div>
+
+        <!-- Stats -->
+        <div style="padding:18px 24px;display:grid;grid-template-columns:repeat(4,1fr);gap:16px;background:#FAFBFC;border-bottom:1px solid #F0F1F5;">
+          <div>
+            <div style="font-size:11px;color:#697386;font-weight:600;letter-spacing:.3px;text-transform:uppercase;">إجمالي الشحنات</div>
+            <div style="font-size:26px;font-weight:700;color:#0A2540;margin-top:4px;letter-spacing:-0.5px;">${total}</div>
+            <div style="font-size:11px;color:#697386;margin-top:2px;display:flex;align-items:center;gap:4px;"><span style="width:6px;height:6px;border-radius:50%;background:#1C4B8E;"></span> نشطة</div>
+          </div>
+          <div>
+            <div style="font-size:11px;color:#697386;font-weight:600;letter-spacing:.3px;text-transform:uppercase;">مكتملة</div>
+            <div style="font-size:26px;font-weight:700;color:#2E8B57;margin-top:4px;letter-spacing:-0.5px;">${done}</div>
+            <div style="font-size:11px;color:#2E8B57;margin-top:2px;display:flex;align-items:center;gap:4px;"><span style="width:6px;height:6px;border-radius:50%;background:#2E8B57;"></span> تم التسليم</div>
+          </div>
+          <div>
+            <div style="font-size:11px;color:#697386;font-weight:600;letter-spacing:.3px;text-transform:uppercase;">قيد التجهيز</div>
+            <div style="font-size:26px;font-weight:700;color:#C2410C;margin-top:4px;letter-spacing:-0.5px;">${pending}</div>
+            <div style="font-size:11px;color:#C2410C;margin-top:2px;display:flex;align-items:center;gap:4px;"><span style="width:6px;height:6px;border-radius:50%;background:#C2410C;"></span> بحاجة معالجة</div>
+          </div>
+          <div>
+            <div style="font-size:11px;color:#697386;font-weight:600;letter-spacing:.3px;text-transform:uppercase;">شحنات الإمارات</div>
+            <div style="font-size:26px;font-weight:700;color:#CC2229;margin-top:4px;letter-spacing:-0.5px;">${uaeCount}</div>
+            <div style="font-size:11px;color:#697386;margin-top:2px;display:flex;align-items:center;gap:4px;"><span style="width:6px;height:6px;border-radius:50%;background:#CC2229;"></span> 🇦🇪 الوجهة الرئيسية</div>
+          </div>
+        </div>
+
+        <!-- Workflow -->
+        <div style="padding:20px 24px;border-bottom:1px solid #F0F1F5;">
+          <div style="font-size:11px;font-weight:700;color:#697386;letter-spacing:.5px;text-transform:uppercase;margin-bottom:14px;display:flex;align-items:center;gap:8px;">
+            <i class="ti ti-git-branch" style="font-size:14px;color:#1C4B8E;"></i>
+            تدفق العمل
+          </div>
+          <div style="display:flex;gap:6px;overflow-x:auto;">
+            ${[
+              {n:1, icon:'ti-edit',        lbl:'تعبئة البيانات',  sub:'يدوي',      color:'#2E8B57'},
+              {n:2, icon:'ti-file-text',   lbl:'توليد الفورمات', sub:'PDF تلقائي', color:'#2E8B57'},
+              {n:3, icon:'ti-paperclip',   lbl:'رفع المرفقات',   sub:'6 ملفات',   color:'#C2410C'},
+              {n:4, icon:'ti-file-stack',  lbl:'دمج PDF',        sub:'ملف واحد',  color:'#1C4B8E'},
+              {n:5, icon:'ti-send',        lbl:'إرسال المخلص',   sub:'واتساب',    color:'#1C4B8E'},
+              {n:6, icon:'ti-mail-check',  lbl:'رد المخلص',      sub:'PDF جاهز',  color:'#1C4B8E'},
+              {n:7, icon:'ti-truck',       lbl:'إرسال السائق',   sub:'+ موعد',    color:'#0F3564'},
+            ].map((s,i,arr) => `
+              <div style="flex:1;min-width:80px;text-align:center;position:relative;">
+                <div style="width:36px;height:36px;border-radius:10px;background:${s.color}20;color:${s.color};display:flex;align-items:center;justify-content:center;margin:0 auto 8px;position:relative;">
+                  <i class="ti ${s.icon}" style="font-size:16px;"></i>
+                  <span style="position:absolute;top:-4px;right:-4px;background:${s.color};color:white;font-size:9px;font-weight:700;width:16px;height:16px;border-radius:50%;display:flex;align-items:center;justify-content:center;">${s.n}</span>
                 </div>
-                <div class="ship-plate">${s.driver_snapshot?.plate || '—'}</div>
-                <div class="ship-dest">${DEST_FLAGS[s.destination] || '🚛'} ${s.destination === 'uae' ? 'إمارات' : s.destination === 'bahrain' ? 'بحرين' : 'عُمان'}</div>
-                <span class="pill ${STATUS_LABELS[s.status]?.class || 'pill-draft'}">${STATUS_LABELS[s.status]?.ar || s.status}</span>
-                <div class="ship-actions">
-                  <div class="icon-btn" title="فتح">📄</div>
-                  <div class="icon-btn" title="إرسال">📤</div>
-                </div>
+                <div style="font-size:11px;font-weight:600;color:#0A2540;">${s.lbl}</div>
+                <div style="font-size:10px;color:#697386;margin-top:2px;">${s.sub}</div>
+                ${i < arr.length-1 ? '<div style="position:absolute;top:18px;left:-3px;color:#E3E8EE;font-size:14px;">›</div>' : ''}
               </div>
             `).join('')}
           </div>
-        `}
-      </div>
+        </div>
 
+        <!-- Recent Shipments -->
+        <div style="padding:16px 24px 20px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+            <div style="font-size:11px;font-weight:700;color:#697386;letter-spacing:.5px;text-transform:uppercase;display:flex;align-items:center;gap:8px;">
+              <i class="ti ti-clock" style="font-size:14px;color:#1C4B8E;"></i>
+              آخر الشحنات
+            </div>
+            <button onclick="navigate('shipments')" style="background:none;border:none;color:#1C4B8E;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;">
+              عرض الكل ←
+            </button>
+          </div>
+
+          ${recent.length === 0 ? `
+            <div style="text-align:center;padding:40px;background:#FAFBFC;border-radius:10px;">
+              <div style="font-size:36px;margin-bottom:8px;">📭</div>
+              <div style="font-size:14px;font-weight:600;color:#0A2540;">لا توجد شحنات بعد</div>
+              <div style="font-size:12px;color:#697386;margin:4px 0 12px;">ابدأ بإنشاء أول شحنة</div>
+              <button class="modern-btn modern-btn-primary" onclick="navigate('new-shipment')">
+                <i class="ti ti-plus"></i> شحنة جديدة
+              </button>
+            </div>
+          ` : `
+            <div>
+              ${recent.map(s => {
+                const st = STATUS_LABELS[s.status] || { ar: s.status, class: 'pill-draft' };
+                let badgeClass = 'gray';
+                if (st.class === 'pill-done') badgeClass = 'green';
+                else if (st.class === 'pill-sent') badgeClass = 'blue';
+                else if (st.class === 'pill-replied') badgeClass = 'amber';
+                const dest = s.destination === 'uae' ? '🇦🇪 إمارات' : s.destination === 'bahrain' ? '🇧🇭 بحرين' : '🇴🇲 عُمان';
+                return `
+                <div class="modern-row" onclick="navigate('shipments', {open:'${s.id}'})" style="cursor:pointer;padding-left:0;padding-right:0;">
+                  <div class="modern-row-icon blue"><i class="ti ti-file"></i></div>
+                  <div class="modern-row-body">
+                    <div class="modern-row-title">#${s.declaration_no || '—'} <span class="muted">· ${s.driver_snapshot?.name || '—'}</span></div>
+                    <div class="modern-row-sub">${s.driver_snapshot?.plate || '—'} · ${s.exporter || 'بضاعة'}</div>
+                  </div>
+                  <span class="modern-badge gray">${dest}</span>
+                  <span class="modern-badge ${badgeClass}">${st.ar}</span>
+                  <span class="modern-row-date">${s.date || '—'}</span>
+                </div>
+              `;
+              }).join('')}
+            </div>
+          `}
+        </div>
+
+      </div>
     </div>`;
 
   window.printExportReport = printExportReport;
