@@ -543,3 +543,111 @@ body {
 .modern-empty-icon { font-size: 32px; margin-bottom: 8px; }
 .modern-empty-title { font-size: 14px; font-weight: 700; color: var(--sd-ink); }
 .modern-empty-sub { font-family: var(--sd-mono); font-size: 11px; color: var(--sd-text-mid); margin-top: 4px; letter-spacing: 0.5px; }
+
+/* ═══════════════════════════════════════════
+   SIDEBAR OVERRIDES — Match Manifest theme
+   ═══════════════════════════════════════════ */
+
+/* Body background */
+body {
+  background: var(--sd-paper-2) !important;
+}
+
+/* Main content area */
+.main-content, main {
+  background: var(--sd-paper-2) !important;
+}
+
+/* Sidebar — clean navy match with manifest */
+.sidebar {
+  background: var(--sd-ink) !important;
+  border-left: none !important;
+}
+.sidebar-brand,
+.sidebar-header {
+  background: var(--sd-ink) !important;
+}
+.sidebar-brand-title,
+.sidebar-header .brand-title {
+  color: white !important;
+  font-family: 'Tajawal', sans-serif !important;
+  font-weight: 700 !important;
+}
+.sidebar-brand-sub {
+  color: rgba(255,255,255,0.6) !important;
+  font-family: var(--sd-mono) !important;
+  font-size: 10px !important;
+  letter-spacing: 1px !important;
+}
+
+/* Section headers in sidebar */
+.sidebar-section-title,
+.sidebar h3 {
+  font-family: var(--sd-mono) !important;
+  font-size: 10px !important;
+  color: rgba(255,255,255,0.4) !important;
+  letter-spacing: 2px !important;
+  text-transform: uppercase !important;
+  font-weight: 700 !important;
+  padding: 12px 20px 6px !important;
+}
+
+/* Nav items */
+.nav-item, .sidebar-link, .sidebar a {
+  color: rgba(255,255,255,0.75) !important;
+  border-radius: 6px !important;
+  transition: all 0.15s !important;
+}
+.nav-item:hover, .sidebar-link:hover, .sidebar a:hover {
+  background: rgba(255,255,255,0.05) !important;
+  color: white !important;
+}
+.nav-item.active, .sidebar-link.active, .sidebar a.active {
+  background: rgba(28,75,142,0.3) !important;
+  color: white !important;
+  border-right: 2px solid var(--sd-blue) !important;
+}
+
+/* Top section (الوارد / الصادر buttons) */
+.section-toggle,
+.section-tab-active {
+  background: var(--sd-blue) !important;
+  color: white !important;
+}
+
+/* User info at bottom */
+.sidebar-user {
+  border-top: 1px solid rgba(255,255,255,0.1) !important;
+}
+.sidebar-user-name {
+  color: white !important;
+  font-weight: 700 !important;
+}
+.sidebar-user-role {
+  color: rgba(255,255,255,0.5) !important;
+  font-family: var(--sd-mono) !important;
+  font-size: 10px !important;
+  letter-spacing: 1px !important;
+}
+
+/* Sign out button */
+.btn-signout, .sidebar-logout {
+  background: rgba(204,34,41,0.15) !important;
+  color: #F87171 !important;
+  border: 1px solid rgba(204,34,41,0.3) !important;
+  border-radius: 6px !important;
+}
+.btn-signout:hover, .sidebar-logout:hover {
+  background: rgba(204,34,41,0.25) !important;
+}
+
+/* Notification/count badges in sidebar */
+.sidebar .badge, .nav-badge {
+  background: var(--sd-blue) !important;
+  color: white !important;
+  font-family: var(--sd-mono) !important;
+  font-weight: 700 !important;
+  border-radius: 3px !important;
+  padding: 2px 6px !important;
+  font-size: 10px !important;
+}
