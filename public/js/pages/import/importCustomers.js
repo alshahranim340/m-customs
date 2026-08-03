@@ -5,25 +5,35 @@ let _customers = [];
 
 export async function renderImportCustomers(container) {
   container.innerHTML = `
-    <div class="topbar">
-      <div>
-        <div class="topbar-title">👥 قاعدة العملاء</div>
-        <div class="topbar-sub">عملاء قسم الوارد</div>
-      </div>
-      <div class="topbar-actions">
-        <button class="btn btn-primary" id="btn-new-customer">
-          <i class="ti ti-plus"></i> عميل جديد
-        </button>
-      </div>
-    </div>
-    <div class="page-body">
-      <div class="card">
-        <div class="card-header">
-          <div class="card-title">📋 العملاء</div>
-          <input type="text" id="cust-search" placeholder="🔍 بحث بالاسم أو السجل..."
-            style="padding:7px 12px;border:0.5px solid var(--border);border-radius:8px;font-family:Tajawal,sans-serif;font-size:13px;outline:none;width:220px;">
+    <div class="page-body" style="padding:20px 24px;background:#F5F3EC;">
+      <div class="modern-page">
+        <div class="modern-header">
+          <div class="modern-header-brand">
+            <div class="modern-header-badges">
+              <div class="modern-header-dots">
+                <span class="modern-header-dot" style="background:#CC2229;"></span>
+                <span class="modern-header-dot" style="background:#1C4B8E;"></span>
+                <span class="modern-header-dot" style="background:#2E8B57;"></span>
+              </div>
+              <span class="modern-header-code">SDS/CUSTOMERS/2026</span>
+            </div>
+            <div class="modern-header-title">قاعدة العملاء</div>
+            <div class="modern-header-sub" id="cust-sub">CUSTOMERS · IMPORT · v2.4</div>
+          </div>
+          <div class="modern-header-actions">
+            <button class="modern-btn modern-btn-primary" id="btn-new-customer">
+              <i class="ti ti-plus"></i> عميل جديد
+            </button>
+          </div>
         </div>
-        <div id="cust-list"><div class="loader"><div class="spinner"></div></div></div>
+        <div class="modern-search-bar">
+          <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#6B6659;letter-spacing:1.5px;font-weight:700;">FIND ›</span>
+          <div class="modern-search-wrap">
+            <i class="ti ti-search modern-search-icon"></i>
+            <input type="text" id="cust-search" class="modern-search-input" placeholder="company name · cr number · vat number">
+          </div>
+        </div>
+        <div id="cust-list" style="padding:12px 24px 20px;"><div class="loader"><div class="spinner"></div></div></div>
       </div>
     </div>
 
@@ -65,49 +75,64 @@ function _renderList(search = '') {
 
   const el = document.getElementById('cust-list');
   if (!list.length) {
-    el.innerHTML = `<div class="empty-state">
-      <div class="empty-icon">👥</div>
-      <div class="empty-title">لا يوجد عملاء</div>
-      <div class="empty-sub">ابدأ بإضافة عميل جديد</div>
+    el.innerHTML = `<div class="modern-empty">
+      <div class="modern-empty-icon">👥</div>
+      <div class="modern-empty-title">لا يوجد عملاء</div>
+      <div class="modern-empty-sub">EMPTY</div>
     </div>`;
     return;
   }
+  const subEl = document.getElementById('cust-sub');
+  if (subEl) subEl.textContent = `CUSTOMERS · ${String(_customers.length).padStart(2,'0')} REGISTERED`;
 
-  el.innerHTML = `
-    <div class="ship-list">
-      ${list.map(c => `
-        <div class="ship-item" style="flex-direction:column;align-items:stretch;padding:14px 18px;gap:8px;">
-          <div style="display:flex;align-items:center;gap:12px;">
-            <div style="width:42px;height:42px;border-radius:50%;background:var(--blue);color:white;
-              display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;flex-shrink:0;">
-              ${c.company_name?.charAt(0)||'؟'}
-            </div>
-            <div style="flex:1;">
-              <div style="font-weight:700;color:var(--navy);font-size:15px;">${c.company_name||'—'}</div>
-              <div style="font-size:12px;color:var(--muted);margin-top:3px;">
-                📋 ${c.cr_number||'—'} &nbsp;|&nbsp; 🏛️ ${c.vat_number||'—'}
-              </div>
-            </div>
-            <div style="display:flex;gap:6px;">
-              <button class="btn btn-sm btn-ghost" onclick="editCustomer('${c.id}')">
-                <i class="ti ti-edit"></i>
-              </button>
-              <button class="btn btn-sm btn-ghost" onclick="deleteCustomerUI('${c.id}')" style="color:var(--red);">
-                <i class="ti ti-trash"></i>
-              </button>
-            </div>
+  el.innerHTML = list.map((c, idx) => `
+    <div style="background:white;border:1px solid #E8E5DC;border-radius:6px;padding:16px 18px;margin-bottom:8px;">
+      <div style="display:flex;align-items:center;gap:14px;margin-bottom:12px;">
+        <div style="width:42px;height:42px;background:#0E1A2E;color:white;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:800;flex-shrink:0;">
+          ${c.company_name?.charAt(0)||'؟'}
+        </div>
+        <div style="flex:1;min-width:0;">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#8A8578;font-weight:700;letter-spacing:1px;">CLIENT · ${String(idx+1).padStart(3,'0')}</span>
           </div>
-          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;background:var(--surface);border-radius:8px;padding:10px 12px;">
-            <div><div style="font-size:10px;color:var(--muted);">العنوان الوطني</div><div style="font-size:12px;font-weight:600;">${c.national_address||'—'}</div></div>
-            <div><div style="font-size:10px;color:var(--muted);">الجوال</div><div style="font-size:12px;font-weight:600;direction:ltr;">${c.phone||'—'}</div></div>
-            <div><div style="font-size:10px;color:var(--muted);">المدينة</div><div style="font-size:12px;font-weight:600;">${c.city||'—'}</div></div>
-            <div><div style="font-size:10px;color:var(--muted);">الهوية (صاحب السجل)</div><div style="font-size:12px;font-weight:600;">${c.owner_id||'—'}</div></div>
-            <div><div style="font-size:10px;color:var(--muted);">البريد الإلكتروني</div><div style="font-size:12px;font-weight:600;direction:ltr;">${c.email||'—'}</div></div>
-            <div><div style="font-size:10px;color:var(--muted);">جهة الاتصال</div><div style="font-size:12px;font-weight:600;">${c.contact_person||'—'}</div></div>
+          <div style="font-size:14px;font-weight:700;color:#0E1A2E;margin-top:2px;">${c.company_name||'—'}</div>
+          <div class="modern-row-sub">
+            → CR/${c.cr_number||'—'} · VAT/${c.vat_number||'—'}
           </div>
-          ${c.notes ? `<div style="font-size:12px;color:var(--muted);padding:0 2px;">📝 ${c.notes}</div>` : ''}
-        </div>`).join('')}
-    </div>`;
+        </div>
+        <div style="display:flex;gap:4px;">
+          <button class="modern-icon-btn" title="تعديل" onclick="editCustomer('${c.id}')"><i class="ti ti-edit"></i></button>
+          <button class="modern-icon-btn danger" title="حذف" onclick="deleteCustomerUI('${c.id}')"><i class="ti ti-trash"></i></button>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;background:#FAFAF7;border:1px solid #F0EDE4;border-radius:4px;padding:12px 14px;">
+        <div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:#8A8578;letter-spacing:1.5px;text-transform:uppercase;font-weight:700;">Address</div>
+          <div style="font-size:12px;font-weight:600;color:#0E1A2E;margin-top:2px;">${c.national_address||'—'}</div>
+        </div>
+        <div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:#8A8578;letter-spacing:1.5px;text-transform:uppercase;font-weight:700;">Phone</div>
+          <div style="font-size:12px;font-weight:600;color:#0E1A2E;margin-top:2px;direction:ltr;">${c.phone||'—'}</div>
+        </div>
+        <div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:#8A8578;letter-spacing:1.5px;text-transform:uppercase;font-weight:700;">City</div>
+          <div style="font-size:12px;font-weight:600;color:#0E1A2E;margin-top:2px;">${c.city||'—'}</div>
+        </div>
+        <div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:#8A8578;letter-spacing:1.5px;text-transform:uppercase;font-weight:700;">Owner ID</div>
+          <div style="font-size:12px;font-weight:600;color:#0E1A2E;margin-top:2px;">${c.owner_id||'—'}</div>
+        </div>
+        <div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:#8A8578;letter-spacing:1.5px;text-transform:uppercase;font-weight:700;">Email</div>
+          <div style="font-size:12px;font-weight:600;color:#0E1A2E;margin-top:2px;direction:ltr;">${c.email||'—'}</div>
+        </div>
+        <div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:#8A8578;letter-spacing:1.5px;text-transform:uppercase;font-weight:700;">Contact</div>
+          <div style="font-size:12px;font-weight:600;color:#0E1A2E;margin-top:2px;">${c.contact_person||'—'}</div>
+        </div>
+      </div>
+      ${c.notes ? `<div style="font-size:12px;color:#6B6659;padding:10px 4px 0;font-family:'JetBrains Mono',monospace;">→ ${c.notes}</div>` : ''}
+    </div>`).join('');
 }
 
 function openCustomerModal(customer = null) {

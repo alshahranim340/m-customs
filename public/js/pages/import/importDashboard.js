@@ -6,15 +6,20 @@ let _expenses  = [];
 
 export async function renderImportDashboard(container) {
   container.innerHTML = `
-    <div class="page-body" style="padding:20px 24px;background:#F5F7FA;">
+    <div class="page-body" style="padding:20px 24px;background:#F5F3EC;">
       <div class="modern-page">
         <div class="modern-header">
           <div class="modern-header-brand">
-            <div class="modern-header-icon"><i class="ti ti-package-import"></i></div>
-            <div>
-              <div class="modern-header-title">لوحة تحكم الوارد</div>
-              <div class="modern-header-sub">نظرة عامة على الشحنات الواردة</div>
+            <div class="modern-header-badges">
+              <div class="modern-header-dots">
+                <span class="modern-header-dot" style="background:#CC2229;"></span>
+                <span class="modern-header-dot" style="background:#1C4B8E;"></span>
+                <span class="modern-header-dot" style="background:#2E8B57;"></span>
+              </div>
+              <span class="modern-header-code">SDS/IMPORT/2026</span>
             </div>
+            <div class="modern-header-title">لوحة تحكم الوارد</div>
+            <div class="modern-header-sub">IMPORT DASHBOARD · OVERVIEW · v2.4</div>
           </div>
           <div class="modern-header-actions">
             <button class="modern-btn" onclick="printImportReport()">
@@ -64,101 +69,102 @@ function _render(shipments, expenses) {
   const fmt = n => n.toLocaleString('ar-SA', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
   document.getElementById('import-dash-content').innerHTML = `
-    <div style="padding:18px 24px;display:grid;grid-template-columns:repeat(4,1fr);gap:20px;background:#FAFBFC;border-bottom:1px solid #F0F1F5;">
-      <div onclick="navigate('import-shipments')" style="cursor:pointer;">
-        <div style="font-size:11px;color:#697386;font-weight:600;letter-spacing:.3px;text-transform:uppercase;">إجمالي الشحنات</div>
-        <div style="font-size:26px;font-weight:700;color:#0A2540;margin-top:4px;letter-spacing:-0.5px;">${total}</div>
-        <div style="font-size:11px;color:#697386;margin-top:2px;display:flex;align-items:center;gap:4px;"><span style="width:6px;height:6px;border-radius:50%;background:#1C4B8E;"></span> إجمالي</div>
+    <div class="modern-stats modern-stats-4">
+      <div class="modern-stat" onclick="navigate('import-shipments')" style="cursor:pointer;">
+        <div class="modern-stat-lbl">01 · TOTAL</div>
+        <div class="modern-stat-val">${String(total).padStart(2,'0')}</div>
+        <div class="modern-stat-hint">إجمالي الشحنات</div>
       </div>
-      <div onclick="navigate('import-shipments',{filter:'waiting'})" style="cursor:pointer;">
-        <div style="font-size:11px;color:#697386;font-weight:600;letter-spacing:.3px;text-transform:uppercase;">قيد الانتظار</div>
-        <div style="font-size:26px;font-weight:700;color:#C2410C;margin-top:4px;letter-spacing:-0.5px;">${waiting}</div>
-        <div style="font-size:11px;color:#C2410C;margin-top:2px;display:flex;align-items:center;gap:4px;"><span style="width:6px;height:6px;border-radius:50%;background:#C2410C;"></span> بانتظار</div>
+      <div class="modern-stat" onclick="navigate('import-shipments',{filter:'waiting'})" style="cursor:pointer;">
+        <div class="modern-stat-lbl">02 · WAITING</div>
+        <div class="modern-stat-val amber">${String(waiting).padStart(2,'0')}</div>
+        <div class="modern-stat-hint">قيد الانتظار</div>
       </div>
-      <div onclick="navigate('import-shipments',{filter:'clearance'})" style="cursor:pointer;">
-        <div style="font-size:11px;color:#697386;font-weight:600;letter-spacing:.3px;text-transform:uppercase;">قيد التخليص</div>
-        <div style="font-size:26px;font-weight:700;color:#6366F1;margin-top:4px;letter-spacing:-0.5px;">${clearance}</div>
-        <div style="font-size:11px;color:#6366F1;margin-top:2px;display:flex;align-items:center;gap:4px;"><span style="width:6px;height:6px;border-radius:50%;background:#6366F1;"></span> جمركي</div>
+      <div class="modern-stat" onclick="navigate('import-shipments',{filter:'clearance'})" style="cursor:pointer;">
+        <div class="modern-stat-lbl">03 · CLEARANCE</div>
+        <div class="modern-stat-val blue">${String(clearance).padStart(2,'0')}</div>
+        <div class="modern-stat-hint">قيد التخليص</div>
       </div>
-      <div onclick="navigate('import-shipments',{filter:'delivered'})" style="cursor:pointer;">
-        <div style="font-size:11px;color:#697386;font-weight:600;letter-spacing:.3px;text-transform:uppercase;">تم التسليم</div>
-        <div style="font-size:26px;font-weight:700;color:#2E8B57;margin-top:4px;letter-spacing:-0.5px;">${delivered}</div>
-        <div style="font-size:11px;color:#2E8B57;margin-top:2px;display:flex;align-items:center;gap:4px;"><span style="width:6px;height:6px;border-radius:50%;background:#2E8B57;"></span> مكتمل</div>
+      <div class="modern-stat" onclick="navigate('import-shipments',{filter:'delivered'})" style="cursor:pointer;">
+        <div class="modern-stat-lbl">04 · DELIVERED</div>
+        <div class="modern-stat-val green">${String(delivered).padStart(2,'0')}</div>
+        <div class="modern-stat-hint">تم التسليم</div>
       </div>
     </div>
 
-    <div style="padding:18px 24px;display:grid;grid-template-columns:repeat(3,1fr);gap:20px;border-bottom:1px solid #F0F1F5;">
-      <div onclick="navigate('import-expenses')" style="cursor:pointer;">
-        <div style="font-size:11px;color:#697386;font-weight:600;letter-spacing:.3px;text-transform:uppercase;">إجمالي الفواتير</div>
-        <div style="font-size:22px;font-weight:700;color:#0A2540;margin-top:4px;letter-spacing:-0.5px;">${fmt(totalAmount)} <span style="font-size:12px;color:#697386;font-weight:500;">ر.س</span></div>
+    <div class="modern-stats modern-stats-3" style="border-top:0;">
+      <div class="modern-stat" onclick="navigate('import-expenses')" style="cursor:pointer;">
+        <div class="modern-stat-lbl">05 · INVOICED (SAR)</div>
+        <div class="modern-stat-val" style="font-size:32px;">${fmt(totalAmount)}</div>
+        <div class="modern-stat-hint">إجمالي الفواتير</div>
       </div>
-      <div>
-        <div style="font-size:11px;color:#697386;font-weight:600;letter-spacing:.3px;text-transform:uppercase;">المدفوع</div>
-        <div style="font-size:22px;font-weight:700;color:#2E8B57;margin-top:4px;letter-spacing:-0.5px;">${fmt(paidAmount)} <span style="font-size:12px;color:#697386;font-weight:500;">ر.س</span></div>
+      <div class="modern-stat">
+        <div class="modern-stat-lbl">06 · PAID (SAR)</div>
+        <div class="modern-stat-val green" style="font-size:32px;">${fmt(paidAmount)}</div>
+        <div class="modern-stat-hint">المدفوع</div>
       </div>
-      <div>
-        <div style="font-size:11px;color:#697386;font-weight:600;letter-spacing:.3px;text-transform:uppercase;">المتبقي</div>
-        <div style="font-size:22px;font-weight:700;color:#CC2229;margin-top:4px;letter-spacing:-0.5px;">${fmt(unpaidAmount)} <span style="font-size:12px;color:#697386;font-weight:500;">ر.س</span></div>
+      <div class="modern-stat">
+        <div class="modern-stat-lbl">07 · UNPAID (SAR)</div>
+        <div class="modern-stat-val danger" style="font-size:32px;">${fmt(unpaidAmount)}</div>
+        <div class="modern-stat-hint">المتبقي</div>
       </div>
     </div>
 
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;padding:20px 24px;">
-      <!-- This Week -->
-      <div style="background:white;border:1px solid #E3E8EE;border-radius:10px;overflow:hidden;">
-        <div style="padding:14px 18px;border-bottom:1px solid #F0F1F5;display:flex;justify-content:space-between;align-items:center;">
-          <div style="font-size:12px;font-weight:700;color:#697386;letter-spacing:.5px;text-transform:uppercase;display:flex;align-items:center;gap:8px;">
-            <i class="ti ti-calendar-event" style="font-size:14px;color:#1C4B8E;"></i>
-            شحنات هذا الأسبوع (ETA)
-          </div>
-          <span class="modern-badge blue">${thisWeek.length}</span>
+      <div>
+        <div class="modern-section-title" style="margin-bottom:12px;">
+          → THIS WEEK / شحنات هذا الأسبوع
+          <div class="divider"></div>
+          <span class="count">${String(thisWeek.length).padStart(2,'0')}</span>
         </div>
-        <div style="padding:8px 12px;">
+        <div class="modern-list-box">
           ${thisWeek.length === 0
-            ? `<div style="text-align:center;padding:24px;color:#697386;font-size:12px;"><div style="font-size:28px;margin-bottom:4px;">✅</div>لا توجد شحنات هذا الأسبوع</div>`
+            ? `<div style="padding:24px;text-align:center;color:#8A8578;font-family:'JetBrains Mono',monospace;font-size:11px;">✓ NO SHIPMENTS</div>`
             : thisWeek.slice(0,5).map(s => {
               const st = IMPORT_STATUS[s.status] || { ar: s.status, class: 'pill-draft' };
-              let badgeClass = 'gray';
-              if (st.class === 'pill-done') badgeClass = 'green';
-              else if (st.class === 'pill-sent') badgeClass = 'blue';
-              else if (st.class === 'pill-replied') badgeClass = 'amber';
+              let badgeClass = 'gray', stripeClass = 'gray';
+              if (st.class === 'pill-done') { badgeClass = 'green'; stripeClass = 'green'; }
+              else if (st.class === 'pill-sent') { badgeClass = 'blue'; stripeClass = 'blue'; }
+              else if (st.class === 'pill-replied') { badgeClass = 'amber'; stripeClass = 'amber'; }
               return `
-              <div onclick="navigate('import-shipments',{open:'${s.id}'})" style="cursor:pointer;padding:10px;border-radius:8px;display:grid;grid-template-columns:1fr auto auto;gap:12px;align-items:center;transition:background .1s;" onmouseover="this.style.background='#FAFBFC'" onmouseout="this.style.background=''">
-                <div style="min-width:0;">
-                  <div style="font-size:13px;font-weight:600;color:#0A2540;">${s.bl_number||'—'}</div>
-                  <div style="font-size:11px;color:#697386;margin-top:2px;">🏢 ${s.customer_name||'—'}</div>
+              <div class="modern-row" onclick="navigate('import-shipments',{open:'${s.id}'})" style="cursor:pointer;grid-template-columns:auto auto 1fr auto auto;">
+                <div class="modern-row-stripe ${stripeClass}"></div>
+                <div class="modern-row-code">${s.bl_number||'—'}</div>
+                <div class="modern-row-body">
+                  <div class="modern-row-title">${s.customer_name||'—'}</div>
+                  <div class="modern-row-sub">→ ${_formatDate(s.eta)}</div>
                 </div>
-                <span style="font-size:11px;color:#697386;">${_formatDate(s.eta)}</span>
                 <span class="modern-badge ${badgeClass}">${st.ar}</span>
+                <span class="modern-row-date">${_formatDate(s.eta)}</span>
               </div>`;
             }).join('')}
         </div>
       </div>
 
-      <!-- Overdue -->
-      <div style="background:white;border:1px solid #E3E8EE;border-radius:10px;overflow:hidden;">
-        <div style="padding:14px 18px;border-bottom:1px solid #F0F1F5;display:flex;justify-content:space-between;align-items:center;">
-          <div style="font-size:12px;font-weight:700;color:#697386;letter-spacing:.5px;text-transform:uppercase;display:flex;align-items:center;gap:8px;">
-            <i class="ti ti-alert-triangle" style="font-size:14px;color:#CC2229;"></i>
-            شحنات متأخرة
-          </div>
-          <span class="modern-badge red">${overdue.length}</span>
+      <div>
+        <div class="modern-section-title" style="margin-bottom:12px;">
+          → OVERDUE / شحنات متأخرة
+          <div class="divider"></div>
+          <span class="count" style="color:#CC2229;">${String(overdue.length).padStart(2,'0')}</span>
         </div>
-        <div style="padding:8px 12px;">
+        <div class="modern-list-box">
           ${overdue.length === 0
-            ? `<div style="text-align:center;padding:24px;color:#697386;font-size:12px;"><div style="font-size:28px;margin-bottom:4px;">✅</div>لا توجد شحنات متأخرة</div>`
+            ? `<div style="padding:24px;text-align:center;color:#8A8578;font-family:'JetBrains Mono',monospace;font-size:11px;">✓ NONE OVERDUE</div>`
             : overdue.slice(0,5).map(s => {
               const st = IMPORT_STATUS[s.status] || { ar: s.status, class: 'pill-draft' };
               let badgeClass = 'gray';
               if (st.class === 'pill-done') badgeClass = 'green';
               else if (st.class === 'pill-sent') badgeClass = 'blue';
               return `
-              <div onclick="navigate('import-shipments',{open:'${s.id}'})" style="cursor:pointer;padding:10px;border-radius:8px;display:grid;grid-template-columns:1fr auto auto;gap:12px;align-items:center;" onmouseover="this.style.background='#FEF2F2'" onmouseout="this.style.background=''">
-                <div style="min-width:0;">
-                  <div style="font-size:13px;font-weight:600;color:#0A2540;">${s.bl_number||'—'}</div>
-                  <div style="font-size:11px;color:#697386;margin-top:2px;">🏢 ${s.customer_name||'—'}</div>
+              <div class="modern-row" onclick="navigate('import-shipments',{open:'${s.id}'})" style="cursor:pointer;grid-template-columns:auto auto 1fr auto auto;">
+                <div class="modern-row-stripe red"></div>
+                <div class="modern-row-code">${s.bl_number||'—'}</div>
+                <div class="modern-row-body">
+                  <div class="modern-row-title">${s.customer_name||'—'}</div>
+                  <div class="modern-row-sub" style="color:#CC2229;">⚠ ${_formatDate(s.eta)}</div>
                 </div>
-                <span style="font-size:11px;color:#CC2229;font-weight:600;">${_formatDate(s.eta)}</span>
                 <span class="modern-badge ${badgeClass}">${st.ar}</span>
+                <span class="modern-row-date" style="color:#CC2229;">${_formatDate(s.eta)}</span>
               </div>`;
             }).join('')}
         </div>

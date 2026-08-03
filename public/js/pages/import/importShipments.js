@@ -14,16 +14,20 @@ export async function renderImportShipments(container, params = {}) {
   _filter = params.filter || 'all';
 
   container.innerHTML = `
-    <div class="page-body" style="padding:20px 24px;background:#F5F7FA;">
+    <div class="page-body" style="padding:20px 24px;background:#F5F3EC;">
       <div class="modern-page">
-        <!-- Header -->
         <div class="modern-header">
           <div class="modern-header-brand">
-            <div class="modern-header-icon"><i class="ti ti-package"></i></div>
-            <div>
-              <div class="modern-header-title">شحنات الوارد</div>
-              <div class="modern-header-sub" id="imp-ship-sub">إدارة الشحنات الواردة</div>
+            <div class="modern-header-badges">
+              <div class="modern-header-dots">
+                <span class="modern-header-dot" style="background:#CC2229;"></span>
+                <span class="modern-header-dot" style="background:#1C4B8E;"></span>
+                <span class="modern-header-dot" style="background:#2E8B57;"></span>
+              </div>
+              <span class="modern-header-code">SDS/IMPORT/2026</span>
             </div>
+            <div class="modern-header-title">شحنات الوارد</div>
+            <div class="modern-header-sub" id="imp-ship-sub">IMPORT SHIPMENTS · v2.4</div>
           </div>
           <div class="modern-header-actions">
             <button class="modern-btn modern-btn-primary" id="btn-new-import-shipment">
@@ -32,27 +36,25 @@ export async function renderImportShipments(container, params = {}) {
           </div>
         </div>
 
-        <!-- Search + Filters -->
-        <div class="modern-search-bar" style="flex-wrap:wrap;">
+        <div class="modern-search-bar">
+          <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#6B6659;letter-spacing:1.5px;font-weight:700;">FIND ›</span>
           <div class="modern-search-wrap">
             <i class="ti ti-search modern-search-icon"></i>
             <input type="text" id="imp-ship-search" class="modern-search-input"
-              placeholder="ابحث برقم البوليصة أو العميل...">
+              placeholder="bl number · customer name">
           </div>
         </div>
 
-        <!-- Filter tabs -->
-        <div style="padding:0 24px 16px;display:flex;gap:6px;flex-wrap:wrap;">
+        <div style="padding:12px 24px 0;display:flex;gap:6px;flex-wrap:wrap;">
           ${Object.entries({all:'الكل',...Object.fromEntries(Object.entries(IMPORT_STATUS).map(([k,v])=>[k,v.ar]))})
             .map(([k,v]) => `
               <button data-filter="${k}" onclick="setImportFilter('${k}')"
-                style="padding:6px 14px;border-radius:20px;font-family:Tajawal,sans-serif;font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;border:1px solid ${_filter===k?'#1C4B8E':'#E3E8EE'};background:${_filter===k?'#1C4B8E':'white'};color:${_filter===k?'white':'#425466'};">
+                style="padding:6px 14px;border-radius:4px;font-family:Tajawal,sans-serif;font-size:11px;font-weight:700;cursor:pointer;transition:all .15s;border:1.5px solid ${_filter===k?'#0E1A2E':'#E8E5DC'};background:${_filter===k?'#0E1A2E':'white'};color:${_filter===k?'white':'#0E1A2E'};letter-spacing:.3px;">
                 ${v}
               </button>`).join('')}
         </div>
 
-        <!-- List -->
-        <div id="imp-ship-list" style="padding:0 24px 20px;"><div class="loader"><div class="spinner"></div></div></div>
+        <div id="imp-ship-list" style="padding:12px 24px 20px;"><div class="loader"><div class="spinner"></div></div></div>
       </div>
     </div>
 
@@ -96,9 +98,9 @@ function setImportFilter(f) {
   _filter = f;
   document.querySelectorAll('[data-filter]').forEach(btn => {
     const active = btn.dataset.filter === f;
-    btn.style.background = active ? '#1C4B8E' : 'white';
-    btn.style.color = active ? 'white' : '#425466';
-    btn.style.borderColor = active ? '#1C4B8E' : '#E3E8EE';
+    btn.style.background = active ? '#0E1A2E' : 'white';
+    btn.style.color = active ? 'white' : '#0E1A2E';
+    btn.style.borderColor = active ? '#0E1A2E' : '#E8E5DC';
   });
   _renderList(document.getElementById('imp-ship-search')?.value || '');
 }
@@ -119,64 +121,52 @@ function _renderList(search = '') {
   if (!el) return;
 
   if (list.length === 0) {
-    el.innerHTML = `<div style="text-align:center;padding:40px;background:#FAFBFC;border-radius:10px;">
-      <div style="font-size:36px;margin-bottom:8px;">📦</div>
-      <div style="font-size:14px;font-weight:600;color:#0A2540;">لا توجد شحنات</div>
-      <div style="font-size:12px;color:#697386;margin-top:4px;">ابدأ بإضافة شحنة جديدة</div>
+    el.innerHTML = `<div class="modern-empty">
+      <div class="modern-empty-icon">📦</div>
+      <div class="modern-empty-title">لا توجد شحنات</div>
+      <div class="modern-empty-sub">EMPTY</div>
     </div>`;
     return;
   }
 
   const subEl = document.getElementById('imp-ship-sub');
-  if (subEl) subEl.textContent = `${_shipments.length} شحنة · ${list.length} معروضة`;
+  if (subEl) subEl.textContent = `IMPORT · ${String(_shipments.length).padStart(2,'0')} TOTAL · ${String(list.length).padStart(2,'0')} SHOWN`;
 
-  el.innerHTML = list.map(s => {
+  el.innerHTML = `<div class="modern-list-box">${list.map(s => {
     const st = IMPORT_STATUS[s.status] || IMPORT_STATUS.waiting;
-    const typeName = s.type === 'air' ? 'جوي' : s.type === 'sea' ? 'بحري' : 'بري';
+    const typeName = s.type === 'air' ? 'AIR' : s.type === 'sea' ? 'SEA' : 'LAND';
     const etaDate  = s.eta ? new Date(s.eta) : null;
     const isLate   = etaDate && etaDate < new Date() && s.status !== 'delivered';
 
-    // Badge color
-    let badgeClass = 'gray';
-    if (st.class === 'pill-done') badgeClass = 'green';
-    else if (st.class === 'pill-sent') badgeClass = 'blue';
-    else if (st.class === 'pill-replied') badgeClass = 'amber';
-
-    // Icon color
-    const iconColor = st.class === 'pill-done' ? 'green' : (isLate ? 'red' : 'blue');
-    const iconName = s.type === 'air' ? 'ti-plane' : s.type === 'sea' ? 'ti-ship' : 'ti-truck';
+    let badgeClass = 'gray', stripeClass = 'gray', stKey = st.ar;
+    if (st.class === 'pill-done') { badgeClass = 'green'; stripeClass = 'green'; }
+    else if (st.class === 'pill-sent') { badgeClass = 'blue'; stripeClass = 'blue'; }
+    else if (st.class === 'pill-replied') { badgeClass = 'amber'; stripeClass = 'amber'; }
+    if (isLate) { stripeClass = 'red'; }
 
     return `
-      <div style="background:white;border:1px solid #E3E8EE;border-radius:10px;padding:14px 16px;margin-bottom:8px;display:grid;grid-template-columns:auto 1fr auto auto auto auto;gap:14px;align-items:center;transition:all 0.15s;" onmouseover="this.style.borderColor='#1C4B8E'" onmouseout="this.style.borderColor='#E3E8EE'">
-        <div class="modern-row-icon ${iconColor}"><i class="ti ${iconName}"></i></div>
-        <div style="min-width:0;">
-          <div style="font-size:13px;font-weight:600;color:#0A2540;">
-            ${s.bl_number || '—'}
-            <span style="color:#697386;font-weight:400;font-size:12px;">· ${s.internal_no || '—'}</span>
+      <div class="modern-row" style="grid-template-columns:auto 70px 1fr auto auto auto auto;">
+        <div class="modern-row-stripe ${stripeClass}"></div>
+        <div class="modern-row-code">${s.bl_number || '—'}</div>
+        <div class="modern-row-body">
+          <div class="modern-row-title">
+            ${s.customer_name || '—'}
+            ${s.internal_no ? `<span class="modern-row-plate">${s.internal_no}</span>` : ''}
           </div>
-          <div style="font-size:11px;color:#697386;margin-top:3px;">
-            🏢 ${s.customer_name || '—'} · ${typeName}
-          </div>
+          <div class="modern-row-sub">→ ${typeName}${isLate ? ' · ⚠ OVERDUE' : ''}</div>
         </div>
-        <div style="font-size:11px;color:${isLate?'#CC2229':'#697386'};font-weight:${isLate?'600':'400'};white-space:nowrap;">
-          ${isLate ? '⚠ ' : ''}${_fmtDate(s.eta)}
-        </div>
+        <span class="modern-row-date" style="${isLate?'color:#CC2229;font-weight:700;':''}">${_fmtDate(s.eta)}</span>
         <select onchange="changeImportStatus('${s.id}',this.value)"
-          style="background:${badgeClass==='green'?'#E7F5EE':badgeClass==='blue'?'#E3F0FF':badgeClass==='amber'?'#FFF7ED':'#F0F1F5'};color:${badgeClass==='green'?'#2E8B57':badgeClass==='blue'?'#0055CC':badgeClass==='amber'?'#C2410C':'#425466'};border:none;border-radius:12px;font-family:Tajawal,sans-serif;font-size:11px;font-weight:600;padding:4px 10px;cursor:pointer;">
+          class="modern-badge ${badgeClass}"
+          style="border:none;cursor:pointer;font-family:'JetBrains Mono',monospace;">
           ${Object.entries(IMPORT_STATUS).map(([k,v]) =>
             `<option value="${k}" ${s.status===k?'selected':''}>${v.ar}</option>`
           ).join('')}
         </select>
-        <div style="display:flex;gap:4px;">
-          <button class="modern-icon-btn" title="تعديل" onclick="editImportShipment('${s.id}')">
-            <i class="ti ti-edit"></i>
-          </button>
-          <button class="modern-icon-btn danger" title="حذف" onclick="deleteImportShipment('${s.id}')">
-            <i class="ti ti-trash"></i>
-          </button>
-        </div>
+        <button class="modern-icon-btn" title="تعديل" onclick="editImportShipment('${s.id}')"><i class="ti ti-edit"></i></button>
+        <button class="modern-icon-btn danger" title="حذف" onclick="deleteImportShipment('${s.id}')"><i class="ti ti-trash"></i></button>
       </div>`;
-  }).join('');
+  }).join('')}</div>`;
 }
 
 // ─────────────────────────────────────────────

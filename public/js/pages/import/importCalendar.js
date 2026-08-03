@@ -11,19 +11,29 @@ const LAST_ALERT_KEY = 'mcustoms_last_alert_date';
 
 export async function renderImportCalendar(container) {
   container.innerHTML = `
-    <div class="topbar">
-      <div>
-        <div class="topbar-title">📅 التقويم والتنبيهات</div>
-        <div class="topbar-sub">متابعة مواعيد وصول الشحنات</div>
+    <div class="page-body" style="padding:20px 24px;background:#F5F3EC;">
+      <div class="modern-page">
+        <div class="modern-header">
+          <div class="modern-header-brand">
+            <div class="modern-header-badges">
+              <div class="modern-header-dots">
+                <span class="modern-header-dot" style="background:#CC2229;"></span>
+                <span class="modern-header-dot" style="background:#1C4B8E;"></span>
+                <span class="modern-header-dot" style="background:#2E8B57;"></span>
+              </div>
+              <span class="modern-header-code">SDS/CALENDAR/2026</span>
+            </div>
+            <div class="modern-header-title">التقويم والتنبيهات</div>
+            <div class="modern-header-sub">CALENDAR · ETA ALERTS · v2.4</div>
+          </div>
+          <div class="modern-header-actions">
+            <button class="modern-btn" id="btn-send-alerts">
+              <i class="ti ti-mail"></i> إرسال تنبيه يدوي
+            </button>
+          </div>
+        </div>
+        <div id="cal-content" style="padding:20px 24px;"><div class="loader"><div class="spinner"></div></div></div>
       </div>
-      <div class="topbar-actions">
-        <button class="btn btn-ghost" id="btn-send-alerts">
-          <i class="ti ti-mail"></i> إرسال تنبيه يدوي
-        </button>
-      </div>
-    </div>
-    <div class="page-body">
-      <div id="cal-content"><div class="loader"><div class="spinner"></div></div></div>
     </div>`;
 
   try {
@@ -140,77 +150,80 @@ function _renderCalendar() {
 
   document.getElementById('cal-content').innerHTML = `
     <div style="display:grid;grid-template-columns:1fr 320px;gap:16px;align-items:start;">
-      <div class="card" style="padding:0;overflow:hidden;">
-        <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--border);">
-          <button class="btn btn-ghost btn-sm" onclick="calPrev()">‹ السابق</button>
-          <div style="font-weight:700;font-size:16px;color:var(--navy);">${monthName}</div>
-          <div style="display:flex;gap:8px;">
-            <button class="btn btn-ghost btn-sm" onclick="calToday()">اليوم</button>
-            <button class="btn btn-ghost btn-sm" onclick="calNext()">التالي ›</button>
+      <div style="background:white;border:1px solid #E8E5DC;border-radius:6px;overflow:hidden;">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid #F0EDE4;">
+          <button class="modern-btn" onclick="calPrev()" style="padding:6px 12px;font-size:11px;">
+            <i class="ti ti-chevron-right"></i> السابق
+          </button>
+          <div style="font-family:'JetBrains Mono',monospace;font-weight:800;font-size:14px;color:#0E1A2E;letter-spacing:1px;">${monthName}</div>
+          <div style="display:flex;gap:6px;">
+            <button class="modern-btn" onclick="calToday()" style="padding:6px 12px;font-size:11px;">اليوم</button>
+            <button class="modern-btn" onclick="calNext()" style="padding:6px 12px;font-size:11px;">
+              التالي <i class="ti ti-chevron-left"></i>
+            </button>
           </div>
         </div>
-        <div style="padding:12px;">
+        <div style="padding:14px;">
           <div class="cal-grid-head">${dayNames.map(d=>`<div class="cal-head-cell">${d}</div>`).join('')}</div>
           <div class="cal-grid">${cells}</div>
         </div>
-        <div style="display:flex;gap:16px;padding:10px 18px;border-top:1px solid var(--border);font-size:12px;">
-          <div style="display:flex;align-items:center;gap:6px;"><div class="cal-chip-active" style="display:inline-block;padding:2px 8px;border-radius:4px;">●</div> قادم</div>
-          <div style="display:flex;align-items:center;gap:6px;"><div class="cal-chip-late" style="display:inline-block;padding:2px 8px;border-radius:4px;">●</div> متأخر</div>
-          <div style="display:flex;align-items:center;gap:6px;"><div class="cal-chip-done" style="display:inline-block;padding:2px 8px;border-radius:4px;">●</div> تم التسليم</div>
+        <div style="display:flex;gap:16px;padding:12px 18px;border-top:1px solid #F0EDE4;font-family:'JetBrains Mono',monospace;font-size:10px;color:#6B6659;letter-spacing:.5px;">
+          <div style="display:flex;align-items:center;gap:6px;"><span style="width:8px;height:8px;background:#1C4B8E;display:inline-block;border-radius:2px;"></span> UPCOMING</div>
+          <div style="display:flex;align-items:center;gap:6px;"><span style="width:8px;height:8px;background:#CC2229;display:inline-block;border-radius:2px;"></span> OVERDUE</div>
+          <div style="display:flex;align-items:center;gap:6px;"><span style="width:8px;height:8px;background:#2E8B57;display:inline-block;border-radius:2px;"></span> DELIVERED</div>
         </div>
       </div>
 
       <div style="display:flex;flex-direction:column;gap:12px;">
 
-        <!-- Alert status -->
-        <div style="background:${sentToday?'#f0fdf4':'#eff6ff'};border:1px solid ${sentToday?'#86efac':'#bfdbfe'};
-          border-radius:8px;padding:10px 14px;font-size:12px;display:flex;align-items:center;gap:8px;">
-          <span style="font-size:18px;">${sentToday?'✅':'🔔'}</span>
-          <span style="color:${sentToday?'#166534':'#1d4ed8'};font-weight:600;">
-            ${sentToday ? 'تم إرسال التنبيهات اليوم تلقائياً' : 'لم يتم إرسال التنبيهات اليوم بعد'}
+        <div style="background:${sentToday?'#E7F5EE':'#E8F0FA'};border:1px solid ${sentToday?'#86efac':'#BFDBFE'};border-radius:6px;padding:10px 14px;font-family:'JetBrains Mono',monospace;font-size:11px;display:flex;align-items:center;gap:10px;letter-spacing:.5px;">
+          <span style="font-size:14px;">${sentToday?'✓':'●'}</span>
+          <span style="color:${sentToday?'#2E8B57':'#1C4B8E'};font-weight:700;">
+            ${sentToday ? 'ALERTS SENT TODAY' : 'PENDING SEND'}
           </span>
         </div>
 
-        <!-- Alert shipments -->
-        <div class="card">
-          <div class="card-header">
-            <div class="card-title">🔔 تنبيهات الـ 5 أيام القادمة</div>
-            <span class="pill" style="background:${alertShips.length>0?'var(--red-light)':'var(--green-light)'};
-              color:${alertShips.length>0?'var(--red)':'var(--green)'};">${alertShips.length}</span>
+        <div style="background:white;border:1px solid #E8E5DC;border-radius:6px;overflow:hidden;">
+          <div style="padding:12px 16px;border-bottom:1px solid #F0EDE4;display:flex;justify-content:space-between;align-items:center;">
+            <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#0E1A2E;letter-spacing:1.5px;font-weight:800;">→ 5-DAY ALERTS</div>
+            <span class="modern-badge ${alertShips.length>0?'red':'green'}">${String(alertShips.length).padStart(2,'0')}</span>
           </div>
           ${alertShips.length === 0
-            ? `<div style="padding:16px;text-align:center;color:var(--muted);font-size:13px;">✅ لا توجد شحنات خلال 5 أيام</div>`
-            : alertShips.map(s => `
-              <div style="padding:10px 16px;border-bottom:0.5px solid var(--border);">
-                <div style="display:flex;justify-content:space-between;align-items:center;">
-                  <div>
-                    <div style="font-weight:700;font-size:13px;">${s.bl_number||'—'}</div>
-                    <div style="font-size:11px;color:var(--muted);">${s.customer_name||'—'}</div>
-                  </div>
-                  <div style="text-align:left;">
-                    <div style="font-size:12px;font-weight:700;color:${s.daysLeft===0?'var(--red)':s.daysLeft<=2?'#f97316':'var(--blue)'};">
-                      ${s.daysLeft===0?'🔴 اليوم':s.daysLeft===1?'🟠 غداً':`🔵 ${s.daysLeft} أيام`}
-                    </div>
-                    <div style="font-size:11px;color:var(--muted);">${_fmtShort(s.eta)}</div>
-                  </div>
+            ? `<div style="padding:20px;text-align:center;color:#8A8578;font-family:'JetBrains Mono',monospace;font-size:11px;">✓ NO ALERTS</div>`
+            : `<div style="padding:6px 8px;">${alertShips.map(s => {
+              const daysColor = s.daysLeft===0?'#CC2229':s.daysLeft<=2?'#C2410C':'#1C4B8E';
+              return `
+              <div style="padding:10px 12px;display:flex;justify-content:space-between;align-items:center;gap:12px;border-bottom:1px solid #F0EDE4;">
+                <div style="min-width:0;flex:1;">
+                  <div style="font-family:'JetBrains Mono',monospace;font-weight:800;font-size:12px;color:#0E1A2E;">${s.bl_number||'—'}</div>
+                  <div style="font-size:11px;color:#6B6659;margin-top:2px;">${s.customer_name||'—'}</div>
                 </div>
-              </div>`).join('')}
+                <div style="text-align:left;">
+                  <div style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;color:${daysColor};letter-spacing:.5px;">
+                    ${s.daysLeft===0?'TODAY':s.daysLeft===1?'TOMORROW':`${s.daysLeft} DAYS`}
+                  </div>
+                  <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#8A8578;">${_fmtShort(s.eta)}</div>
+                </div>
+              </div>`;
+            }).join('')}</div>`}
         </div>
 
         ${overdue.length > 0 ? `
-        <div class="card">
-          <div class="card-header">
-            <div class="card-title">⚠️ شحنات متأخرة</div>
-            <span class="pill" style="background:var(--red-light);color:var(--red);">${overdue.length}</span>
+        <div style="background:white;border:1px solid #E8E5DC;border-radius:6px;overflow:hidden;">
+          <div style="padding:12px 16px;border-bottom:1px solid #F0EDE4;display:flex;justify-content:space-between;align-items:center;">
+            <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#CC2229;letter-spacing:1.5px;font-weight:800;">→ OVERDUE</div>
+            <span class="modern-badge red">${String(overdue.length).padStart(2,'0')}</span>
           </div>
-          ${overdue.map(s => `
-            <div style="padding:10px 16px;border-bottom:0.5px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
-              <div>
-                <div style="font-weight:700;font-size:13px;">${s.bl_number||'—'}</div>
-                <div style="font-size:11px;color:var(--muted);">${s.customer_name||'—'}</div>
-              </div>
-              <div style="font-size:11px;color:var(--red);font-weight:600;">${_fmtShort(s.eta)}</div>
-            </div>`).join('')}
+          <div style="padding:6px 8px;">
+            ${overdue.map(s => `
+              <div style="padding:10px 12px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #F0EDE4;">
+                <div>
+                  <div style="font-family:'JetBrains Mono',monospace;font-weight:800;font-size:12px;color:#0E1A2E;">${s.bl_number||'—'}</div>
+                  <div style="font-size:11px;color:#6B6659;margin-top:2px;">${s.customer_name||'—'}</div>
+                </div>
+                <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#CC2229;font-weight:700;letter-spacing:.5px;">${_fmtShort(s.eta)}</div>
+              </div>`).join('')}
+          </div>
         </div>` : ''}
 
       </div>

@@ -13,31 +13,42 @@ let _feeTypes   = [];
 
 export async function renderImportExpenses(container) {
   container.innerHTML = `
-    <div class="topbar">
-      <div>
-        <div class="topbar-title">💰 المصاريف</div>
-        <div class="topbar-sub">فواتير مصاريف العملاء</div>
-      </div>
-      <div class="topbar-actions">
-        <button class="btn btn-ghost" id="btn-print-expenses" onclick="openExpensesReportModal()">
-          <i class="ti ti-printer"></i> طباعة تقرير
-        </button>
-        <button class="btn btn-primary" id="btn-new-expense">
-          <i class="ti ti-plus"></i> فاتورة جديدة
-        </button>
-      </div>
-    </div>
-    <div class="page-body">
-      <!-- Summary -->
-      <div class="stats-row" id="exp-stats"></div>
-      <!-- List -->
-      <div class="card">
-        <div class="card-header">
-          <div class="card-title">📋 الفواتير</div>
-          <input type="text" id="exp-search" placeholder="🔍 بحث..."
-            style="padding:7px 12px;border:0.5px solid var(--border);border-radius:8px;font-family:Tajawal,sans-serif;font-size:13px;outline:none;width:200px;">
+    <div class="page-body" style="padding:20px 24px;background:#F5F3EC;">
+      <div class="modern-page">
+        <div class="modern-header">
+          <div class="modern-header-brand">
+            <div class="modern-header-badges">
+              <div class="modern-header-dots">
+                <span class="modern-header-dot" style="background:#CC2229;"></span>
+                <span class="modern-header-dot" style="background:#1C4B8E;"></span>
+                <span class="modern-header-dot" style="background:#2E8B57;"></span>
+              </div>
+              <span class="modern-header-code">SDS/EXPENSES/2026</span>
+            </div>
+            <div class="modern-header-title">المصاريف</div>
+            <div class="modern-header-sub" id="exp-sub">EXPENSES · CLIENT INVOICES · v2.4</div>
+          </div>
+          <div class="modern-header-actions">
+            <button class="modern-btn" id="btn-print-expenses" onclick="openExpensesReportModal()">
+              <i class="ti ti-printer"></i> طباعة تقرير
+            </button>
+            <button class="modern-btn modern-btn-primary" id="btn-new-expense">
+              <i class="ti ti-plus"></i> فاتورة جديدة
+            </button>
+          </div>
         </div>
-        <div id="exp-list"><div class="loader"><div class="spinner"></div></div></div>
+
+        <div id="exp-stats"></div>
+
+        <div class="modern-search-bar">
+          <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#6B6659;letter-spacing:1.5px;font-weight:700;">FIND ›</span>
+          <div class="modern-search-wrap">
+            <i class="ti ti-search modern-search-icon"></i>
+            <input type="text" id="exp-search" class="modern-search-input" placeholder="customer name · bl number">
+          </div>
+        </div>
+
+        <div id="exp-list" style="padding:12px 24px 20px;"><div class="loader"><div class="spinner"></div></div></div>
       </div>
     </div>
 
@@ -87,17 +98,22 @@ function _renderStats() {
   const fmt = n => n.toLocaleString('ar-SA', { minimumFractionDigits: 2 });
 
   document.getElementById('exp-stats').innerHTML = `
-    <div class="stat-card">
-      <div class="stat-icon" style="background:#FFF7ED;"><i class="ti ti-receipt" style="font-size:22px;color:#f97316"></i></div>
-      <div><div class="stat-num" style="font-size:18px;">${fmt(total)}</div><div class="stat-label">إجمالي (ر.س)</div></div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-icon si-green"><i class="ti ti-cash" style="font-size:22px;color:var(--green)"></i></div>
-      <div><div class="stat-num" style="font-size:18px;color:var(--green);">${fmt(paid)}</div><div class="stat-label">المدفوع (ر.س)</div></div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-icon si-red"><i class="ti ti-alert-circle" style="font-size:22px;color:var(--red)"></i></div>
-      <div><div class="stat-num" style="font-size:18px;color:var(--red);">${fmt(unpaid)}</div><div class="stat-label">المتبقي (ر.س)</div></div>
+    <div class="modern-stats modern-stats-3">
+      <div class="modern-stat">
+        <div class="modern-stat-lbl">01 · TOTAL (SAR)</div>
+        <div class="modern-stat-val" style="font-size:32px;">${fmt(total)}</div>
+        <div class="modern-stat-hint">إجمالي الفواتير</div>
+      </div>
+      <div class="modern-stat">
+        <div class="modern-stat-lbl">02 · PAID (SAR)</div>
+        <div class="modern-stat-val green" style="font-size:32px;">${fmt(paid)}</div>
+        <div class="modern-stat-hint">المدفوع</div>
+      </div>
+      <div class="modern-stat">
+        <div class="modern-stat-lbl">03 · UNPAID (SAR)</div>
+        <div class="modern-stat-val danger" style="font-size:32px;">${fmt(unpaid)}</div>
+        <div class="modern-stat-hint">المتبقي</div>
+      </div>
     </div>`;
 }
 
@@ -115,72 +131,73 @@ function _renderList(search = '') {
   if (!el) return;
 
   if (list.length === 0) {
-    el.innerHTML = `<div class="empty-state">
-      <div class="empty-icon">💰</div>
-      <div class="empty-title">لا توجد فواتير</div>
-      <div class="empty-sub">ابدأ بإضافة فاتورة جديدة</div>
+    el.innerHTML = `<div class="modern-empty">
+      <div class="modern-empty-icon">💰</div>
+      <div class="modern-empty-title">لا توجد فواتير</div>
+      <div class="modern-empty-sub">EMPTY</div>
     </div>`;
     return;
   }
+  const subEl = document.getElementById('exp-sub');
+  if (subEl) subEl.textContent = `EXPENSES · ${String(_expenses.length).padStart(2,'0')} INVOICES`;
 
   const fmt = n => parseFloat(n || 0).toLocaleString('ar-SA', { minimumFractionDigits: 2 });
 
-  el.innerHTML = `
-    <div class="ship-list">
-      ${list.map(e => {
-        const total = _totalOf(e);
-        return `
-        <div class="ship-item" style="flex-direction:column;align-items:stretch;padding:14px 18px;gap:10px;">
-          <div style="display:flex;align-items:center;gap:12px;">
-            <div style="flex:1;">
-              <div style="font-weight:700;color:var(--navy);font-size:14px;">🏢 ${e.customer_name||'—'}</div>
-              <div style="font-size:12px;color:var(--muted);margin-top:2px;">📦 ${e.shipment_bl||'—'} &nbsp;|&nbsp; 📅 ${_fmtDate(e.invoice_date)}</div>
-            </div>
-            <div style="text-align:left;">
-              <div style="font-size:18px;font-weight:800;color:var(--navy);">${fmt(total)} ر.س</div>
-              <div style="text-align:center;">
-                <span class="pill ${e.paid ? 'pill-done' : 'pill-draft'}" style="cursor:pointer;"
-                  onclick="togglePaid('${e.id}',${e.paid})">
-                  ${e.paid ? '✅ مدفوع' : '⏳ لم يتم الدفع'}
-                </span>
+  el.innerHTML = list.map(e => {
+    const total = _totalOf(e);
+    const paidBg = e.paid ? '#E7F5EE' : '#FFF7ED';
+    const paidColor = e.paid ? '#2E8B57' : '#C2410C';
+    return `
+      <div style="background:white;border:1px solid #E8E5DC;border-radius:6px;padding:16px 18px;margin-bottom:8px;">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:14px;margin-bottom:12px;">
+          <div style="display:flex;align-items:center;gap:12px;min-width:0;flex:1;">
+            <div class="modern-row-stripe blue"></div>
+            <div style="min-width:0;">
+              <div style="font-size:14px;font-weight:700;color:#0E1A2E;">${e.customer_name||'—'}</div>
+              <div class="modern-row-sub">
+                → BL/${e.shipment_bl||'—'} · ${_fmtDate(e.invoice_date)}
               </div>
             </div>
           </div>
-          <!-- Fee items -->
-          <div style="background:var(--surface);border-radius:8px;padding:10px 12px;">
-            <table style="width:100%;font-size:12px;border-collapse:collapse;">
-              <thead>
-                <tr style="color:var(--muted);font-weight:600;">
-                  <th style="text-align:right;padding:3px 6px;">نوع الرسوم</th>
-                  <th style="text-align:center;padding:3px 6px;">المبلغ (ر.س)</th>
-                  <th style="text-align:center;padding:3px 6px;">التاريخ</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${(e.items||[]).map(i => `
-                  <tr style="border-top:0.5px solid var(--border);">
-                    <td style="padding:5px 6px;">${i.fee_type||'—'}</td>
-                    <td style="padding:5px 6px;text-align:center;font-weight:600;">${fmt(i.amount)}</td>
-                    <td style="padding:5px 6px;text-align:center;color:var(--muted);">${_fmtDate(i.date)}</td>
-                  </tr>`).join('')}
-              </tbody>
-            </table>
-          </div>
-          <!-- Actions -->
-          <div style="display:flex;gap:8px;justify-content:flex-end;">
-            <button class="btn btn-sm btn-ghost" onclick="exportExpensePdf('${e.id}')">
-              <i class="ti ti-file-download"></i> PDF
-            </button>
-            <button class="btn btn-sm btn-ghost" onclick="editExpense('${e.id}')">
-              <i class="ti ti-edit"></i> تعديل
-            </button>
-            <button class="btn btn-sm btn-ghost" onclick="deleteExpenseUI('${e.id}')" style="color:var(--red);">
-              <i class="ti ti-trash"></i>
+          <div style="text-align:left;">
+            <div style="font-family:'JetBrains Mono',monospace;font-size:22px;font-weight:800;color:#0E1A2E;letter-spacing:-0.5px;">${fmt(total)} <span style="font-size:11px;color:#6B6659;font-weight:500;">SAR</span></div>
+            <button onclick="togglePaid('${e.id}',${e.paid})" class="modern-badge ${e.paid?'green':'amber'}" style="border:none;cursor:pointer;margin-top:6px;">
+              ${e.paid ? 'PAID ✓' : 'UNPAID'}
             </button>
           </div>
-        </div>`;
-      }).join('')}
-    </div>`;
+        </div>
+        <div style="background:#FAFAF7;border:1px solid #F0EDE4;border-radius:4px;padding:10px 14px;margin-bottom:12px;">
+          <table style="width:100%;font-size:12px;border-collapse:collapse;">
+            <thead>
+              <tr>
+                <th style="text-align:right;padding:4px 6px;font-family:'JetBrains Mono',monospace;font-size:9px;color:#8A8578;letter-spacing:1.5px;text-transform:uppercase;font-weight:700;">Fee Type</th>
+                <th style="text-align:center;padding:4px 6px;font-family:'JetBrains Mono',monospace;font-size:9px;color:#8A8578;letter-spacing:1.5px;text-transform:uppercase;font-weight:700;">Amount (SAR)</th>
+                <th style="text-align:center;padding:4px 6px;font-family:'JetBrains Mono',monospace;font-size:9px;color:#8A8578;letter-spacing:1.5px;text-transform:uppercase;font-weight:700;">Date</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${(e.items||[]).map(i => `
+                <tr style="border-top:1px solid #F0EDE4;">
+                  <td style="padding:6px;color:#0E1A2E;">${i.fee_type||'—'}</td>
+                  <td style="padding:6px;text-align:center;font-family:'JetBrains Mono',monospace;font-weight:700;color:#0E1A2E;">${fmt(i.amount)}</td>
+                  <td style="padding:6px;text-align:center;font-family:'JetBrains Mono',monospace;color:#6B6659;font-size:11px;">${_fmtDate(i.date)}</td>
+                </tr>`).join('')}
+            </tbody>
+          </table>
+        </div>
+        <div style="display:flex;gap:6px;justify-content:flex-end;">
+          <button class="modern-btn" onclick="exportExpensePdf('${e.id}')" style="padding:6px 12px;font-size:11px;">
+            <i class="ti ti-file-download"></i> PDF
+          </button>
+          <button class="modern-btn" onclick="editExpense('${e.id}')" style="padding:6px 12px;font-size:11px;">
+            <i class="ti ti-edit"></i> تعديل
+          </button>
+          <button class="modern-icon-btn danger" onclick="deleteExpenseUI('${e.id}')" style="width:32px;height:32px;">
+            <i class="ti ti-trash"></i>
+          </button>
+        </div>
+      </div>`;
+  }).join('');
 }
 
 // ─────────────────────────────────────────────

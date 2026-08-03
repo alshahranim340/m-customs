@@ -5,25 +5,35 @@ let _agents = [];
 
 export async function renderImportAgents(container) {
   container.innerHTML = `
-    <div class="topbar">
-      <div>
-        <div class="topbar-title">🤝 قائمة الوكلاء</div>
-        <div class="topbar-sub">وكلاء الشحن الملاحي</div>
-      </div>
-      <div class="topbar-actions">
-        <button class="btn btn-primary" id="btn-new-agent">
-          <i class="ti ti-plus"></i> وكيل جديد
-        </button>
-      </div>
-    </div>
-    <div class="page-body">
-      <div class="card">
-        <div class="card-header">
-          <div class="card-title">📋 الوكلاء (${0})</div>
-          <input type="text" id="agent-search" placeholder="🔍 بحث بالاسم أو الإيميل..."
-            style="padding:7px 12px;border:0.5px solid var(--border);border-radius:8px;font-family:Tajawal,sans-serif;font-size:13px;outline:none;width:240px;">
+    <div class="page-body" style="padding:20px 24px;background:#F5F3EC;">
+      <div class="modern-page">
+        <div class="modern-header">
+          <div class="modern-header-brand">
+            <div class="modern-header-badges">
+              <div class="modern-header-dots">
+                <span class="modern-header-dot" style="background:#CC2229;"></span>
+                <span class="modern-header-dot" style="background:#1C4B8E;"></span>
+                <span class="modern-header-dot" style="background:#2E8B57;"></span>
+              </div>
+              <span class="modern-header-code">SDS/AGENTS/2026</span>
+            </div>
+            <div class="modern-header-title">قائمة الوكلاء</div>
+            <div class="modern-header-sub" id="agent-sub">SHIPPING AGENTS · v2.4</div>
+          </div>
+          <div class="modern-header-actions">
+            <button class="modern-btn modern-btn-primary" id="btn-new-agent">
+              <i class="ti ti-plus"></i> وكيل جديد
+            </button>
+          </div>
         </div>
-        <div id="agent-list"><div class="loader"><div class="spinner"></div></div></div>
+        <div class="modern-search-bar">
+          <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#6B6659;letter-spacing:1.5px;font-weight:700;">FIND ›</span>
+          <div class="modern-search-wrap">
+            <i class="ti ti-search modern-search-icon"></i>
+            <input type="text" id="agent-search" class="modern-search-input" placeholder="agent name · email">
+          </div>
+        </div>
+        <div id="agent-list" style="padding:12px 24px 20px;"><div class="loader"><div class="spinner"></div></div></div>
       </div>
     </div>
 
@@ -66,8 +76,8 @@ export async function renderImportAgents(container) {
 }
 
 function _updateCount() {
-  const title = document.querySelector('#agent-list')?.previousElementSibling?.querySelector('.card-title');
-  if (title) title.textContent = `📋 الوكلاء (${_agents.length})`;
+  const sub = document.getElementById('agent-sub');
+  if (sub) sub.textContent = `AGENTS · ${String(_agents.length).padStart(2,'0')} REGISTERED`;
 }
 
 function _renderList(search = '') {
@@ -82,34 +92,40 @@ function _renderList(search = '') {
 
   const el = document.getElementById('agent-list');
   if (!list.length) {
-    el.innerHTML = `<div class="empty-state">
-      <div class="empty-icon">🤝</div>
-      <div class="empty-title">لا توجد نتائج</div>
+    el.innerHTML = `<div class="modern-empty">
+      <div class="modern-empty-icon">🤝</div>
+      <div class="modern-empty-title">لا توجد نتائج</div>
+      <div class="modern-empty-sub">NO RESULTS</div>
     </div>`;
     return;
   }
 
-  el.innerHTML = `
-    <div class="ship-list">
-      ${list.map(a => `
-        <div class="ship-item" style="flex-direction:column;align-items:stretch;padding:14px 18px;gap:8px;">
-          <div style="font-weight:700;color:var(--navy);font-size:15px;">${a.name}</div>
-          <div style="display:flex;flex-wrap:wrap;gap:6px;">
-            ${(a.emails||[]).map(email => `
-              <div style="display:flex;align-items:center;gap:4px;background:var(--surface);border:0.5px solid var(--border);border-radius:6px;padding:5px 10px;">
-                <span style="font-size:12px;direction:ltr;color:#2563a8;">${email}</span>
-                <button onclick="copyEmail('${email}')" title="نسخ"
-                  style="background:none;border:none;cursor:pointer;color:var(--muted);font-size:13px;padding:0 2px;">
-                  <i class="ti ti-copy"></i>
-                </button>
-                <a href="mailto:${email}" title="إرسال إيميل"
-                  style="color:var(--muted);font-size:13px;text-decoration:none;">
-                  <i class="ti ti-mail"></i>
-                </a>
-              </div>`).join('')}
+  el.innerHTML = list.map((a, idx) => `
+    <div style="background:white;border:1px solid #E8E5DC;border-radius:6px;padding:14px 18px;margin-bottom:8px;">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:${(a.emails||[]).length?'10':'0'}px;">
+        <div class="modern-row-stripe blue"></div>
+        <div style="flex:1;min-width:0;">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#8A8578;font-weight:700;letter-spacing:1px;">AGENT · ${String(idx+1).padStart(3,'0')}</span>
           </div>
-        </div>`).join('')}
-    </div>`;
+          <div style="font-size:14px;font-weight:700;color:#0E1A2E;margin-top:2px;">${a.name}</div>
+          <div class="modern-row-sub">→ ${String((a.emails||[]).length).padStart(2,'0')} EMAILS</div>
+        </div>
+      </div>
+      ${(a.emails||[]).length ? `
+        <div style="display:flex;flex-wrap:wrap;gap:6px;padding-right:22px;">
+          ${(a.emails||[]).map(email => `
+            <div style="display:flex;align-items:center;gap:6px;background:#FAFAF7;border:1px solid #F0EDE4;border-radius:4px;padding:6px 10px;">
+              <span style="font-family:'JetBrains Mono',monospace;font-size:11px;direction:ltr;color:#1C4B8E;font-weight:600;">${email}</span>
+              <button onclick="copyEmail('${email}')" title="نسخ" style="background:none;border:none;cursor:pointer;color:#8A8578;font-size:13px;padding:0 2px;">
+                <i class="ti ti-copy"></i>
+              </button>
+              <a href="mailto:${email}" title="إرسال" style="color:#8A8578;font-size:13px;text-decoration:none;">
+                <i class="ti ti-mail"></i>
+              </a>
+            </div>`).join('')}
+        </div>` : ''}
+    </div>`).join('');
 }
 
 async function saveAgent() {
