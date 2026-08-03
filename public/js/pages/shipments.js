@@ -28,17 +28,22 @@ let _brokerReplyFile = null;
 
 export async function renderShipments(container) {
   container.innerHTML = `
-    <div class="page-body" style="padding:20px 24px;background:#F5F7FA;">
+    <div class="page-body" style="padding:20px 24px;background:#F5F3EC;">
       <div class="modern-page">
 
         <!-- Header -->
         <div class="modern-header">
           <div class="modern-header-brand">
-            <div class="modern-header-icon"><i class="ti ti-package"></i></div>
-            <div>
-              <div class="modern-header-title">سجل الشحنات</div>
-              <div class="modern-header-sub" id="header-sub">جميع الشحنات المسجلة</div>
+            <div class="modern-header-badges">
+              <div class="modern-header-dots">
+                <span class="modern-header-dot" style="background:#CC2229;"></span>
+                <span class="modern-header-dot" style="background:#1C4B8E;"></span>
+                <span class="modern-header-dot" style="background:#2E8B57;"></span>
+              </div>
+              <span class="modern-header-code">SDS/EXPORT/2026</span>
             </div>
+            <div class="modern-header-title">سجل الشحنات</div>
+            <div class="modern-header-sub">SHIPMENTS · EXPORT LEDGER · v2.4</div>
           </div>
           <div class="modern-header-actions">
             <button class="modern-btn" onclick="openNewFolder()">
@@ -51,38 +56,39 @@ export async function renderShipments(container) {
         </div>
 
         <!-- Stats -->
-        <div class="modern-stats">
-          <div>
-            <div class="modern-stat-lbl">إجمالي الشحنات</div>
+        <div class="modern-stats modern-stats-3">
+          <div class="modern-stat">
+            <div class="modern-stat-lbl">01 · TOTAL</div>
             <div class="modern-stat-val" id="stat-total">0</div>
-            <div class="modern-stat-hint" id="stat-hint-total">شحنة</div>
+            <div class="modern-stat-hint">إجمالي الشحنات المسجلة</div>
           </div>
-          <div>
-            <div class="modern-stat-lbl">المجلدات</div>
-            <div class="modern-stat-val" id="stat-folders">0</div>
-            <div class="modern-stat-hint">نشطة</div>
+          <div class="modern-stat">
+            <div class="modern-stat-lbl">02 · FOLDERS</div>
+            <div class="modern-stat-val blue" id="stat-folders">0</div>
+            <div class="modern-stat-hint">مجلد نشط</div>
           </div>
-          <div>
-            <div class="modern-stat-lbl">تحتاج تصنيف</div>
+          <div class="modern-stat">
+            <div class="modern-stat-lbl" style="color:#CC2229;">03 · UNSORTED ●</div>
             <div class="modern-stat-val danger" id="stat-unassigned">0</div>
-            <div class="modern-stat-hint alert">تنبيه</div>
+            <div class="modern-stat-hint">تحتاج تصنيف</div>
           </div>
         </div>
 
         <!-- Search -->
         <div class="modern-search-bar">
+          <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#6B6659;letter-spacing:1.5px;font-weight:700;">FIND ›</span>
           <div class="modern-search-wrap">
             <i class="ti ti-search modern-search-icon"></i>
             <input type="text" id="search-input" class="modern-search-input"
-              placeholder="ابحث برقم البيان، اسم السائق، المصدر، رقم اللوحة..."
+              placeholder="declaration number · driver · exporter · plate"
               oninput="searchShipments(this.value)">
           </div>
         </div>
 
         <!-- Selection toolbar -->
         <div id="selection-bar" style="display:none;align-items:center;gap:10px;
-          background:#1C4B8E;color:white;padding:10px 16px;margin:12px 24px 0;border-radius:10px;">
-          <span id="sel-count" style="font-size:13px;font-weight:600;"></span>
+          background:#0E1A2E;color:white;padding:10px 16px;margin:12px 24px 0;border-radius:6px;">
+          <span id="sel-count" style="font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;letter-spacing:1px;"></span>
           <button class="modern-btn" onclick="moveSelectedToFolder()" style="background:rgba(255,255,255,0.15);color:white;border-color:rgba(255,255,255,0.2);">
             <i class="ti ti-folder-plus"></i> نقل إلى مجلد
           </button>
@@ -95,510 +101,9 @@ export async function renderShipments(container) {
         <div id="shipments-list"><div class="loader"><div class="spinner"></div></div></div>
 
       </div>
-    </div>
-
-    <!-- EDIT MODAL -->
-    <div id="edit-modal" class="modal-overlay hidden">
-      <div class="modal-box" style="max-width:700px;width:95%;max-height:92vh;overflow-y:auto;">
-        <div class="modal-title">✏️ تعديل الشحنة</div>
-        <div id="edit-form-body"><div class="loader"><div class="spinner"></div></div></div>
-        <div class="modal-actions">
-          <button class="btn btn-ghost"   onclick="closeEditModal()">إلغاء</button>
-          <button class="btn btn-gold"    id="btn-merge" onclick="previewMerge()">👁️ معاينة ودمج PDF</button>
-          <button class="btn btn-primary" id="btn-save"  onclick="saveEdit()">💾 حفظ</button>
-        </div>
-      </div>
     </div>`;
 
-  await loadShipments();
-
-  window.openEditModal    = openEditModal;
-  window.closeEditModal   = closeEditModal;
-  window.saveEdit         = saveEdit;
-  window.confirmDelete    = confirmDelete;
-  window.editFileSelected = editFileSelected;
-  window.deleteAttach     = deleteAttach;
-  window.mergeAll         = mergeAll;
-  window.previewMerge     = previewMerge;
-  window.doMergeDownload  = mergeAll;
-
-  // Listen for merge signal from preview tab (via localStorage)
-  window.removeEventListener('message', window._mergeMessageHandler || (()=>{}));
-  if (window._storageListener) window.removeEventListener('storage', window._storageListener);
-  window._storageListener = (e) => {
-    if (e.key === 'm-customs-merge') {
-      mergeAll();
-      localStorage.removeItem('m-customs-merge');
-    }
-  };
-  window.addEventListener('storage', window._storageListener);
-  window.addEventListener('message', (e) => {
-    if (e.data === 'do-merge-download') mergeAll();
-  });
-  window.updatePortEdit   = updatePortEdit;
-}
-
-// ─────────────────────────────────────────────
-// LIST — merged folders, checkboxes, sorting
-// ─────────────────────────────────────────────
-let _allShipments = [];
-let _folders      = [];
-let _sortField    = 'created';
-let _sortDir      = 'desc';
-let _searchQuery  = '';
-let _selected     = new Set();
-let _openFolders  = new Set();
-
-function searchShipments(query) {
-  _searchQuery = query.toLowerCase().trim();
-  applyFiltersAndRender();
-}
-
-function sortList(list) {
-  return list.sort((a, b) => {
-    let av, bv;
-    switch(_sortField) {
-      case 'declaration_no': av = a.declaration_no||''; bv = b.declaration_no||''; break;
-      case 'driver':         av = a.driver_snapshot?.name||''; bv = b.driver_snapshot?.name||''; break;
-      case 'date':           av = a.date||''; bv = b.date||''; break;
-      case 'status':         av = a.status||''; bv = b.status||''; break;
-      default:               av = a.created_at?.seconds||0; bv = b.created_at?.seconds||0;
-    }
-    if (av < bv) return _sortDir === 'asc' ? -1 : 1;
-    if (av > bv) return _sortDir === 'asc' ? 1 : -1;
-    return 0;
-  });
-}
-
-function matchSearch(s) {
-  if (!_searchQuery) return true;
-  return (s.declaration_no||'').toLowerCase().includes(_searchQuery) ||
-    (s.driver_snapshot?.name||'').toLowerCase().includes(_searchQuery) ||
-    (s.driver_snapshot?.plate||'').toLowerCase().includes(_searchQuery) ||
-    (s.exporter||'').toLowerCase().includes(_searchQuery) ||
-    (s.goods_description||'').toLowerCase().includes(_searchQuery) ||
-    (s.created_by?.name||'').toLowerCase().includes(_searchQuery);
-}
-
-async function loadShipments() {
-  [_allShipments, _folders] = await Promise.all([
-    getShipments(200),
-    getFolders()
-  ]);
-  applyFiltersAndRender();
-  window.searchShipments      = searchShipments;
-  window.setSortField         = setSortField;
-  window.openNewFolder        = openNewFolder;
-  window.toggleFolder         = toggleFolder;
-  window.deleteFolderFn       = deleteFolderFn;
-  window.toggleSelect         = toggleSelect;
-  window.clearSelection       = clearSelection;
-  window.moveSelectedToFolder = moveSelectedToFolder;
-  window.moveToFolder         = moveToFolder;
-  window.openFolderMenu       = openFolderMenu;
-  window.renameFolderFn       = renameFolderFn;
-}
-
-function setSortField(field) {
-  if (_sortField === field) _sortDir = _sortDir === 'asc' ? 'desc' : 'asc';
-  else { _sortField = field; _sortDir = 'asc'; }
-  applyFiltersAndRender();
-}
-
-function sortIcon(field) {
-  if (_sortField !== field) return '<i class="ti ti-arrows-sort" style="opacity:0.4;font-size:13px"></i>';
-  return _sortDir === 'asc'
-    ? '<i class="ti ti-sort-ascending" style="color:var(--blue);font-size:13px"></i>'
-    : '<i class="ti ti-sort-descending" style="color:var(--blue);font-size:13px"></i>';
-}
-
-function applyFiltersAndRender() {
-  const list = document.getElementById('shipments-list');
-  if (!list) return;
-
-  // Group shipments by folder
-  const inFolder = {};
-  const noFolder = [];
-  _folders.forEach(f => inFolder[f.id] = []);
-
-  _allShipments.filter(matchSearch).forEach(s => {
-    if (s.folder_id && inFolder[s.folder_id]) {
-      inFolder[s.folder_id].push(s);
-    } else {
-      noFolder.push(s);
-    }
-  });
-
-  Object.keys(inFolder).forEach(k => sortList(inFolder[k]));
-  sortList(noFolder);
-
-  // Update stats
-  const totalAll = _allShipments.length;
-  const totalUnassigned = _allShipments.filter(s => !s.folder_id).length;
-  const totalFolders = _folders.length;
-  const elTotal = document.getElementById('stat-total');
-  const elFolders = document.getElementById('stat-folders');
-  const elUnassigned = document.getElementById('stat-unassigned');
-  const elSub = document.getElementById('header-sub');
-  if (elTotal) elTotal.textContent = totalAll;
-  if (elFolders) elFolders.textContent = totalFolders;
-  if (elUnassigned) elUnassigned.textContent = totalUnassigned;
-  if (elSub) elSub.textContent = `${totalAll} شحنة · ${totalFolders} مجلد`;
-
-  const totalShown = _allShipments.filter(matchSearch).length;
-  if (totalShown === 0) {
-    list.innerHTML = `<div class="empty-state" style="padding:40px;text-align:center;"><div class="empty-icon" style="font-size:32px;">📭</div><div class="empty-title" style="margin-top:8px;color:#697386;">لا توجد شحنات</div></div>`;
-    return;
-  }
-
-  let html = '';
-
-  // Section 1: Unassigned shipments
-  if (noFolder.length > 0) {
-    html += `
-      <div class="modern-section">
-        <div class="modern-section-title">
-          <i class="ti ti-file-alert" style="font-size:14px;color:#CC2229;"></i>
-          تحتاج تصنيف
-          <span class="badge">${noFolder.length}</span>
-        </div>
-      </div>
-      <div class="modern-list">`;
-    let counter = 0;
-    noFolder.forEach(s => {
-      counter++;
-      html += renderModernRow(s, counter, true);
-    });
-    html += `</div>`;
-  }
-
-  // Section 2: Folders
-  if (_folders.length > 0) {
-    html += `
-      <div class="modern-section">
-        <div class="modern-section-title">
-          <i class="ti ti-folders" style="font-size:14px;color:#1C4B8E;"></i>
-          المجلدات <span style="color:#697386;font-weight:500;letter-spacing:0;text-transform:none;font-size:11px;">· ${_folders.length}</span>
-        </div>
-      </div>
-      <div class="modern-folders-grid">`;
-
-    _folders.forEach(f => {
-      const items = inFolder[f.id] || [];
-      if (_searchQuery && items.length === 0) return;
-      html += `
-        <div class="modern-folder-card" onclick="toggleFolder('${f.id}')">
-          <div class="modern-folder-icon"><i class="ti ti-folder"></i></div>
-          <div class="modern-folder-body">
-            <div class="modern-folder-name">${f.name}</div>
-            <div class="modern-folder-meta">${items.length} ${items.length === 1 ? 'شحنة' : 'شحنات'}</div>
-          </div>
-          <button class="modern-folder-menu" onclick="event.stopPropagation();openFolderMenu('${f.id}','${(f.name||'').replace(/'/g,"&#39;")}')" title="خيارات">
-            <i class="ti ti-dots" style="font-size:15px;"></i>
-          </button>
-        </div>`;
-    });
-    html += `</div>`;
-
-    // Show open folders content
-    _folders.forEach(f => {
-      if (!_openFolders.has(f.id)) return;
-      const items = inFolder[f.id] || [];
-      html += `
-        <div class="modern-section">
-          <div class="modern-section-title">
-            <i class="ti ti-folder-open" style="font-size:14px;color:#2E8B57;"></i>
-            ${f.name}
-            <button onclick="toggleFolder('${f.id}')" style="margin-right:auto;background:none;border:none;color:#1C4B8E;font-size:11px;cursor:pointer;font-family:inherit;">إغلاق ×</button>
-          </div>
-        </div>
-        <div class="modern-list">`;
-      if (items.length === 0) {
-        html += `<div style="padding:20px;text-align:center;color:#697386;font-size:12px;">المجلد فارغ</div>`;
-      } else {
-        let counter = 0;
-        items.forEach(s => { counter++; html += renderModernRow(s, counter, false); });
-      }
-      html += `</div>`;
-    });
-  }
-
-  list.innerHTML = html;
-  updateSelectionBar();
-}
-
-function renderModernRow(s, num, isUnassigned) {
-  const checked = _selected.has(s.id);
-  const st = STATUS[s.status] || { ar: s.status, class: 'pill-draft' };
-
-  // Badge color
-  let badgeClass = 'gray';
-  if (st.class === 'pill-done') badgeClass = 'green';
-  else if (st.class === 'pill-sent') badgeClass = 'blue';
-  else if (st.class === 'pill-replied') badgeClass = 'amber';
-  else if (isUnassigned) badgeClass = 'gray';
-
-  const iconColor = isUnassigned ? 'red'
-    : (st.class === 'pill-done' ? 'green' : 'blue');
-  const iconName = isUnassigned ? 'ti-file-alert'
-    : (st.class === 'pill-done' ? 'ti-truck-delivery' : 'ti-file');
-
-  return `
-    <div class="modern-row">
-      <input type="checkbox" class="modern-row-check" ${checked?'checked':''}
-        onchange="toggleSelect('${s.id}')" onclick="event.stopPropagation()">
-      <div class="modern-row-icon ${iconColor}"><i class="ti ${iconName}"></i></div>
-      <div class="modern-row-body">
-        <div class="modern-row-title">
-          #${s.declaration_no||'—'}
-          <span class="muted">· ${s.driver_snapshot?.name||'—'}</span>
-        </div>
-        <div class="modern-row-sub">
-          ${s.exporter ? s.exporter + ' · ' : ''}${s.goods_description || 'بضاعة'}
-        </div>
-      </div>
-      <span class="modern-badge gray">${DEST[s.destination] || '—'}</span>
-      <span class="modern-badge ${badgeClass}">${st.ar}</span>
-      <span class="modern-row-date">${s.date || '—'}</span>
-      <div class="modern-row-actions">
-        <button class="modern-icon-btn" title="نقل لمجلد" onclick="moveToFolder('${s.id}')"><i class="ti ti-folder-plus"></i></button>
-        <button class="modern-icon-btn" title="عرض" onclick="navigate('shipment-view',{id:'${s.id}'})"><i class="ti ti-eye"></i></button>
-        <button class="modern-icon-btn" title="تعديل" onclick="openEditModal('${s.id}')"><i class="ti ti-edit"></i></button>
-        <button class="modern-icon-btn danger" title="حذف" onclick="confirmDelete('${s.id}','${s.declaration_no||''}')"><i class="ti ti-trash"></i></button>
-      </div>
-    </div>`;
-}
-
-function openFolderMenu(id, name) {
-  const choice = window.prompt(`المجلد: ${name}\n\n1 - تعديل الاسم\n2 - حذف المجلد`);
-  if (choice === '1') renameFolderFn(id, name);
-  else if (choice === '2') deleteFolderFn(id, name);
-}
-
-async function renameFolderFn(id, oldName) {
-  const newName = window.prompt('الاسم الجديد للمجلد:', oldName);
-  if (!newName || !newName.trim() || newName.trim() === oldName) return;
-  const { updateFolder } = await import('../../../src/firebase/folders.js');
-  await updateFolder(id, { name: newName.trim() });
-  _folders = await getFolders();
-  applyFiltersAndRender();
-  toast('✅ تم تعديل اسم المجلد', 'success');
-}
-
-// ── FOLDER TOGGLE ──
-function toggleFolder(id) {
-  if (_openFolders.has(id)) _openFolders.delete(id);
-  else _openFolders.add(id);
-  applyFiltersAndRender();
-}
-
-async function openNewFolder() {
-  const name = window.prompt('اسم المجلد الجديد:');
-  if (!name || !name.trim()) return;
-  const id = await createFolder(name.trim());
-  _folders = await getFolders();
-  _openFolders.add(id);
-  applyFiltersAndRender();
-  toast('✅ تم إنشاء المجلد', 'success');
-}
-
-async function deleteFolderFn(id, name) {
-  if (!window.confirm(`حذف مجلد "${name}"؟\nالشحنات بداخله ستعود للقائمة العامة.`)) return;
-  const inFolder = _allShipments.filter(s => s.folder_id === id);
-  for (const s of inFolder) {
-    await updateShipment(s.id, { folder_id: null });
-    s.folder_id = null;
-  }
-  await deleteFolder(id);
-  _folders = await getFolders();
-  _openFolders.delete(id);
-  applyFiltersAndRender();
-  toast('🗑️ تم حذف المجلد', 'success');
-}
-
-// ── SELECTION ──
-function toggleSelect(id) {
-  if (_selected.has(id)) _selected.delete(id);
-  else _selected.add(id);
-  applyFiltersAndRender();
-}
-
-function clearSelection() {
-  _selected.clear();
-  applyFiltersAndRender();
-}
-
-function updateSelectionBar() {
-  const bar = document.getElementById('selection-bar');
-  const cnt = document.getElementById('sel-count');
-  if (!bar) return;
-  if (_selected.size > 0) {
-    bar.style.display = 'flex';
-    cnt.textContent = `تم تحديد ${_selected.size} شحنة`;
-  } else {
-    bar.style.display = 'none';
-  }
-}
-
-async function moveSelectedToFolder() {
-  if (_selected.size === 0) return;
-  if (!_folders.length) { toast('أنشئ مجلداً أولاً', 'error'); return; }
-  const options = _folders.map((f, i) => `${i+1}. ${f.name}`).join('\n');
-  const choice = window.prompt(`نقل ${_selected.size} شحنة إلى:\n0. إزالة من المجلد\n${options}`);
-  if (choice === null) return;
-  const idx = parseInt(choice);
-  let folderId = null;
-  if (idx > 0 && idx <= _folders.length) folderId = _folders[idx-1].id;
-
-  for (const sid of _selected) {
-    await updateShipment(sid, { folder_id: folderId });
-    const ship = _allShipments.find(s => s.id === sid);
-    if (ship) ship.folder_id = folderId;
-  }
-  if (folderId) _openFolders.add(folderId);
-  _selected.clear();
-  applyFiltersAndRender();
-  toast(folderId ? '✅ تم النقل للمجلد' : '✅ أُزيلت من المجلد', 'success');
-}
-
-async function moveToFolder(shipmentId) {
-  if (!_folders.length) { toast('أنشئ مجلداً أولاً', 'error'); return; }
-  const options = _folders.map((f, i) => `${i+1}. ${f.name}`).join('\n');
-  const choice = window.prompt(`نقل إلى مجلد:\n0. إزالة من المجلد\n${options}`);
-  if (choice === null) return;
-  const idx = parseInt(choice);
-  let folderId = null;
-  if (idx > 0 && idx <= _folders.length) folderId = _folders[idx-1].id;
-  await updateShipment(shipmentId, { folder_id: folderId });
-  const ship = _allShipments.find(s => s.id === shipmentId);
-  if (ship) ship.folder_id = folderId;
-  if (folderId) _openFolders.add(folderId);
-  applyFiltersAndRender();
-  toast(folderId ? '✅ تم النقل' : '✅ أُزيل من المجلد', 'success');
-}
-
-// ─────────────────────────────────────────────
-// EDIT MODAL
-// ─────────────────────────────────────────────
-async function openEditModal(id) {
-  _editingId = id;
-  _editFiles = {};
-  _brokerReplyFile = null;
-  document.getElementById('edit-modal').classList.remove('hidden');
-  document.getElementById('edit-form-body').innerHTML =
-    '<div class="loader"><div class="spinner"></div></div>';
-
-  const [s, existing] = await Promise.all([
-    getShipment(id),
-    getAttachments(id)
-  ]);
-
-  if (!s) { toast('تعذّر تحميل الشحنة', 'error'); return; }
-  _editingShipment = s;
-  _existingFiles   = existing;
-
-  const destOpts   = ['uae','bahrain','oman'].map(d =>
-    `<option value="${d}" ${s.destination===d?'selected':''}>${DEST[d]}</option>`
-  ).join('');
-  const statusOpts = Object.entries(STATUS).map(([k,v]) =>
-    `<option value="${k}" ${s.status===k?'selected':''}>${v.ar}</option>`
-  ).join('');
-
-  const attachHTML = ATTACHMENTS_ORDER.map(a => {
-    const has = !!existing[a.key];
-    return `
-      <div class="upload-item ${has?'uploaded':''}" id="edit-upload-${a.key}" style="position:relative;">
-        <label style="display:flex;align-items:center;gap:8px;flex:1;cursor:pointer;">
-          <input type="file" accept=".pdf,.jpg,.jpeg,.png" style="display:none"
-            onchange="editFileSelected('${a.key}',this)">
-          <span class="u-icon">${has?'✅':'📎'}</span>
-          <div>
-            <div class="u-name">${a.ar}</div>
-            <div class="u-state" id="edit-state-${a.key}">
-              ${has?(existing[a.key].name||'✓ محفوظ'):'اضغط للرفع'}
-            </div>
-          </div>
-        </label>
-        ${has ? `<button onclick="deleteAttach('${a.key}')" title="حذف المرفق"
-          style="position:absolute;left:6px;top:50%;transform:translateY(-50%);
-          width:24px;height:24px;border:none;border-radius:6px;background:var(--red-light);
-          color:var(--red);cursor:pointer;display:flex;align-items:center;justify-content:center;">
-          <i class="ti ti-trash" style="font-size:13px"></i>
-        </button>` : ''}
-      </div>`;
-  }).join('');
-
-
-  document.getElementById('edit-form-body').innerHTML = `
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;">
-      <div class="field"><label>الوجهة</label>
-        <select id="e-dest" onchange="updatePortEdit()">${destOpts}</select></div>
-      <div class="field"><label>المنفذ</label>
-        <input type="text" id="e-port" value="${PMAPS[s.port]||PMAPS.uae}"></div>
-      <div class="field"><label>رقم البيان</label>
-        <input type="text" id="e-decl-no" value="${s.declaration_no||''}"></div>
-      <div class="field"><label>الرقم الموحد</label>
-        <input type="text" id="e-unified-no" value="${s.unified_no||''}"></div>
-      <div id="e-date-wrap"></div>
-      <div id="e-sample-date-wrap"></div>
-      <div class="field"><label>الحالة</label>
-        <select id="e-status">${statusOpts}</select></div>
-      <div class="field" style="grid-column:span 2;"><label>اسم المصدر</label>
-        <input type="text" id="e-exporter" value="${s.exporter||''}"></div>
-      <div class="field" style="grid-column:span 2;"><label>وصف البضاعة</label>
-        <input type="text" id="e-goods" value="${s.goods_description||''}"></div>
-    </div>
-
-    <div style="background:var(--surface);border-radius:8px;padding:14px;margin-bottom:16px;">
-      <div style="font-size:11px;font-weight:700;color:var(--muted);margin-bottom:10px;">بيانات السائق</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
-        <div class="field"><label>اسم السائق</label>
-          <input type="text" id="e-drv-name" value="${s.driver_snapshot?.name||''}"></div>
-        <div class="field"><label>الجنسية</label>
-          <input type="text" id="e-drv-nat" value="${s.driver_snapshot?.nationality||''}"></div>
-        <div class="field"><label>بلد الجواز</label>
-          <input type="text" id="e-drv-passport" value="${s.driver_snapshot?.passport_country||''}"></div>
-        <div class="field"><label>رقم اللوحة</label>
-          <input type="text" id="e-drv-plate" value="${s.driver_snapshot?.plate||''}"></div>
-        <div class="field"><label>نوع السيارة</label>
-          <input type="text" id="e-drv-vtype" value="${s.driver_snapshot?.vehicle_type||''}"></div>
-        <div class="field"><label>نوع الناقل</label>
-          <input type="text" id="e-drv-ctype" value="${s.driver_snapshot?.carrier_type||''}"></div>
-        <div class="field"><label>جنسية اللوحة</label>
-          <input type="text" id="e-drv-pnat" value="${s.driver_snapshot?.plate_nationality||''}"></div>
-      </div>
-    </div>
-
-    <div style="background:var(--surface);border-radius:8px;padding:14px;margin-bottom:16px;">
-      <div style="font-size:11px;font-weight:700;color:var(--muted);margin-bottom:10px;">
-        المرفقات — <span style="color:var(--green);">✅ محفوظة</span> &nbsp;|&nbsp;
-        <span style="color:var(--muted);">📎 اضغط للرفع أو التحديث</span>
-      </div>
-      <div class="upload-grid">${attachHTML}</div>
-    </div>
-`;
-
-  // Init hijri date pickers AFTER innerHTML is set
-  const dateWrap = document.getElementById('e-date-wrap');
-  if (dateWrap) {
-    dateWrap.innerHTML = '';
-    dateWrap.appendChild(buildHijriPicker('e-date', s.date || todayHijri(), 'تاريخ البيان'));
-  }
-  const sampleWrap = document.getElementById('e-sample-date-wrap');
-  if (sampleWrap) {
-    sampleWrap.innerHTML = '';
-    sampleWrap.appendChild(buildHijriPicker('e-sample-date', s.sample_date || s.date || todayHijri(), 'تاريخ استقطاع العينة'));
-  }
-}
-
-function updatePortEdit() {
-  const d = document.getElementById('e-dest')?.value;
-  if (d) document.getElementById('e-port').value = PMAPS[d] || PMAPS.uae;
-}
-
-async function deleteAttach(key) {
-  if (!window.confirm('حذف هذا المرفق نهائياً؟')) return;
-  try {
+    try {
     await deleteAttachment(_editingId, key);
     delete _existingFiles[key];
     delete _editFiles[key];
@@ -1079,4 +584,181 @@ function buildSampleHTML(s, drv) {
       <span>Jeddah – Al Jawhara District – Building 3508 – Unit 14 – Postal 22416 .6204</span>
     </div>
   </div>`;
+}function applyFiltersAndRender() {
+  const list = document.getElementById('shipments-list');
+  if (!list) return;
+
+  const inFolder = {};
+  const noFolder = [];
+  _folders.forEach(f => inFolder[f.id] = []);
+
+  _allShipments.filter(matchSearch).forEach(s => {
+    if (s.folder_id && inFolder[s.folder_id]) {
+      inFolder[s.folder_id].push(s);
+    } else {
+      noFolder.push(s);
+    }
+  });
+
+  Object.keys(inFolder).forEach(k => sortList(inFolder[k]));
+  sortList(noFolder);
+
+  // Update stats
+  const totalAll = _allShipments.length;
+  const totalUnassigned = _allShipments.filter(s => !s.folder_id).length;
+  const totalFolders = _folders.length;
+  const pad = n => String(n).padStart(2, '0');
+  const elTotal = document.getElementById('stat-total');
+  const elFolders = document.getElementById('stat-folders');
+  const elUnassigned = document.getElementById('stat-unassigned');
+  if (elTotal) elTotal.textContent = pad(totalAll);
+  if (elFolders) elFolders.textContent = pad(totalFolders);
+  if (elUnassigned) elUnassigned.textContent = pad(totalUnassigned);
+
+  const totalShown = _allShipments.filter(matchSearch).length;
+  if (totalShown === 0) {
+    list.innerHTML = `<div style="padding:24px;"><div class="modern-empty">
+      <div class="modern-empty-icon">📭</div>
+      <div class="modern-empty-title">لا توجد شحنات</div>
+      <div class="modern-empty-sub">NO RESULTS</div>
+    </div></div>`;
+    return;
+  }
+
+  let html = '';
+
+  // Section 1: Unassigned
+  if (noFolder.length > 0) {
+    html += `
+      <div class="modern-section">
+        <div class="modern-section-title">
+          → UNSORTED / تحتاج تصنيف
+          <div class="divider"></div>
+          <span class="count">${pad(noFolder.length)} items</span>
+        </div>
+      </div>
+      <div class="modern-list">
+        <div class="modern-list-box">`;
+    noFolder.forEach(s => { html += renderManifestRow(s, true); });
+    html += `</div></div>`;
+  }
+
+  // Section 2: Folders
+  if (_folders.length > 0) {
+    html += `
+      <div class="modern-section">
+        <div class="modern-section-title">
+          → FOLDERS / المجلدات
+          <div class="divider"></div>
+          <span class="count">${pad(_folders.length)} folders</span>
+        </div>
+      </div>
+      <div class="modern-folders-grid">`;
+
+    _folders.forEach((f, idx) => {
+      const items = inFolder[f.id] || [];
+      if (_searchQuery && items.length === 0) return;
+      html += `
+        <div class="modern-folder-card" onclick="toggleFolder('${f.id}')">
+          <button class="modern-folder-menu" onclick="event.stopPropagation();openFolderMenu('${f.id}','${(f.name||'').replace(/'/g,"&#39;")}')" title="خيارات">
+            <i class="ti ti-dots" style="font-size:14px;"></i>
+          </button>
+          <div class="modern-folder-topline">
+            <span class="modern-folder-code">FOLDER · ${pad(idx+1)}</span>
+            <span class="modern-folder-count">${pad(items.length)}</span>
+          </div>
+          <div class="modern-folder-name">${f.name}</div>
+          <div class="modern-folder-meta">${items.length === 1 ? 'shipment' : 'shipments'}</div>
+        </div>`;
+    });
+    html += `</div>`;
+
+    // Open folders content
+    _folders.forEach(f => {
+      if (!_openFolders.has(f.id)) return;
+      const items = inFolder[f.id] || [];
+      html += `
+        <div class="modern-section">
+          <div class="modern-section-title">
+            → ${f.name.toUpperCase()}
+            <div class="divider"></div>
+            <button onclick="toggleFolder('${f.id}')" style="background:none;border:none;color:#1C4B8E;font-family:'JetBrains Mono',monospace;font-size:10px;cursor:pointer;font-weight:700;letter-spacing:1px;">CLOSE ×</button>
+          </div>
+        </div>
+        <div class="modern-list">
+          <div class="modern-list-box">`;
+      if (items.length === 0) {
+        html += `<div style="padding:20px;text-align:center;color:#8A8578;font-family:'JetBrains Mono',monospace;font-size:11px;">EMPTY</div>`;
+      } else {
+        items.forEach(s => { html += renderManifestRow(s, false); });
+      }
+      html += `</div></div>`;
+    });
+  }
+
+  list.innerHTML = html;
+  updateSelectionBar();
 }
+
+function renderManifestRow(s, isUnassigned) {
+  const checked = _selected.has(s.id);
+  const st = STATUS[s.status] || { ar: s.status, class: 'pill-draft' };
+
+  let badgeClass = 'gray';
+  let stripeClass = 'gray';
+  let stKey = 'DRAFT';
+  if (st.class === 'pill-done') { badgeClass = 'green'; stripeClass = 'green'; stKey = 'DONE'; }
+  else if (st.class === 'pill-sent') { badgeClass = 'blue'; stripeClass = 'blue'; stKey = 'SENT'; }
+  else if (st.class === 'pill-replied') { badgeClass = 'amber'; stripeClass = 'amber'; stKey = 'REPLIED'; }
+  if (isUnassigned && st.class === 'pill-draft') { stripeClass = 'red'; }
+
+  const destCode = s.destination === 'uae' ? 'AE / EMIRATES'
+    : s.destination === 'bahrain' ? 'BH / BAHRAIN'
+    : s.destination === 'oman' ? 'OM / OMAN' : '—';
+
+  const driver = s.driver_snapshot?.name || '';
+  const plate = s.driver_snapshot?.plate || '';
+  const exporter = s.exporter || '';
+
+  return `
+    <div class="modern-row">
+      <input type="checkbox" class="modern-row-check" ${checked?'checked':''}
+        onchange="toggleSelect('${s.id}')" onclick="event.stopPropagation()">
+      <div class="modern-row-stripe ${stripeClass}"></div>
+      <div class="modern-row-code">${s.declaration_no || '—'}</div>
+      <div class="modern-row-body">
+        <div class="modern-row-title">
+          ${driver || '<span class="muted">— no driver</span>'}
+          ${plate ? `<span class="modern-row-plate">${plate}</span>` : ''}
+          ${exporter ? `<span class="muted"> · ${exporter}</span>` : ''}
+        </div>
+        <div class="modern-row-sub">→ ${destCode}${s.goods_description ? ' · ' + s.goods_description : ''}</div>
+      </div>
+      <span class="modern-badge ${badgeClass}">${stKey}</span>
+      <span class="modern-row-date">${s.date || '—'}</span>
+      <div class="modern-row-actions">
+        <button class="modern-icon-btn" title="نقل" onclick="moveToFolder('${s.id}')"><i class="ti ti-folder-plus"></i></button>
+        <button class="modern-icon-btn" title="عرض" onclick="navigate('shipment-view',{id:'${s.id}'})"><i class="ti ti-eye"></i></button>
+        <button class="modern-icon-btn" title="تعديل" onclick="openEditModal('${s.id}')"><i class="ti ti-edit"></i></button>
+        <button class="modern-icon-btn danger" title="حذف" onclick="confirmDelete('${s.id}','${s.declaration_no||''}')"><i class="ti ti-trash"></i></button>
+      </div>
+    </div>`;
+}
+
+function openFolderMenu(id, name) {
+  const choice = window.prompt(`المجلد: ${name}\n\n1 - تعديل الاسم\n2 - حذف المجلد`);
+  if (choice === '1') renameFolderFn(id, name);
+  else if (choice === '2') deleteFolderFn(id, name);
+}
+
+async function renameFolderFn(id, oldName) {
+  const newName = window.prompt('الاسم الجديد للمجلد:', oldName);
+  if (!newName || !newName.trim() || newName.trim() === oldName) return;
+  const { updateFolder } = await import('../../../src/firebase/folders.js');
+  await updateFolder(id, { name: newName.trim() });
+  _folders = await getFolders();
+  applyFiltersAndRender();
+  toast('✅ تم تعديل اسم المجلد', 'success');
+}
+
+
