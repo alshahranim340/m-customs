@@ -1,3 +1,6 @@
+import { renderActivities } from './pages/activities.js';
+import { renderSnake } from './pages/gameSnake.js';
+import { renderTicTacToe } from './pages/gameTicTacToe.js';
 import { getShipments } from '../../src/firebase/db.js';
 import { onAuthChange, ensureAdminProfile, getUserProfile, logOut, isAdmin, getCurrentUser } from '../../src/firebase/auth.js';
 import { renderDashboard }      from './pages/dashboard.js';
