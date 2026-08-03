@@ -1,6 +1,10 @@
 import { renderActivities } from './pages/activities.js';
 import { renderSnake } from './pages/gameSnake.js';
 import { renderTicTacToe } from './pages/gameTicTacToe.js';
+import { renderQuiz } from './pages/gameQuiz.js';
+import { renderMemory } from './pages/gameMemory.js';
+import { render2048 } from './pages/game2048.js';
+import { renderConnect4 } from './pages/gameConnect4.js';
 import { getShipments } from '../../src/firebase/db.js';
 import { onAuthChange, ensureAdminProfile, getUserProfile, logOut, isAdmin, getCurrentUser } from '../../src/firebase/auth.js';
 import { renderDashboard }      from './pages/dashboard.js';
@@ -44,6 +48,10 @@ const PAGES = {
   'activities':       renderActivities,
   'game-snake':       renderSnake,
   'game-xo':          renderTicTacToe,
+  'game-quiz':        renderQuiz,
+  'game-memory':      renderMemory,
+  'game-2048':        render2048,
+  'game-c4':          renderConnect4,
 };
 
 // ─────────────────────────────────────────────
