@@ -40,6 +40,10 @@ const PAGES = {
   'import-calendar':  renderImportCalendar,
   'import-customers': renderImportCustomers,
   'import-agents':    renderImportAgents,
+  // Activities
+  'activities':       renderActivities,
+  'game-snake':       renderSnake,
+  'game-xo':          renderTicTacToe,
 };
 
 // ─────────────────────────────────────────────
@@ -47,8 +51,9 @@ const PAGES = {
 // ─────────────────────────────────────────────
 export function navigate(page, params = {}) {
   // Determine which section this page belongs to
+  const isActivityPage = page === 'activities' || page.startsWith('game-');
   const isImportPage = page.startsWith('import-') || page === 'quotations';
-  _activeSection = isImportPage ? 'import' : 'export';
+  if (!isActivityPage) _activeSection = isImportPage ? 'import' : 'export';
 
   // Update section switcher
   document.getElementById('section-export')?.classList.toggle('section-active', !isImportPage);
@@ -253,6 +258,10 @@ function renderAppShell(profile) {
           <a class="nav-item" data-page="users" onclick="navigate('users')">
             <i class="ti ti-users"></i> الموظفون
           </a>` : ''}
+          <div class="nav-group-label">الترفيه</div>
+          <a class="nav-item" data-page="activities" onclick="navigate('activities')">
+            <i class="ti ti-device-gamepad-2"></i> الفعاليات
+          </a>
         </nav>
 
         <!-- Import Nav -->
@@ -278,6 +287,10 @@ function renderAppShell(profile) {
           </a>
           <a class="nav-item" data-page="import-agents" onclick="navigate('import-agents')">
             <i class="ti ti-users"></i> الوكلاء
+          </a>
+          <div class="nav-group-label">الترفيه</div>
+          <a class="nav-item" data-page="activities" onclick="navigate('activities')">
+            <i class="ti ti-device-gamepad-2"></i> الفعاليات
           </a>
         </nav>
 
