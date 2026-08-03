@@ -17,7 +17,6 @@ export async function renderActivities(container) {
     <div class="page-body" style="padding:20px 24px;background:#F5F3EC;">
       <div class="modern-page">
 
-        <!-- Header -->
         <div class="modern-header">
           <div class="modern-header-brand">
             <div class="modern-header-badges">
@@ -29,7 +28,7 @@ export async function renderActivities(container) {
               <span class="modern-header-code">SDS/ACTIVITIES/2026</span>
             </div>
             <div class="modern-header-title">🎮 الفعاليات</div>
-            <div class="modern-header-sub">EMPLOYEE GAMES · LEADERBOARDS · v1.0</div>
+            <div class="modern-header-sub">EMPLOYEE GAMES · LEADERBOARDS · v2.0</div>
           </div>
           <div style="text-align:left;">
             <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#8A8578;letter-spacing:1.5px;text-transform:uppercase;font-weight:700;">YOUR POINTS</div>
@@ -38,7 +37,6 @@ export async function renderActivities(container) {
           </div>
         </div>
 
-        <!-- Stats -->
         <div class="modern-stats modern-stats-4">
           <div class="modern-stat">
             <div class="modern-stat-lbl">01 · RANK</div>
@@ -62,114 +60,42 @@ export async function renderActivities(container) {
           </div>
         </div>
 
-        <!-- Available games -->
         <div class="modern-section">
           <div class="modern-section-title">
             → AVAILABLE GAMES / الألعاب المتاحة
             <div class="divider"></div>
-            <span class="count">04 games</span>
+            <span class="count">06 games</span>
           </div>
         </div>
 
-        <div style="padding:0 24px;display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:24px;">
+        <div style="padding:0 24px;display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px;margin-bottom:24px;">
 
-          <!-- Snake -->
-          <div style="background:white;border:1px solid #E8E5DC;border-radius:6px;padding:18px;position:relative;overflow:hidden;">
-            <div style="position:absolute;top:0;right:0;width:6px;height:100%;background:#2E8B57;"></div>
-            <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;">
-              <div>
-                <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:#8A8578;letter-spacing:2px;font-weight:700;">GAME · 001</div>
-                <div style="font-size:18px;color:#0E1A2E;font-weight:800;margin-top:4px;">🐍 لعبة الثعبان</div>
-                <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#6B6659;margin-top:2px;">SNAKE · SINGLE PLAYER</div>
-              </div>
-              <span class="modern-badge green">READY</span>
-            </div>
-            <div style="background:#FAFAF7;border:1px solid #F0EDE4;border-radius:4px;padding:10px;margin-bottom:12px;display:grid;grid-template-columns:repeat(2,1fr);gap:12px;">
-              <div>
-                <div style="font-family:'JetBrains Mono',monospace;font-size:8px;color:#8A8578;letter-spacing:1px;font-weight:700;text-transform:uppercase;">YOUR BEST</div>
-                <div style="font-family:'JetBrains Mono',monospace;font-size:16px;color:#0E1A2E;font-weight:800;" id="snake-best">00</div>
-              </div>
-              <div>
-                <div style="font-family:'JetBrains Mono',monospace;font-size:8px;color:#8A8578;letter-spacing:1px;font-weight:700;text-transform:uppercase;">GAMES</div>
-                <div style="font-family:'JetBrains Mono',monospace;font-size:16px;color:#0E1A2E;font-weight:800;" id="snake-games">00</div>
-              </div>
-            </div>
-            <button onclick="navigate('game-snake')" style="background:#0E1A2E;color:white;border:none;border-radius:6px;padding:10px 16px;font-family:Tajawal,sans-serif;font-size:12px;cursor:pointer;font-weight:700;letter-spacing:.3px;width:100%;">
-              ▶ ابدأ اللعب
-            </button>
-          </div>
+          ${gameCard('001','🐍 لعبة الثعبان','SNAKE · SINGLE PLAYER','#2E8B57','READY','green',[
+            {lbl:'YOUR BEST',id:'snake-best'},{lbl:'GAMES',id:'snake-games'}
+          ],'▶ ابدأ اللعب','game-snake','#0E1A2E')}
 
-          <!-- Tic-Tac-Toe -->
-          <div style="background:white;border:1px solid #E8E5DC;border-radius:6px;padding:18px;position:relative;overflow:hidden;">
-            <div style="position:absolute;top:0;right:0;width:6px;height:100%;background:#1C4B8E;"></div>
-            <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;">
-              <div>
-                <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:#8A8578;letter-spacing:2px;font-weight:700;">GAME · 002</div>
-                <div style="font-size:18px;color:#0E1A2E;font-weight:800;margin-top:4px;">⭕ إكس أو</div>
-                <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#6B6659;margin-top:2px;">TIC-TAC-TOE · MULTIPLAYER</div>
-              </div>
-              <span class="modern-badge blue">LIVE</span>
-            </div>
-            <div style="background:#FAFAF7;border:1px solid #F0EDE4;border-radius:4px;padding:10px;margin-bottom:12px;display:grid;grid-template-columns:repeat(3,1fr);gap:12px;">
-              <div>
-                <div style="font-family:'JetBrains Mono',monospace;font-size:8px;color:#8A8578;letter-spacing:1px;font-weight:700;text-transform:uppercase;">WINS</div>
-                <div style="font-family:'JetBrains Mono',monospace;font-size:16px;color:#2E8B57;font-weight:800;" id="xo-wins">00</div>
-              </div>
-              <div>
-                <div style="font-family:'JetBrains Mono',monospace;font-size:8px;color:#8A8578;letter-spacing:1px;font-weight:700;text-transform:uppercase;">LOSSES</div>
-                <div style="font-family:'JetBrains Mono',monospace;font-size:16px;color:#CC2229;font-weight:800;" id="xo-losses">00</div>
-              </div>
-              <div>
-                <div style="font-family:'JetBrains Mono',monospace;font-size:8px;color:#8A8578;letter-spacing:1px;font-weight:700;text-transform:uppercase;">DRAWS</div>
-                <div style="font-family:'JetBrains Mono',monospace;font-size:16px;color:#6B6659;font-weight:800;" id="xo-draws">00</div>
-              </div>
-            </div>
-            <button onclick="navigate('game-xo')" style="background:#1C4B8E;color:white;border:none;border-radius:6px;padding:10px 16px;font-family:Tajawal,sans-serif;font-size:12px;cursor:pointer;font-weight:700;letter-spacing:.3px;width:100%;">
-              ⚔ تحدى موظف
-            </button>
-          </div>
+          ${gameCard('002','⭕ إكس أو','TIC-TAC-TOE · MULTIPLAYER','#1C4B8E','LIVE','blue',[
+            {lbl:'WINS',id:'xo-wins'},{lbl:'LOSSES',id:'xo-losses'},{lbl:'DRAWS',id:'xo-draws'}
+          ],'⚔ تحدى موظف','game-xo','#1C4B8E')}
 
-          <!-- Quiz - coming soon -->
-          <div style="background:white;border:1px solid #E8E5DC;border-radius:6px;padding:18px;position:relative;overflow:hidden;opacity:0.6;">
-            <div style="position:absolute;top:0;right:0;width:6px;height:100%;background:#C2410C;"></div>
-            <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;">
-              <div>
-                <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:#8A8578;letter-spacing:2px;font-weight:700;">GAME · 003</div>
-                <div style="font-size:18px;color:#0E1A2E;font-weight:800;margin-top:4px;">🧩 ألغاز جمركية</div>
-                <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#6B6659;margin-top:2px;">CUSTOMS QUIZ · TRIVIA</div>
-              </div>
-              <span class="modern-badge amber">SOON</span>
-            </div>
-            <div style="background:#FAFAF7;border:1px solid #F0EDE4;border-radius:4px;padding:14px;margin-bottom:12px;text-align:center;">
-              <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#8A8578;letter-spacing:1px;">50 QUESTIONS · CUSTOMS & LOGISTICS</div>
-            </div>
-            <button disabled style="background:#F5F3EC;color:#8A8578;border:1px solid #E8E5DC;border-radius:6px;padding:10px 16px;font-family:Tajawal,sans-serif;font-size:12px;cursor:not-allowed;font-weight:700;letter-spacing:.3px;width:100%;">
-              🔒 قريباً
-            </button>
-          </div>
+          ${gameCard('003','🧩 ألغاز جمركية','CUSTOMS QUIZ · 10 QUESTIONS','#C2410C','READY','green',[
+            {lbl:'YOUR BEST',id:'quiz-best'},{lbl:'GAMES',id:'quiz-games'}
+          ],'▶ ابدأ الاختبار','game-quiz','#C2410C')}
 
-          <!-- Memory - coming soon -->
-          <div style="background:white;border:1px solid #E8E5DC;border-radius:6px;padding:18px;position:relative;overflow:hidden;opacity:0.6;">
-            <div style="position:absolute;top:0;right:0;width:6px;height:100%;background:#CC2229;"></div>
-            <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;">
-              <div>
-                <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:#8A8578;letter-spacing:2px;font-weight:700;">GAME · 004</div>
-                <div style="font-size:18px;color:#0E1A2E;font-weight:800;margin-top:4px;">🎴 ذاكرة البطاقات</div>
-                <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#6B6659;margin-top:2px;">MEMORY CARDS · MATCH PAIRS</div>
-              </div>
-              <span class="modern-badge amber">SOON</span>
-            </div>
-            <div style="background:#FAFAF7;border:1px solid #F0EDE4;border-radius:4px;padding:14px;margin-bottom:12px;text-align:center;">
-              <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#8A8578;letter-spacing:1px;">4 DIFFICULTY LEVELS</div>
-            </div>
-            <button disabled style="background:#F5F3EC;color:#8A8578;border:1px solid #E8E5DC;border-radius:6px;padding:10px 16px;font-family:Tajawal,sans-serif;font-size:12px;cursor:not-allowed;font-weight:700;letter-spacing:.3px;width:100%;">
-              🔒 قريباً
-            </button>
-          </div>
+          ${gameCard('004','🎴 ذاكرة البطاقات','MEMORY · MATCH PAIRS','#CC2229','READY','green',[
+            {lbl:'BEST MOVES',id:'memory-best'},{lbl:'GAMES',id:'memory-games'}
+          ],'▶ ابدأ اللعب','game-memory','#CC2229')}
+
+          ${gameCard('005','🎯 لعبة 2048','2048 · MERGE TILES','#EDC22E','READY','green',[
+            {lbl:'YOUR BEST',id:'g2048-best'},{lbl:'GAMES',id:'g2048-games'}
+          ],'▶ ابدأ اللعب','game-2048','#0E1A2E')}
+
+          ${gameCard('006','🔴 الأربعة في صف','CONNECT FOUR · MULTIPLAYER','#CC2229','LIVE','blue',[
+            {lbl:'WINS',id:'c4-wins'},{lbl:'LOSSES',id:'c4-losses'},{lbl:'DRAWS',id:'c4-draws'}
+          ],'⚔ تحدى موظف','game-c4','#CC2229')}
 
         </div>
 
-        <!-- Leaderboard -->
         <div class="modern-section">
           <div class="modern-section-title">
             → LEADERBOARD / لوحة المتصدرين
@@ -179,9 +105,7 @@ export async function renderActivities(container) {
         </div>
 
         <div class="modern-list">
-          <div id="leaderboard-body">
-            <div class="loader"><div class="spinner"></div></div>
-          </div>
+          <div id="leaderboard-body"><div class="loader"><div class="spinner"></div></div></div>
         </div>
 
       </div>
@@ -190,10 +114,37 @@ export async function renderActivities(container) {
   await loadData(profile);
 }
 
+function gameCard(num, title, sub, stripeColor, badge, badgeClass, stats, btnLabel, page, btnColor) {
+  return `
+    <div style="background:white;border:1px solid #E8E5DC;border-radius:6px;padding:18px;position:relative;overflow:hidden;">
+      <div style="position:absolute;top:0;right:0;width:6px;height:100%;background:${stripeColor};"></div>
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;">
+        <div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:#8A8578;letter-spacing:2px;font-weight:700;">GAME · ${num}</div>
+          <div style="font-size:16px;color:#0E1A2E;font-weight:800;margin-top:4px;">${title}</div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#6B6659;margin-top:2px;">${sub}</div>
+        </div>
+        <span class="modern-badge ${badgeClass}">${badge}</span>
+      </div>
+      <div style="background:#FAFAF7;border:1px solid #F0EDE4;border-radius:4px;padding:10px;margin-bottom:12px;display:grid;grid-template-columns:repeat(${stats.length},1fr);gap:8px;">
+        ${stats.map(s => `
+          <div>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:8px;color:#8A8578;letter-spacing:1px;font-weight:700;text-transform:uppercase;">${s.lbl}</div>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:14px;color:#0E1A2E;font-weight:800;" id="${s.id}">00</div>
+          </div>
+        `).join('')}
+      </div>
+      <button onclick="navigate('${page}')" style="background:${btnColor};color:white;border:none;border-radius:6px;padding:10px 16px;font-family:Tajawal,sans-serif;font-size:12px;cursor:pointer;font-weight:700;letter-spacing:.3px;width:100%;">
+        ${btnLabel}
+      </button>
+    </div>`;
+}
+
 async function loadData(profile) {
   try {
+    const uid = profile.id || profile.uid;
     const [stats, leaderboard] = await Promise.all([
-      getUserStats(profile.uid || profile.id),
+      getUserStats(uid),
       getLeaderboard(10),
     ]);
     _stats = stats;
@@ -208,7 +159,7 @@ async function loadData(profile) {
 function pad(n) { return String(n || 0).padStart(2, '0'); }
 
 function renderStats(profile) {
-  const uid = profile.uid || profile.id;
+  const uid = profile.id || profile.uid;
   const myIdx = _leaderboard.findIndex(u => u.id === uid);
   const rank = myIdx >= 0 ? `#${pad(myIdx + 1)}` : '—';
 
@@ -218,15 +169,25 @@ function renderStats(profile) {
   document.getElementById('stat-games').textContent = pad(_stats.games_played || 0);
   document.getElementById('stat-wins').textContent = pad(_stats.wins || 0);
   document.getElementById('stat-streak').textContent = pad(_stats.streak_days || 0);
+
   document.getElementById('snake-best').textContent = pad(_stats.snake_best || 0);
   document.getElementById('snake-games').textContent = pad(_stats.snake_games || 0);
   document.getElementById('xo-wins').textContent = pad(_stats.xo_wins || 0);
   document.getElementById('xo-losses').textContent = pad(_stats.xo_losses || 0);
   document.getElementById('xo-draws').textContent = pad(_stats.xo_draws || 0);
+  document.getElementById('quiz-best').textContent = pad(_stats.quiz_best || 0);
+  document.getElementById('quiz-games').textContent = pad(_stats.quiz_games || 0);
+  document.getElementById('memory-best').textContent = _stats.memory_best ? pad(_stats.memory_best) : '—';
+  document.getElementById('memory-games').textContent = pad(_stats.memory_games || 0);
+  document.getElementById('g2048-best').textContent = pad(_stats.g2048_best || 0);
+  document.getElementById('g2048-games').textContent = pad(_stats.g2048_games || 0);
+  document.getElementById('c4-wins').textContent = pad(_stats.c4_wins || 0);
+  document.getElementById('c4-losses').textContent = pad(_stats.c4_losses || 0);
+  document.getElementById('c4-draws').textContent = pad(_stats.c4_draws || 0);
 }
 
 function renderLeaderboard(profile) {
-  const uid = profile.uid || profile.id;
+  const uid = profile.id || profile.uid;
   const el = document.getElementById('leaderboard-body');
 
   if (_leaderboard.length === 0) {
