@@ -5,6 +5,11 @@ import { renderQuiz } from './pages/gameQuiz.js';
 import { renderMemory } from './pages/gameMemory.js';
 import { render2048 } from './pages/game2048.js';
 import { renderConnect4 } from './pages/gameConnect4.js';
+import { renderAim } from './pages/gameAim.js';
+import { renderReaction } from './pages/gameReaction.js';
+import { renderHangman } from './pages/gameHangman.js';
+import { renderTrivia } from './pages/gameTrivia.js';
+import { renderWork } from './pages/gameWork.js';
 import { getShipments } from '../../src/firebase/db.js';
 import { onAuthChange, ensureAdminProfile, getUserProfile, logOut, isAdmin, getCurrentUser } from '../../src/firebase/auth.js';
 import { renderDashboard }      from './pages/dashboard.js';
@@ -52,6 +57,11 @@ const PAGES = {
   'game-memory':      renderMemory,
   'game-2048':        render2048,
   'game-c4':          renderConnect4,
+  'game-aim':         renderAim,
+  'game-reaction':    renderReaction,
+  'game-hangman':     renderHangman,
+  'game-trivia':      renderTrivia,
+  'game-work':        renderWork,
 };
 
 // ─────────────────────────────────────────────
