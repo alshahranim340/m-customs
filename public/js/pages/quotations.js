@@ -14,30 +14,39 @@ let _customers  = [];
 
 export async function renderQuotations(container) {
   container.innerHTML = `
-    <div class="topbar">
-      <div>
-        <div class="topbar-title">📋 عروض الأسعار</div>
-        <div class="topbar-sub">إدارة عروض أسعار التخليص والنقل</div>
-      </div>
-      <div class="topbar-actions">
-        <button class="btn btn-ghost" id="btn-quot-report" onclick="openQuotReport()">
-          <i class="ti ti-chart-bar"></i> تقرير العروض
-        </button>
-        <button class="btn btn-primary" id="btn-new-quotation">
-          <i class="ti ti-plus"></i> عرض سعر جديد
-        </button>
-      </div>
-    </div>
-    <div class="page-body">
-      <div id="quot-stats" class="stats-row"></div>
-      <div class="card">
-        <div class="card-header">
-          <div class="card-title">قائمة العروض</div>
-          <input type="text" id="quot-search" placeholder="🔍 بحث بالعميل أو رقم العرض..."
-            style="padding:7px 12px;border:0.5px solid var(--border);border-radius:8px;
-            font-family:Tajawal,sans-serif;font-size:13px;outline:none;width:220px;">
+    <div class="page-body" style="padding:20px 24px;background:#F5F3EC;">
+      <div class="modern-page">
+        <div class="modern-header">
+          <div class="modern-header-brand">
+            <div class="modern-header-badges">
+              <div class="modern-header-dots">
+                <span class="modern-header-dot" style="background:#CC2229;"></span>
+                <span class="modern-header-dot" style="background:#1C4B8E;"></span>
+                <span class="modern-header-dot" style="background:#2E8B57;"></span>
+              </div>
+              <span class="modern-header-code">SDS/QUOTATIONS/2026</span>
+            </div>
+            <div class="modern-header-title">عروض الأسعار</div>
+            <div class="modern-header-sub" id="quot-sub">QUOTATIONS · CUSTOMS & TRANSPORT · v2.4</div>
+          </div>
+          <div class="modern-header-actions">
+            <button class="modern-btn" id="btn-quot-report" onclick="openQuotReport()">
+              <i class="ti ti-chart-bar"></i> تقرير العروض
+            </button>
+            <button class="modern-btn modern-btn-primary" id="btn-new-quotation">
+              <i class="ti ti-plus"></i> عرض سعر جديد
+            </button>
+          </div>
         </div>
-        <div id="quot-list"><div class="loader"><div class="spinner"></div></div></div>
+        <div id="quot-stats"></div>
+        <div class="modern-search-bar">
+          <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#6B6659;letter-spacing:1.5px;font-weight:700;">FIND ›</span>
+          <div class="modern-search-wrap">
+            <i class="ti ti-search modern-search-icon"></i>
+            <input type="text" id="quot-search" class="modern-search-input" placeholder="customer name · quotation number">
+          </div>
+        </div>
+        <div id="quot-list" style="padding:12px 24px 20px;"><div class="loader"><div class="spinner"></div></div></div>
       </div>
     </div>
 
@@ -99,22 +108,29 @@ function _renderStats() {
   const accepted = _quotations.filter(q => q.status === 'accepted').length;
   const rejected = _quotations.filter(q => q.status === 'rejected').length;
 
+  const pad = n => String(n).padStart(2, '0');
   document.getElementById('quot-stats').innerHTML = `
-    <div class="stat-card">
-      <div class="stat-icon si-blue"><i class="ti ti-file-text" style="font-size:22px;color:var(--blue)"></i></div>
-      <div><div class="stat-num">${total}</div><div class="stat-label">إجمالي العروض</div></div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-icon si-amber"><i class="ti ti-clock" style="font-size:22px;color:var(--amber)"></i></div>
-      <div><div class="stat-num">${pending}</div><div class="stat-label">قيد الانتظار</div></div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-icon si-green"><i class="ti ti-circle-check" style="font-size:22px;color:var(--green)"></i></div>
-      <div><div class="stat-num">${accepted}</div><div class="stat-label">مقبول</div></div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-icon si-red"><i class="ti ti-circle-x" style="font-size:22px;color:var(--red)"></i></div>
-      <div><div class="stat-num">${rejected}</div><div class="stat-label">مرفوض</div></div>
+    <div class="modern-stats modern-stats-4">
+      <div class="modern-stat">
+        <div class="modern-stat-lbl">01 · TOTAL</div>
+        <div class="modern-stat-val">${pad(total)}</div>
+        <div class="modern-stat-hint">إجمالي العروض</div>
+      </div>
+      <div class="modern-stat">
+        <div class="modern-stat-lbl">02 · PENDING</div>
+        <div class="modern-stat-val amber">${pad(pending)}</div>
+        <div class="modern-stat-hint">قيد الانتظار</div>
+      </div>
+      <div class="modern-stat">
+        <div class="modern-stat-lbl">03 · ACCEPTED</div>
+        <div class="modern-stat-val green">${pad(accepted)}</div>
+        <div class="modern-stat-hint">مقبول</div>
+      </div>
+      <div class="modern-stat">
+        <div class="modern-stat-lbl">04 · REJECTED</div>
+        <div class="modern-stat-val danger">${pad(rejected)}</div>
+        <div class="modern-stat-hint">مرفوض</div>
+      </div>
     </div>`;
 }
 
@@ -133,71 +149,58 @@ function _renderList(search = '') {
 
   const el = document.getElementById('quot-list');
   if (!list.length) {
-    el.innerHTML = `<div class="empty-state">
-      <div class="empty-icon">📋</div>
-      <div class="empty-title">لا توجد عروض أسعار</div>
-      <div class="empty-sub">ابدأ بإنشاء أول عرض سعر</div>
+    el.innerHTML = `<div class="modern-empty">
+      <div class="modern-empty-icon">📋</div>
+      <div class="modern-empty-title">لا توجد عروض أسعار</div>
+      <div class="modern-empty-sub">EMPTY</div>
     </div>`;
     return;
   }
+  const subEl = document.getElementById('quot-sub');
+  if (subEl) subEl.textContent = `QUOTATIONS · ${String(_quotations.length).padStart(2,'0')} TOTAL`;
 
-  el.innerHTML = `
-    <table style="width:100%;border-collapse:collapse;font-size:13px;">
-      <thead>
-        <tr style="background:var(--surface);border-bottom:1px solid var(--border);">
-          <th style="padding:10px 14px;text-align:right;font-weight:600;color:var(--muted);font-size:12px;">رقم العرض</th>
-          <th style="padding:10px 14px;text-align:right;font-weight:600;color:var(--muted);font-size:12px;">العميل</th>
-          <th style="padding:10px 14px;text-align:right;font-weight:600;color:var(--muted);font-size:12px;">المنفذ</th>
-          <th style="padding:10px 14px;text-align:right;font-weight:600;color:var(--muted);font-size:12px;">المدينة</th>
-          <th style="padding:10px 14px;text-align:center;font-weight:600;color:var(--muted);font-size:12px;">تخليص</th>
-          <th style="padding:10px 14px;text-align:center;font-weight:600;color:var(--muted);font-size:12px;">نقل</th>
-          <th style="padding:10px 14px;text-align:center;font-weight:600;color:var(--muted);font-size:12px;">الحالة</th>
-          <th style="padding:10px 14px;text-align:center;font-weight:600;color:var(--muted);font-size:12px;">إجراءات</th>
-        </tr>
-      </thead>
-      <tbody>
-        ${list.map(q => {
-          const st = QUOTATION_STATUS[q.status] || QUOTATION_STATUS.pending;
-          const portLabel = _getPortLabel(q.port_type, q.port);
-          return `
-          <tr style="border-bottom:0.5px solid var(--border);">
-            <td style="padding:11px 14px;font-weight:700;color:var(--navy);font-size:12px;">${q.number||'—'}</td>
-            <td style="padding:11px 14px;font-weight:600;">${q.customer_name||'—'}</td>
-            <td style="padding:11px 14px;color:var(--muted);">${PORT_ICONS[q.port_type]||''} ${portLabel}</td>
-            <td style="padding:11px 14px;color:var(--muted);font-size:11px;">
-            ${(q.transport_rows && q.transport_rows.length > 0
-              ? q.transport_rows.map(r => r.city)
-              : [q.city]
-            ).filter(Boolean).join('، ') || '—'}
-          </td>
-            <td style="padding:11px 14px;text-align:center;font-weight:600;">${q.customs_price ? q.customs_price+' ر.س' : '—'}</td>
-            <td style="padding:11px 14px;text-align:center;font-weight:600;">${q.transport_price ? q.transport_price+' ر.س' : '—'}</td>
-            <td style="padding:11px 14px;text-align:center;">
-              <select onchange="changeQuotStatus('${q.id}',this.value)"
-                style="background:${st.bg};color:${st.color};border:none;border-radius:20px;
-                font-family:Tajawal,sans-serif;font-size:11px;font-weight:700;padding:3px 8px;cursor:pointer;">
-                ${Object.entries(QUOTATION_STATUS).map(([k,v])=>
-                  `<option value="${k}" ${q.status===k?'selected':''}>${v.ar}</option>`
-                ).join('')}
-              </select>
-            </td>
-            <td style="padding:11px 14px;text-align:center;">
-              <div style="display:flex;gap:5px;justify-content:center;">
-                <button class="btn btn-sm btn-ghost" onclick="printQuotation('${q.id}')" title="طباعة PDF">
-                  <i class="ti ti-printer"></i>
-                </button>
-                <button class="btn btn-sm btn-ghost" onclick="editQuotation('${q.id}')">
-                  <i class="ti ti-edit"></i>
-                </button>
-                <button class="btn btn-sm btn-ghost" onclick="deleteQuotUI('${q.id}')" style="color:var(--red);">
-                  <i class="ti ti-trash"></i>
-                </button>
-              </div>
-            </td>
-          </tr>`;
-        }).join('')}
-      </tbody>
-    </table>`;
+  el.innerHTML = `<div class="modern-list-box">${list.map(q => {
+    const st = QUOTATION_STATUS[q.status] || QUOTATION_STATUS.pending;
+    const portLabel = _getPortLabel(q.port_type, q.port);
+    const cities = (q.transport_rows && q.transport_rows.length > 0
+      ? q.transport_rows.map(r => r.city)
+      : [q.city]).filter(Boolean).join(' · ') || '—';
+
+    let stripeClass = 'blue';
+    if (q.status === 'accepted') stripeClass = 'green';
+    else if (q.status === 'rejected') stripeClass = 'red';
+    else if (q.status === 'pending') stripeClass = 'amber';
+
+    return `
+      <div class="modern-row" style="grid-template-columns:auto 80px 1fr auto auto auto auto;">
+        <div class="modern-row-stripe ${stripeClass}"></div>
+        <div class="modern-row-code">${q.number||'—'}</div>
+        <div class="modern-row-body">
+          <div class="modern-row-title">${q.customer_name||'—'}</div>
+          <div class="modern-row-sub">→ ${portLabel} · ${cities}</div>
+        </div>
+        <div style="text-align:center;">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:#8A8578;letter-spacing:1px;font-weight:700;">CUSTOMS</div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:800;color:#0E1A2E;margin-top:2px;">${q.customs_price || '—'}</div>
+        </div>
+        <div style="text-align:center;">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:#8A8578;letter-spacing:1px;font-weight:700;">TRANSPORT</div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:800;color:#0E1A2E;margin-top:2px;">${q.transport_price || '—'}</div>
+        </div>
+        <select onchange="changeQuotStatus('${q.id}',this.value)"
+          class="modern-badge ${q.status==='accepted'?'green':q.status==='rejected'?'red':q.status==='pending'?'amber':'gray'}"
+          style="border:none;cursor:pointer;font-family:'JetBrains Mono',monospace;">
+          ${Object.entries(QUOTATION_STATUS).map(([k,v])=>
+            `<option value="${k}" ${q.status===k?'selected':''}>${v.ar}</option>`
+          ).join('')}
+        </select>
+        <div class="modern-row-actions">
+          <button class="modern-icon-btn" title="طباعة" onclick="printQuotation('${q.id}')"><i class="ti ti-printer"></i></button>
+          <button class="modern-icon-btn" title="تعديل" onclick="editQuotation('${q.id}')"><i class="ti ti-edit"></i></button>
+          <button class="modern-icon-btn danger" title="حذف" onclick="deleteQuotUI('${q.id}')"><i class="ti ti-trash"></i></button>
+        </div>
+      </div>`;
+  }).join('')}</div>`;
 }
 
 // ─────────────────────────────────────────────
@@ -656,7 +659,7 @@ function printQuotation(id, lang = null) {
         </div>
         <div class="info-cell">
           <div class="info-lbl">${L.city}</div>
-          <div class="info-val">${(q.transport_rows && q.transport_rows.length > 0 ? q.transport_rows.map(r => r.city).join('، ') : q.city) || '—'}</div>
+          <div class="info-val">${q.city}</div>
         </div>
       </div>
 
@@ -677,18 +680,14 @@ function printQuotation(id, lang = null) {
             </td>
             <td class="amt">${fmt(q.customs_price)}</td>
           </tr>
-${(() => {
-            const rows = (q.transport_rows && q.transport_rows.length > 0)
-              ? q.transport_rows
-              : [{ city: q.city, price: q.transport_price }];
-            return rows.map((r, i) => {
-              const cls = i % 2 === 0 ? 'alt' : '';
-              return '<tr class="' + cls + '"><td class="sn">' + (i+2) + '</td><td>' +
-                '<div class="svc-name">' + L.transport + ' — ' + r.city + '</div>' +
-                '<div class="svc-sub">' + L.transportSub + ' ' + L.portVal + ' → ' + r.city + '</div>' +
-                '</td><td class="amt">' + fmt(r.price) + '</td></tr>';
-            }).join('');
-          })()}
+          <tr class="alt">
+            <td class="sn">2</td>
+            <td>
+              <div class="svc-name">${L.transport}</div>
+              <div class="svc-sub">${L.transportSub} ${L.portVal} → ${q.city}</div>
+            </td>
+            <td class="amt">${fmt(q.transport_price)}</td>
+          </tr>
           <tr class="net-row">
             <td colspan="2" style="text-align:${L.alignOpp};padding-${L.alignOpp}:16px;">${L.net}</td>
             <td class="net-amt">${fmt(total)}</td>

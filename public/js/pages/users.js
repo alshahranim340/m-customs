@@ -13,16 +13,21 @@ export async function renderUsers(container) {
   }
 
   container.innerHTML = `
-    <div class="page-body" style="padding:20px 24px;background:#F5F7FA;">
+    <div class="page-body" style="padding:20px 24px;background:#F5F3EC;">
       <div class="modern-page">
-        <!-- Header -->
+
         <div class="modern-header">
           <div class="modern-header-brand">
-            <div class="modern-header-icon"><i class="ti ti-users"></i></div>
-            <div>
-              <div class="modern-header-title">إدارة الموظفين</div>
-              <div class="modern-header-sub">إنشاء وإدارة حسابات الفريق</div>
+            <div class="modern-header-badges">
+              <div class="modern-header-dots">
+                <span class="modern-header-dot" style="background:#CC2229;"></span>
+                <span class="modern-header-dot" style="background:#1C4B8E;"></span>
+                <span class="modern-header-dot" style="background:#2E8B57;"></span>
+              </div>
+              <span class="modern-header-code">SDS/USERS/2026</span>
             </div>
+            <div class="modern-header-title">إدارة الموظفين</div>
+            <div class="modern-header-sub">USERS · ACCESS CONTROL · v2.4</div>
           </div>
           <div class="modern-header-actions">
             <button class="modern-btn" onclick="printUsersReport()">
@@ -34,15 +39,14 @@ export async function renderUsers(container) {
           </div>
         </div>
 
-        <!-- Stats -->
         <div id="users-stats"></div>
 
-        <!-- Search -->
         <div class="modern-search-bar">
+          <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#6B6659;letter-spacing:1.5px;font-weight:700;">FIND ›</span>
           <div class="modern-search-wrap">
             <i class="ti ti-search modern-search-icon"></i>
             <input type="text" id="user-search" class="modern-search-input"
-              placeholder="ابحث بالاسم أو البريد الإلكتروني...">
+              placeholder="name · email">
           </div>
         </div>
 
@@ -129,22 +133,23 @@ function renderStats() {
 
   const el = document.getElementById('users-stats');
   if (!el) return;
+  const pad = n => String(n).padStart(2, '0');
   el.innerHTML = `
-    <div style="padding:18px 24px;display:grid;grid-template-columns:repeat(3,1fr);gap:20px;background:#FAFBFC;border-bottom:1px solid #F0F1F5;">
-      <div>
-        <div style="font-size:11px;color:#697386;font-weight:600;letter-spacing:.3px;text-transform:uppercase;">إجمالي الحسابات</div>
-        <div style="font-size:26px;font-weight:700;color:#0A2540;margin-top:4px;letter-spacing:-0.5px;">${total}</div>
-        <div style="font-size:11px;color:#697386;margin-top:2px;display:flex;align-items:center;gap:4px;"><span style="width:6px;height:6px;border-radius:50%;background:#1C4B8E;"></span> مسجل</div>
+    <div class="modern-stats modern-stats-3">
+      <div class="modern-stat">
+        <div class="modern-stat-lbl">01 · TOTAL</div>
+        <div class="modern-stat-val">${pad(total)}</div>
+        <div class="modern-stat-hint">إجمالي الحسابات</div>
       </div>
-      <div>
-        <div style="font-size:11px;color:#697386;font-weight:600;letter-spacing:.3px;text-transform:uppercase;">نشط</div>
-        <div style="font-size:26px;font-weight:700;color:#2E8B57;margin-top:4px;letter-spacing:-0.5px;">${active}</div>
-        <div style="font-size:11px;color:#2E8B57;margin-top:2px;display:flex;align-items:center;gap:4px;"><span style="width:6px;height:6px;border-radius:50%;background:#2E8B57;"></span> فعّال</div>
+      <div class="modern-stat">
+        <div class="modern-stat-lbl">02 · ACTIVE</div>
+        <div class="modern-stat-val green">${pad(active)}</div>
+        <div class="modern-stat-hint">نشط</div>
       </div>
-      <div>
-        <div style="font-size:11px;color:#697386;font-weight:600;letter-spacing:.3px;text-transform:uppercase;">معطّل</div>
-        <div style="font-size:26px;font-weight:700;color:#CC2229;margin-top:4px;letter-spacing:-0.5px;">${inactive}</div>
-        <div style="font-size:11px;color:#CC2229;margin-top:2px;display:flex;align-items:center;gap:4px;"><span style="width:6px;height:6px;border-radius:50%;background:#CC2229;"></span> غير نشط</div>
+      <div class="modern-stat">
+        <div class="modern-stat-lbl">03 · DISABLED</div>
+        <div class="modern-stat-val danger">${pad(inactive)}</div>
+        <div class="modern-stat-hint">معطّل</div>
       </div>
     </div>`;
 }

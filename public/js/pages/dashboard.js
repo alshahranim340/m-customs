@@ -23,28 +23,25 @@ export async function renderDashboard(container) {
   const recent  = _shipments.slice(0, 8);
 
   const uaeCount = _shipments.filter(s=>s.destination==='uae').length;
-  const bahCount = _shipments.filter(s=>s.destination==='bahrain').length;
-  const omanCount = _shipments.filter(s=>s.destination==='oman').length;
+  const pad = n => String(n).padStart(2, '0');
 
   container.innerHTML = `
-<style>
-.modern-page .modern-row[onclick] {
-  grid-template-columns: auto 1fr auto auto auto !important;
-  gap: 14px;
-}
-</style>
-
-    <div class="page-body" style="padding:20px 24px;background:#F5F7FA;">
+    <div class="page-body" style="padding:20px 24px;background:#F5F3EC;">
       <div class="modern-page">
 
         <!-- Header -->
         <div class="modern-header">
           <div class="modern-header-brand">
-            <div class="modern-header-icon"><i class="ti ti-layout-dashboard"></i></div>
-            <div>
-              <div class="modern-header-title">لوحة التحكم — الصادر</div>
-              <div class="modern-header-sub">نظرة عامة على عمليات التخليص</div>
+            <div class="modern-header-badges">
+              <div class="modern-header-dots">
+                <span class="modern-header-dot" style="background:#CC2229;"></span>
+                <span class="modern-header-dot" style="background:#1C4B8E;"></span>
+                <span class="modern-header-dot" style="background:#2E8B57;"></span>
+              </div>
+              <span class="modern-header-code">SDS/EXPORT/2026</span>
             </div>
+            <div class="modern-header-title">لوحة التحكم — الصادر</div>
+            <div class="modern-header-sub">EXPORT DASHBOARD · OVERVIEW · v2.4</div>
           </div>
           <div class="modern-header-actions">
             <button class="modern-btn" onclick="printExportReport()">
@@ -57,71 +54,76 @@ export async function renderDashboard(container) {
         </div>
 
         <!-- Stats -->
-        <div style="padding:18px 24px;display:grid;grid-template-columns:repeat(4,1fr);gap:16px;background:#FAFBFC;border-bottom:1px solid #F0F1F5;">
-          <div>
-            <div style="font-size:11px;color:#697386;font-weight:600;letter-spacing:.3px;text-transform:uppercase;">إجمالي الشحنات</div>
-            <div style="font-size:26px;font-weight:700;color:#0A2540;margin-top:4px;letter-spacing:-0.5px;">${total}</div>
-            <div style="font-size:11px;color:#697386;margin-top:2px;display:flex;align-items:center;gap:4px;"><span style="width:6px;height:6px;border-radius:50%;background:#1C4B8E;"></span> نشطة</div>
+        <div class="modern-stats modern-stats-4">
+          <div class="modern-stat">
+            <div class="modern-stat-lbl">01 · TOTAL</div>
+            <div class="modern-stat-val">${pad(total)}</div>
+            <div class="modern-stat-hint">إجمالي الشحنات</div>
           </div>
-          <div>
-            <div style="font-size:11px;color:#697386;font-weight:600;letter-spacing:.3px;text-transform:uppercase;">مكتملة</div>
-            <div style="font-size:26px;font-weight:700;color:#2E8B57;margin-top:4px;letter-spacing:-0.5px;">${done}</div>
-            <div style="font-size:11px;color:#2E8B57;margin-top:2px;display:flex;align-items:center;gap:4px;"><span style="width:6px;height:6px;border-radius:50%;background:#2E8B57;"></span> تم التسليم</div>
+          <div class="modern-stat">
+            <div class="modern-stat-lbl">02 · DONE</div>
+            <div class="modern-stat-val green">${pad(done)}</div>
+            <div class="modern-stat-hint">مكتملة</div>
           </div>
-          <div>
-            <div style="font-size:11px;color:#697386;font-weight:600;letter-spacing:.3px;text-transform:uppercase;">قيد التجهيز</div>
-            <div style="font-size:26px;font-weight:700;color:#C2410C;margin-top:4px;letter-spacing:-0.5px;">${pending}</div>
-            <div style="font-size:11px;color:#C2410C;margin-top:2px;display:flex;align-items:center;gap:4px;"><span style="width:6px;height:6px;border-radius:50%;background:#C2410C;"></span> بحاجة معالجة</div>
+          <div class="modern-stat">
+            <div class="modern-stat-lbl">03 · PENDING</div>
+            <div class="modern-stat-val amber">${pad(pending)}</div>
+            <div class="modern-stat-hint">قيد التجهيز</div>
           </div>
-          <div>
-            <div style="font-size:11px;color:#697386;font-weight:600;letter-spacing:.3px;text-transform:uppercase;">شحنات الإمارات</div>
-            <div style="font-size:26px;font-weight:700;color:#CC2229;margin-top:4px;letter-spacing:-0.5px;">${uaeCount}</div>
-            <div style="font-size:11px;color:#697386;margin-top:2px;display:flex;align-items:center;gap:4px;"><span style="width:6px;height:6px;border-radius:50%;background:#CC2229;"></span> 🇦🇪 الوجهة الرئيسية</div>
+          <div class="modern-stat">
+            <div class="modern-stat-lbl">04 · UAE ●</div>
+            <div class="modern-stat-val blue">${pad(uaeCount)}</div>
+            <div class="modern-stat-hint">شحنات الإمارات</div>
           </div>
         </div>
 
         <!-- Recent Shipments -->
-        <div style="padding:16px 24px 20px;">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
-            <div style="font-size:11px;font-weight:700;color:#697386;letter-spacing:.5px;text-transform:uppercase;display:flex;align-items:center;gap:8px;">
-              <i class="ti ti-clock" style="font-size:14px;color:#1C4B8E;"></i>
-              آخر الشحنات
-            </div>
-            <button onclick="navigate('shipments')" style="background:none;border:none;color:#1C4B8E;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;">
-              عرض الكل ←
-            </button>
+        <div class="modern-section">
+          <div class="modern-section-title">
+            → RECENT / آخر الشحنات
+            <div class="divider"></div>
+            <button onclick="navigate('shipments')" style="background:none;border:none;color:#1C4B8E;font-family:'JetBrains Mono',monospace;font-size:10px;cursor:pointer;font-weight:700;letter-spacing:1px;">VIEW ALL ›</button>
           </div>
+        </div>
 
+        <div class="modern-list">
           ${recent.length === 0 ? `
-            <div style="text-align:center;padding:40px;background:#FAFBFC;border-radius:10px;">
-              <div style="font-size:36px;margin-bottom:8px;">📭</div>
-              <div style="font-size:14px;font-weight:600;color:#0A2540;">لا توجد شحنات بعد</div>
-              <div style="font-size:12px;color:#697386;margin:4px 0 12px;">ابدأ بإنشاء أول شحنة</div>
-              <button class="modern-btn modern-btn-primary" onclick="navigate('new-shipment')">
+            <div class="modern-empty">
+              <div class="modern-empty-icon">📭</div>
+              <div class="modern-empty-title">لا توجد شحنات بعد</div>
+              <div class="modern-empty-sub">EMPTY LEDGER</div>
+              <button class="modern-btn modern-btn-primary" onclick="navigate('new-shipment')" style="margin-top:12px;">
                 <i class="ti ti-plus"></i> شحنة جديدة
               </button>
             </div>
           ` : `
-            <div>
+            <div class="modern-list-box">
               ${recent.map(s => {
                 const st = STATUS_LABELS[s.status] || { ar: s.status, class: 'pill-draft' };
-                let badgeClass = 'gray';
-                if (st.class === 'pill-done') badgeClass = 'green';
-                else if (st.class === 'pill-sent') badgeClass = 'blue';
-                else if (st.class === 'pill-replied') badgeClass = 'amber';
-                const dest = s.destination === 'uae' ? '🇦🇪 إمارات' : s.destination === 'bahrain' ? '🇧🇭 بحرين' : '🇴🇲 عُمان';
+                let badgeClass = 'gray', stripeClass = 'gray', stKey = 'DRAFT';
+                if (st.class === 'pill-done') { badgeClass = 'green'; stripeClass = 'green'; stKey = 'DONE'; }
+                else if (st.class === 'pill-sent') { badgeClass = 'blue'; stripeClass = 'blue'; stKey = 'SENT'; }
+                else if (st.class === 'pill-replied') { badgeClass = 'amber'; stripeClass = 'amber'; stKey = 'REPLIED'; }
+                const destCode = s.destination === 'uae' ? 'AE / EMIRATES'
+                  : s.destination === 'bahrain' ? 'BH / BAHRAIN'
+                  : s.destination === 'oman' ? 'OM / OMAN' : '—';
+                const driver = s.driver_snapshot?.name || '';
+                const plate = s.driver_snapshot?.plate || '';
                 return `
-                <div class="modern-row" onclick="navigate('shipments', {open:'${s.id}'})" style="cursor:pointer;padding-left:0;padding-right:0;">
-                  <div class="modern-row-icon blue"><i class="ti ti-file"></i></div>
+                <div class="modern-row" onclick="navigate('shipments', {open:'${s.id}'})" style="cursor:pointer;grid-template-columns:auto 70px 1fr auto auto;">
+                  <div class="modern-row-stripe ${stripeClass}"></div>
+                  <div class="modern-row-code">${s.declaration_no || '—'}</div>
                   <div class="modern-row-body">
-                    <div class="modern-row-title">#${s.declaration_no || '—'} <span class="muted">· ${s.driver_snapshot?.name || '—'}</span></div>
-                    <div class="modern-row-sub">${s.driver_snapshot?.plate || '—'} · ${s.exporter || 'بضاعة'}</div>
+                    <div class="modern-row-title">
+                      ${driver || '<span class="muted">—</span>'}
+                      ${plate ? `<span class="modern-row-plate">${plate}</span>` : ''}
+                    </div>
+                    <div class="modern-row-sub">→ ${destCode}</div>
                   </div>
-                  <span class="modern-badge gray">${dest}</span>
-                  <span class="modern-badge ${badgeClass}">${st.ar}</span>
+                  <span class="modern-badge ${badgeClass}">${stKey}</span>
                   <span class="modern-row-date">${s.date || '—'}</span>
                 </div>
-              `;
+                `;
               }).join('')}
             </div>
           `}
@@ -131,6 +133,7 @@ export async function renderDashboard(container) {
     </div>`;
 
   window.printExportReport = printExportReport;
+
 }
 
 // ─────────────────────────────────────────────
