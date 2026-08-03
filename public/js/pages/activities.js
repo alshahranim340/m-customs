@@ -28,7 +28,7 @@ export async function renderActivities(container) {
               <span class="modern-header-code">SDS/ACTIVITIES/2026</span>
             </div>
             <div class="modern-header-title">🎮 الفعاليات</div>
-            <div class="modern-header-sub">EMPLOYEE GAMES · LEADERBOARDS · v2.0</div>
+            <div class="modern-header-sub">EMPLOYEE GAMES · LEADERBOARDS · v3.0</div>
           </div>
           <div style="text-align:left;">
             <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#8A8578;letter-spacing:1.5px;text-transform:uppercase;font-weight:700;">YOUR POINTS</div>
@@ -60,42 +60,95 @@ export async function renderActivities(container) {
           </div>
         </div>
 
+        <!-- Multiplayer games section -->
         <div class="modern-section">
           <div class="modern-section-title">
-            → AVAILABLE GAMES / الألعاب المتاحة
+            → MULTIPLAYER / ألعاب جماعية
             <div class="divider"></div>
-            <span class="count">06 games</span>
+            <span class="count">03 games</span>
+          </div>
+        </div>
+
+        <div style="padding:0 24px 8px;display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px;margin-bottom:16px;">
+          ${gameCard('001','⭕ إكس أو','TIC-TAC-TOE · MULTIPLAYER','#1C4B8E','LIVE','blue',[
+            {lbl:'WINS',id:'xo-wins'},{lbl:'LOSSES',id:'xo-losses'},{lbl:'DRAWS',id:'xo-draws'}
+          ],'⚔ تحدى موظف','game-xo','#1C4B8E')}
+
+          ${gameCard('002','🔴 الأربعة في صف','CONNECT FOUR · MULTIPLAYER','#CC2229','LIVE','blue',[
+            {lbl:'WINS',id:'c4-wins'},{lbl:'LOSSES',id:'c4-losses'},{lbl:'DRAWS',id:'c4-draws'}
+          ],'⚔ تحدى موظف','game-c4','#CC2229')}
+        </div>
+
+        <!-- Skill games section -->
+        <div class="modern-section">
+          <div class="modern-section-title">
+            → SKILL & REFLEX / مهارة وردود فعل
+            <div class="divider"></div>
+            <span class="count">02 games</span>
+          </div>
+        </div>
+
+        <div style="padding:0 24px 8px;display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px;margin-bottom:16px;">
+          ${gameCard('003','🎯 Aim Trainer','TARGET PRACTICE · 30 SEC','#2E8B57','READY','green',[
+            {lbl:'YOUR BEST',id:'aim-best'},{lbl:'GAMES',id:'aim-games'}
+          ],'▶ ابدأ التدريب','game-aim','#2E8B57')}
+
+          ${gameCard('004','⚡ Reaction Test','REACTION SPEED · 5 ROUNDS','#EDC22E','READY','green',[
+            {lbl:'BEST MS',id:'reaction-best'},{lbl:'GAMES',id:'reaction-games'}
+          ],'▶ اختبر ردة فعلك','game-reaction','#C2410C')}
+        </div>
+
+        <!-- Classic games section -->
+        <div class="modern-section">
+          <div class="modern-section-title">
+            → CLASSIC / كلاسيكية
+            <div class="divider"></div>
+            <span class="count">03 games</span>
+          </div>
+        </div>
+
+        <div style="padding:0 24px 8px;display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px;margin-bottom:16px;">
+          ${gameCard('005','🐍 لعبة الثعبان','SNAKE · SINGLE PLAYER','#2E8B57','READY','green',[
+            {lbl:'YOUR BEST',id:'snake-best'},{lbl:'GAMES',id:'snake-games'}
+          ],'▶ ابدأ اللعب','game-snake','#0E1A2E')}
+
+          ${gameCard('006','🎯 لعبة 2048','2048 · MERGE TILES','#EDC22E','READY','green',[
+            {lbl:'YOUR BEST',id:'g2048-best'},{lbl:'GAMES',id:'g2048-games'}
+          ],'▶ ابدأ اللعب','game-2048','#0E1A2E')}
+
+          ${gameCard('007','🎴 ذاكرة البطاقات','MEMORY · MATCH PAIRS','#CC2229','READY','green',[
+            {lbl:'BEST MOVES',id:'memory-best'},{lbl:'GAMES',id:'memory-games'}
+          ],'▶ ابدأ اللعب','game-memory','#CC2229')}
+        </div>
+
+        <!-- Knowledge games section -->
+        <div class="modern-section">
+          <div class="modern-section-title">
+            → KNOWLEDGE & WORDS / معرفة وكلمات
+            <div class="divider"></div>
+            <span class="count">04 games</span>
           </div>
         </div>
 
         <div style="padding:0 24px;display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px;margin-bottom:24px;">
-
-          ${gameCard('001','🐍 لعبة الثعبان','SNAKE · SINGLE PLAYER','#2E8B57','READY','green',[
-            {lbl:'YOUR BEST',id:'snake-best'},{lbl:'GAMES',id:'snake-games'}
-          ],'▶ ابدأ اللعب','game-snake','#0E1A2E')}
-
-          ${gameCard('002','⭕ إكس أو','TIC-TAC-TOE · MULTIPLAYER','#1C4B8E','LIVE','blue',[
-            {lbl:'WINS',id:'xo-wins'},{lbl:'LOSSES',id:'xo-losses'},{lbl:'DRAWS',id:'xo-draws'}
-          ],'⚔ تحدى موظف','game-xo','#1C4B8E')}
-
-          ${gameCard('003','🧩 ألغاز جمركية','CUSTOMS QUIZ · 10 QUESTIONS','#C2410C','READY','green',[
+          ${gameCard('008','🧩 ألغاز جمركية','CUSTOMS QUIZ · 10 QUESTIONS','#C2410C','READY','green',[
             {lbl:'YOUR BEST',id:'quiz-best'},{lbl:'GAMES',id:'quiz-games'}
           ],'▶ ابدأ الاختبار','game-quiz','#C2410C')}
 
-          ${gameCard('004','🎴 ذاكرة البطاقات','MEMORY · MATCH PAIRS','#CC2229','READY','green',[
-            {lbl:'BEST MOVES',id:'memory-best'},{lbl:'GAMES',id:'memory-games'}
-          ],'▶ ابدأ اللعب','game-memory','#CC2229')}
+          ${gameCard('009','🎪 لعبة الحروف','HANGMAN · GUESS WORDS','#1C4B8E','READY','green',[
+            {lbl:'BEST WINS',id:'hangman-best'},{lbl:'GAMES',id:'hangman-games'}
+          ],'▶ ابدأ اللعب','game-hangman','#1C4B8E')}
 
-          ${gameCard('005','🎯 لعبة 2048','2048 · MERGE TILES','#EDC22E','READY','green',[
-            {lbl:'YOUR BEST',id:'g2048-best'},{lbl:'GAMES',id:'g2048-games'}
-          ],'▶ ابدأ اللعب','game-2048','#0E1A2E')}
+          ${gameCard('010','🌍 مسابقة المعرفة','TRIVIA · 4 CATEGORIES','#2E8B57','READY','green',[
+            {lbl:'YOUR BEST',id:'trivia-best'},{lbl:'GAMES',id:'trivia-games'}
+          ],'▶ اختر فئة','game-trivia','#2E8B57')}
 
-          ${gameCard('006','🔴 الأربعة في صف','CONNECT FOUR · MULTIPLAYER','#CC2229','LIVE','blue',[
-            {lbl:'WINS',id:'c4-wins'},{lbl:'LOSSES',id:'c4-losses'},{lbl:'DRAWS',id:'c4-draws'}
-          ],'⚔ تحدى موظف','game-c4','#CC2229')}
-
+          ${gameCard('011','💼 مسابقة التخصص','WORK QUIZ · 4 CATEGORIES','#CC2229','READY','green',[
+            {lbl:'YOUR BEST',id:'work-best'},{lbl:'GAMES',id:'work-games'}
+          ],'▶ اختر فئة','game-work','#CC2229')}
         </div>
 
+        <!-- Leaderboard -->
         <div class="modern-section">
           <div class="modern-section-title">
             → LEADERBOARD / لوحة المتصدرين
@@ -158,32 +211,54 @@ async function loadData(profile) {
 
 function pad(n) { return String(n || 0).padStart(2, '0'); }
 
+function setText(id, val) {
+  const el = document.getElementById(id);
+  if (el) el.textContent = val;
+}
+
 function renderStats(profile) {
   const uid = profile.id || profile.uid;
   const myIdx = _leaderboard.findIndex(u => u.id === uid);
   const rank = myIdx >= 0 ? `#${pad(myIdx + 1)}` : '—';
 
-  document.getElementById('hdr-points').textContent = (_stats.total_points || 0).toLocaleString('en-US');
-  document.getElementById('hdr-level').textContent = `▲ LEVEL ${pad(_stats.level || 1)}`;
-  document.getElementById('stat-rank').textContent = rank;
-  document.getElementById('stat-games').textContent = pad(_stats.games_played || 0);
-  document.getElementById('stat-wins').textContent = pad(_stats.wins || 0);
-  document.getElementById('stat-streak').textContent = pad(_stats.streak_days || 0);
+  setText('hdr-points', (_stats.total_points || 0).toLocaleString('en-US'));
+  setText('hdr-level', `▲ LEVEL ${pad(_stats.level || 1)}`);
+  setText('stat-rank', rank);
+  setText('stat-games', pad(_stats.games_played || 0));
+  setText('stat-wins', pad(_stats.wins || 0));
+  setText('stat-streak', pad(_stats.streak_days || 0));
 
-  document.getElementById('snake-best').textContent = pad(_stats.snake_best || 0);
-  document.getElementById('snake-games').textContent = pad(_stats.snake_games || 0);
-  document.getElementById('xo-wins').textContent = pad(_stats.xo_wins || 0);
-  document.getElementById('xo-losses').textContent = pad(_stats.xo_losses || 0);
-  document.getElementById('xo-draws').textContent = pad(_stats.xo_draws || 0);
-  document.getElementById('quiz-best').textContent = pad(_stats.quiz_best || 0);
-  document.getElementById('quiz-games').textContent = pad(_stats.quiz_games || 0);
-  document.getElementById('memory-best').textContent = _stats.memory_best ? pad(_stats.memory_best) : '—';
-  document.getElementById('memory-games').textContent = pad(_stats.memory_games || 0);
-  document.getElementById('g2048-best').textContent = pad(_stats.g2048_best || 0);
-  document.getElementById('g2048-games').textContent = pad(_stats.g2048_games || 0);
-  document.getElementById('c4-wins').textContent = pad(_stats.c4_wins || 0);
-  document.getElementById('c4-losses').textContent = pad(_stats.c4_losses || 0);
-  document.getElementById('c4-draws').textContent = pad(_stats.c4_draws || 0);
+  // Multiplayer
+  setText('xo-wins', pad(_stats.xo_wins || 0));
+  setText('xo-losses', pad(_stats.xo_losses || 0));
+  setText('xo-draws', pad(_stats.xo_draws || 0));
+  setText('c4-wins', pad(_stats.c4_wins || 0));
+  setText('c4-losses', pad(_stats.c4_losses || 0));
+  setText('c4-draws', pad(_stats.c4_draws || 0));
+
+  // Skill
+  setText('aim-best', pad(_stats.aim_best || 0));
+  setText('aim-games', pad(_stats.aim_games || 0));
+  setText('reaction-best', _stats.reaction_best && _stats.reaction_best !== 999 ? _stats.reaction_best + 'ms' : '—');
+  setText('reaction-games', pad(_stats.reaction_games || 0));
+
+  // Classic
+  setText('snake-best', pad(_stats.snake_best || 0));
+  setText('snake-games', pad(_stats.snake_games || 0));
+  setText('g2048-best', pad(_stats.g2048_best || 0));
+  setText('g2048-games', pad(_stats.g2048_games || 0));
+  setText('memory-best', _stats.memory_best ? pad(_stats.memory_best) : '—');
+  setText('memory-games', pad(_stats.memory_games || 0));
+
+  // Knowledge
+  setText('quiz-best', pad(_stats.quiz_best || 0));
+  setText('quiz-games', pad(_stats.quiz_games || 0));
+  setText('hangman-best', pad(_stats.hangman_best || 0));
+  setText('hangman-games', pad(_stats.hangman_games || 0));
+  setText('trivia-best', pad(_stats.trivia_best || 0));
+  setText('trivia-games', pad(_stats.trivia_games || 0));
+  setText('work-best', pad(_stats.work_best || 0));
+  setText('work-games', pad(_stats.work_games || 0));
 }
 
 function renderLeaderboard(profile) {
