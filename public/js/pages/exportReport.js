@@ -21,7 +21,6 @@ const DEST_LABELS = {
 const STATUS_LABELS = {
   draft: { ar: 'مسودة', en: 'DRAFT', class: 'gray' },
   sent: { ar: 'مرسلة', en: 'SENT', class: 'blue' },
-  replied: { ar: 'رد عودة', en: 'REPLIED', class: 'amber' },
   done: { ar: 'مكتملة', en: 'DONE', class: 'green' },
 };
 
@@ -306,7 +305,7 @@ function render() {
   _filtered.forEach(s => { if (byDest[s.destination] !== undefined) byDest[s.destination]++; });
 
   // Status breakdown
-  const byStatus = { draft: 0, sent: 0, replied: 0, done: 0 };
+  const byStatus = { draft: 0, sent: 0, done: 0 };
   _filtered.forEach(s => { if (byStatus[s.status] !== undefined) byStatus[s.status]++; });
 
   // Avg per day
@@ -377,7 +376,7 @@ function render() {
     <!-- Status breakdown -->
     <div style="background:white;border:1px solid #E8E5DC;border-radius:6px;padding:20px;margin-bottom:16px;">
       <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#0E1A2E;letter-spacing:2px;font-weight:800;margin-bottom:14px;">→ BY STATUS / حسب الحالة</div>
-      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;">
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;">
         ${Object.entries(STATUS_LABELS).map(([key, label]) => {
           const count = byStatus[key];
           const pct = total > 0 ? Math.round((count / total) * 100) : 0;
