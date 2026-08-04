@@ -13,6 +13,7 @@ import { renderWork } from './pages/gameWork.js';
 import { renderChess } from './pages/gameChess.js';
 import { renderPingPong } from './pages/gamePingPong.js';
 import { renderFrogger } from './pages/gameFrogger.js';
+import { renderExportReport } from './pages/exportReport.js';
 import { getShipments } from '../../src/firebase/db.js';
 import { onAuthChange, ensureAdminProfile, getUserProfile, logOut, isAdmin, getCurrentUser } from '../../src/firebase/auth.js';
 import { renderDashboard }      from './pages/dashboard.js';
@@ -68,6 +69,7 @@ const PAGES = {
   'game-chess':       renderChess,
   'game-pingpong':    renderPingPong,
   'game-frogger':     renderFrogger,
+  'export-report':    renderExportReport,
 };
 
 // ─────────────────────────────────────────────
