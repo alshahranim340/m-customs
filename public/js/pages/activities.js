@@ -65,7 +65,7 @@ export async function renderActivities(container) {
           <div class="modern-section-title">
             → MULTIPLAYER / ألعاب جماعية
             <div class="divider"></div>
-            <span class="count">03 games</span>
+            <span class="count">04 games</span>
           </div>
         </div>
 
@@ -77,6 +77,14 @@ export async function renderActivities(container) {
           ${gameCard('002','🔴 الأربعة في صف','CONNECT FOUR · MULTIPLAYER','#CC2229','LIVE','blue',[
             {lbl:'WINS',id:'c4-wins'},{lbl:'LOSSES',id:'c4-losses'},{lbl:'DRAWS',id:'c4-draws'}
           ],'⚔ تحدى موظف','game-c4','#CC2229')}
+
+          ${gameCard('003','♟️ الشطرنج','CHESS · STRATEGIC MULTIPLAYER','#0E1A2E','LIVE','blue',[
+            {lbl:'WINS',id:'chess-wins'},{lbl:'LOSSES',id:'chess-losses'},{lbl:'DRAWS',id:'chess-draws'}
+          ],'♟️ تحدى موظف','game-chess','#0E1A2E')}
+
+          ${gameCard('004','🏓 Ping Pong','TABLE TENNIS · REALTIME MULTIPLAYER','#2E8B57','LIVE','blue',[
+            {lbl:'WINS',id:'pingpong-wins'},{lbl:'LOSSES',id:'pingpong-losses'}
+          ],'🏓 تحدى موظف','game-pingpong','#2E8B57')}
         </div>
 
         <!-- Skill games section -->
@@ -103,7 +111,7 @@ export async function renderActivities(container) {
           <div class="modern-section-title">
             → CLASSIC / كلاسيكية
             <div class="divider"></div>
-            <span class="count">03 games</span>
+            <span class="count">04 games</span>
           </div>
         </div>
 
@@ -119,6 +127,10 @@ export async function renderActivities(container) {
           ${gameCard('007','🎴 ذاكرة البطاقات','MEMORY · MATCH PAIRS','#CC2229','READY','green',[
             {lbl:'BEST MOVES',id:'memory-best'},{lbl:'GAMES',id:'memory-games'}
           ],'▶ ابدأ اللعب','game-memory','#CC2229')}
+
+          ${gameCard('008','🐸 لعبة الضفدع','FROGGER · CROSS THE ROAD','#2E8B57','READY','green',[
+            {lbl:'YOUR BEST',id:'frogger-best'},{lbl:'GAMES',id:'frogger-games'}
+          ],'▶ ابدأ اللعب','game-frogger','#2E8B57')}
         </div>
 
         <!-- Knowledge games section -->
@@ -131,19 +143,19 @@ export async function renderActivities(container) {
         </div>
 
         <div style="padding:0 24px;display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px;margin-bottom:24px;">
-          ${gameCard('008','🧩 ألغاز جمركية','CUSTOMS QUIZ · 10 QUESTIONS','#C2410C','READY','green',[
+          ${gameCard('009','🧩 ألغاز جمركية','CUSTOMS QUIZ · 10 QUESTIONS','#C2410C','READY','green',[
             {lbl:'YOUR BEST',id:'quiz-best'},{lbl:'GAMES',id:'quiz-games'}
           ],'▶ ابدأ الاختبار','game-quiz','#C2410C')}
 
-          ${gameCard('009','🎪 لعبة الحروف','HANGMAN · GUESS WORDS','#1C4B8E','READY','green',[
+          ${gameCard('010','🎪 لعبة الحروف','HANGMAN · GUESS WORDS','#1C4B8E','READY','green',[
             {lbl:'BEST WINS',id:'hangman-best'},{lbl:'GAMES',id:'hangman-games'}
           ],'▶ ابدأ اللعب','game-hangman','#1C4B8E')}
 
-          ${gameCard('010','🌍 مسابقة المعرفة','TRIVIA · 4 CATEGORIES','#2E8B57','READY','green',[
+          ${gameCard('011','🌍 مسابقة المعرفة','TRIVIA · 4 CATEGORIES','#2E8B57','READY','green',[
             {lbl:'YOUR BEST',id:'trivia-best'},{lbl:'GAMES',id:'trivia-games'}
           ],'▶ اختر فئة','game-trivia','#2E8B57')}
 
-          ${gameCard('011','💼 مسابقة التخصص','WORK QUIZ · 4 CATEGORIES','#CC2229','READY','green',[
+          ${gameCard('012','💼 مسابقة التخصص','WORK QUIZ · 4 CATEGORIES','#CC2229','READY','green',[
             {lbl:'YOUR BEST',id:'work-best'},{lbl:'GAMES',id:'work-games'}
           ],'▶ اختر فئة','game-work','#CC2229')}
         </div>
@@ -235,6 +247,11 @@ function renderStats(profile) {
   setText('c4-wins', pad(_stats.c4_wins || 0));
   setText('c4-losses', pad(_stats.c4_losses || 0));
   setText('c4-draws', pad(_stats.c4_draws || 0));
+  setText('chess-wins', pad(_stats.chess_wins || 0));
+  setText('chess-losses', pad(_stats.chess_losses || 0));
+  setText('chess-draws', pad(_stats.chess_draws || 0));
+  setText('pingpong-wins', pad(_stats.pingpong_wins || 0));
+  setText('pingpong-losses', pad(_stats.pingpong_losses || 0));
 
   // Skill
   setText('aim-best', pad(_stats.aim_best || 0));
@@ -249,6 +266,8 @@ function renderStats(profile) {
   setText('g2048-games', pad(_stats.g2048_games || 0));
   setText('memory-best', _stats.memory_best ? pad(_stats.memory_best) : '—');
   setText('memory-games', pad(_stats.memory_games || 0));
+  setText('frogger-best', pad(_stats.frogger_best || 0));
+  setText('frogger-games', pad(_stats.frogger_games || 0));
 
   // Knowledge
   setText('quiz-best', pad(_stats.quiz_best || 0));
