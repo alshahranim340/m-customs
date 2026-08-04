@@ -25,6 +25,18 @@ const WORDS = [
 ];
 
 const MAX_WRONG = 6;
+
+// Normalize Arabic letters — special forms map to their base letter
+// So typing "ه" reveals both "ه" and "ة", typing "ا" reveals أ إ آ, etc.
+function normalizeLetter(ch) {
+  const map = {
+    'أ':'ا','إ':'ا','آ':'ا','ء':'ا',
+    'ة':'ه',
+    'ؤ':'و',
+    'ئ':'ي','ى':'ي',
+  };
+  return map[ch] || ch;
+}
 let _profile, _wins, _current, _guessed, _wrong, _word, _hint, _revealed, _gameOver;
 
 export async function renderHangman(container) {
@@ -131,7 +143,8 @@ function render() {
   const kb = document.getElementById('hm-keyboard');
   kb.innerHTML = arabic.split('').map(letter => {
     const isGuessed = _guessed.has(letter);
-    const isInWord = _word.includes(letter);
+    // Check if the guessed letter matches any normalized form in the word
+    const isInWord = _word.split('').some(ch => normalizeLetter(ch) === letter);
     let bg = 'white', color = '#0E1A2E', border = '#E8E5DC';
     if (isGuessed) {
       if (isInWord) { bg = '#E7F5EE'; color = '#2E8B57'; border = '#2E8B57'; }
@@ -152,10 +165,16 @@ function guessLetter(letter) {
   if (_gameOver || _guessed.has(letter)) return;
   _guessed.add(letter);
 
-  if (_word.includes(letter)) {
-    _word.split('').forEach((ch, i) => {
-      if (ch === letter) _revealed[i] = true;
-    });
+  // Compare using normalized letters (so ه matches ة, ا matches أ إ آ, etc.)
+  let found = false;
+  _word.split('').forEach((ch, i) => {
+    if (normalizeLetter(ch) === letter) {
+      _revealed[i] = true;
+      found = true;
+    }
+  });
+
+  if (found) {
     if (_revealed.every(r => r)) win();
   } else {
     _wrong++;
