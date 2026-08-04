@@ -46,6 +46,9 @@ export async function renderShipments(container) {
             <div class="modern-header-sub">SHIPMENTS · EXPORT LEDGER · v2.4</div>
           </div>
           <div class="modern-header-actions">
+            <button class="modern-btn" onclick="navigate('export-report')">
+              <i class="ti ti-chart-bar"></i> التقارير
+            </button>
             <button class="modern-btn" onclick="openNewFolder()">
               <i class="ti ti-folder-plus"></i> مجلد جديد
             </button>
