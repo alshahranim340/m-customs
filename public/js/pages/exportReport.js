@@ -1,4 +1,5 @@
 import { getShipments } from '../../../src/firebase/db.js';
+import { toHijri } from '../../../src/utils/hijriDate.js';
 
 let _allShipments = [];
 let _filtered = [];
@@ -233,10 +234,15 @@ function updatePicker() {
 function applyFilters() {
   let { from, to } = getPeriodRange();
 
+  // Convert gregorian range to hijri for comparison
+  // (shipments store dates in Hijri format YYYY-MM-DD)
+  let fromHijri = from ? toHijri(new Date(from + 'T00:00:00')) : null;
+  let toHijriStr = to ? toHijri(new Date(to + 'T23:59:59')) : null;
+
   _filtered = _allShipments.filter(s => {
     if (!s.date) return false;
-    if (from && s.date < from) return false;
-    if (to && s.date > to) return false;
+    if (fromHijri && s.date < fromHijri) return false;
+    if (toHijriStr && s.date > toHijriStr) return false;
     if (!_destinations[s.destination]) return false;
     return true;
   });
