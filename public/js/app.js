@@ -10,6 +10,9 @@ import { renderReaction } from './pages/gameReaction.js';
 import { renderHangman } from './pages/gameHangman.js';
 import { renderTrivia } from './pages/gameTrivia.js';
 import { renderWork } from './pages/gameWork.js';
+import { renderChess } from './pages/gameChess.js';
+import { renderPingPong } from './pages/gamePingPong.js';
+import { renderFrogger } from './pages/gameFrogger.js';
 import { getShipments } from '../../src/firebase/db.js';
 import { onAuthChange, ensureAdminProfile, getUserProfile, logOut, isAdmin, getCurrentUser } from '../../src/firebase/auth.js';
 import { renderDashboard }      from './pages/dashboard.js';
@@ -62,6 +65,9 @@ const PAGES = {
   'game-hangman':     renderHangman,
   'game-trivia':      renderTrivia,
   'game-work':        renderWork,
+  'game-chess':       renderChess,
+  'game-pingpong':    renderPingPong,
+  'game-frogger':     renderFrogger,
 };
 
 // ─────────────────────────────────────────────
