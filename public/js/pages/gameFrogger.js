@@ -89,10 +89,23 @@ export async function renderFrogger(container) {
         </div>
 
         <div style="padding:20px 24px;display:flex;justify-content:center;">
-          <div style="background:white;border:1px solid #E8E5DC;border-radius:6px;padding:16px;">
-            <canvas id="fr-canvas" width="${GAME_W}" height="${GAME_H}" style="background:#0E1A2E;border-radius:4px;display:block;"></canvas>
+          <div style="background:white;border:1px solid #E8E5DC;border-radius:6px;padding:16px;position:relative;">
+            <div style="position:relative;">
+              <canvas id="fr-canvas" width="${GAME_W}" height="${GAME_H}" style="background:#0E1A2E;border-radius:4px;display:block;"></canvas>
+              <div id="fr-start-overlay" style="position:absolute;inset:0;background:rgba(14,26,46,0.85);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;border-radius:4px;color:white;">
+                <div style="font-size:56px;">🐸</div>
+                <div style="font-size:20px;font-weight:800;">لعبة الضفدع</div>
+                <div style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:1px;opacity:0.8;">CROSS THE ROAD & RIVER</div>
+                <button id="fr-start-btn" style="background:#2E8B57;color:white;border:none;border-radius:6px;padding:12px 24px;font-family:Tajawal,sans-serif;font-size:14px;font-weight:800;cursor:pointer;margin-top:6px;">
+                  ▶ ابدأ اللعب
+                </button>
+                <div style="font-family:'JetBrains Mono',monospace;font-size:10px;opacity:0.7;letter-spacing:1px;margin-top:4px;">
+                  ↑ ↓ ← → OR WASD
+                </div>
+              </div>
+            </div>
             <div style="text-align:center;margin-top:12px;font-family:'JetBrains Mono',monospace;font-size:10px;color:#8A8578;letter-spacing:1px;">
-              ↑ ↓ ← → OR WASD · SPACE = START · REACH THE TOP 🏁
+              REACH THE GREEN AREA · AVOID CARS & DROWNING 🏁
             </div>
           </div>
         </div>
@@ -114,6 +127,16 @@ export async function renderFrogger(container) {
   _canvas = document.getElementById('fr-canvas');
   _ctx = _canvas.getContext('2d');
   draw();
+
+  // Start button
+  const startBtn = document.getElementById('fr-start-btn');
+  if (startBtn) {
+    startBtn.onclick = () => {
+      const overlay = document.getElementById('fr-start-overlay');
+      if (overlay) overlay.style.display = 'none';
+      if (!_running) startGame();
+    };
+  }
 
   window._frKeyHandler = handleKey;
   window.addEventListener('keydown', window._frKeyHandler);
@@ -162,7 +185,11 @@ function handleKey(e) {
   const k = e.key.toLowerCase();
   if (k === ' ' || k === 'spacebar') {
     e.preventDefault();
-    if (!_running) startGame();
+    if (!_running) {
+      const overlay = document.getElementById('fr-start-overlay');
+      if (overlay) overlay.style.display = 'none';
+      startGame();
+    }
     return;
   }
   if (!_running) return;
