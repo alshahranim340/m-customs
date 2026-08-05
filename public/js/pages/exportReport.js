@@ -257,6 +257,9 @@ function applyFilters() {
 
     if (from && gregDateStr < from) return false;
     if (to && gregDateStr > to) return false;
+
+    // Store converted date so it can be shown in the table
+    s._gregDate = gregDateStr;
     return true;
   });
 }
@@ -440,7 +443,10 @@ function render() {
                   <tr style="border-bottom:1px solid #F0EDE4;">
                     <td style="padding:8px;font-family:'JetBrains Mono',monospace;font-size:11px;color:#8A8578;">${pad(idx + 1)}</td>
                     <td style="padding:8px;font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:800;color:#0E1A2E;">${s.declaration_no || '—'}</td>
-                    <td style="padding:8px;font-family:'JetBrains Mono',monospace;font-size:11px;color:#6B6659;">${s.date || '—'}</td>
+                    <td style="padding:8px;font-family:'JetBrains Mono',monospace;font-size:11px;color:#6B6659;">
+                      <div style="color:#0E1A2E;font-weight:700;">${s._gregDate || s.date || '—'}</div>
+                      <div style="font-size:9px;color:#8A8578;margin-top:1px;">${s.date || ''} هـ</div>
+                    </td>
                     <td style="padding:8px;font-size:12px;color:#0E1A2E;font-weight:600;">${s.driver_snapshot?.name || '—'}</td>
                     <td style="padding:8px;"><span style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;color:#0E1A2E;background:#F5F3EC;border:1px solid #E8E5DC;padding:2px 6px;border-radius:3px;direction:ltr;display:inline-block;">${s.driver_snapshot?.plate || '—'}</span></td>
                     <td style="padding:8px;font-size:12px;color:#0E1A2E;">${s.exporter || '—'}</td>
@@ -520,14 +526,14 @@ function handleExcel() {
   csv += `\n`;
 
   // Full list
-  csv += `#,رقم البيان,التاريخ,السائق,رقم اللوحة,المصدر,الوجهة,الحالة\n`;
+  csv += `#,رقم البيان,التاريخ الميلادي,التاريخ الهجري,السائق,رقم اللوحة,المصدر,الوجهة,الحالة\n`;
   _filtered.forEach((s, idx) => {
     const dest = DEST_LABELS[s.destination]?.ar || '—';
     const status = STATUS_LABELS[s.status]?.ar || s.status || '—';
     const driver = (s.driver_snapshot?.name || '—').replace(/,/g, '،');
     const plate = (s.driver_snapshot?.plate || '—').replace(/,/g, '');
     const exporter = (s.exporter || '—').replace(/,/g, '،');
-    csv += `${idx + 1},${s.declaration_no || '—'},${s.date || '—'},"${driver}","${plate}","${exporter}",${dest},${status}\n`;
+    csv += `${idx + 1},${s.declaration_no || '—'},${s._gregDate || '—'},${s.date || '—'},"${driver}","${plate}","${exporter}",${dest},${status}\n`;
   });
 
   // Notes
