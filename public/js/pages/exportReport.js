@@ -1,12 +1,12 @@
 import { getShipments } from '../../../src/firebase/db.js';
-import { toHijri, todayHijri } from '../../../src/utils/hijriDate.js';
+import { hijriToGregorian } from '../../../src/utils/hijriDate.js';
 
 let _allShipments = [];
 let _filtered = [];
 let _period = 'month'; // month | quarter | year | custom
-let _selectedMonth = ''; // Hijri YYYY-MM, set on init
-let _selectedQuarter = ''; // Hijri e.g. 1447-Q1
-let _selectedYear = 0; // Hijri year, set on init
+let _selectedMonth = new Date().toISOString().slice(0, 7); // YYYY-MM Gregorian
+let _selectedQuarter = ''; // e.g. 2026-Q1
+let _selectedYear = new Date().getFullYear();
 let _customFrom = '';
 let _customTo = '';
 let _destinations = { uae: true, bahrain: true, oman: true };
@@ -115,12 +115,6 @@ export async function renderExportReport(container) {
       }
     </style>`;
 
-  // Initialize with today's Hijri date
-  const today = todayHijri();
-  const [ty, tm] = today.split('-');
-  if (!_selectedMonth) _selectedMonth = `${ty}-${tm}`;
-  if (!_selectedYear) _selectedYear = parseInt(ty);
-
   await loadShipments();
   attachFilterHandlers();
   updatePicker();
@@ -163,20 +157,15 @@ function updatePicker() {
   const el = document.getElementById('rep-picker');
   if (!el) return;
 
-  const HIJRI_MONTHS = ['محرم','صفر','ربيع الأول','ربيع الآخر','جمادى الأولى','جمادى الآخرة','رجب','شعبان','رمضان','شوال','ذو القعدة','ذو الحجة'];
-
   if (_period === 'month') {
-    // Generate list of Hijri months for last 3 hijri years
-    const today = todayHijri();
-    const [curY, curM] = today.split('-').map(Number);
+    // Generate list of Gregorian months
     const months = [];
-    for (let y = curY; y >= curY - 2; y--) {
-      const startM = y === curY ? curM : 12;
-      for (let m = startM; m >= 1; m--) {
-        const val = `${y}-${String(m).padStart(2,'0')}`;
-        const label = `${HIJRI_MONTHS[m-1]} ${y}هـ`;
-        months.push({ val, label });
-      }
+    const now = new Date();
+    for (let i = 0; i < 24; i++) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const val = d.toISOString().slice(0, 7);
+      const label = d.toLocaleDateString('ar-SA', { year: 'numeric', month: 'long', calendar: 'gregory' });
+      months.push({ val, label });
     }
     el.innerHTML = `
       <select id="picker-month" style="border:1.5px solid #E8E5DC;border-radius:4px;padding:6px 12px;font-family:'Tajawal',sans-serif;font-size:12px;background:white;color:#0E1A2E;font-weight:600;min-width:180px;">
@@ -188,12 +177,12 @@ function updatePicker() {
       render();
     };
   } else if (_period === 'quarter') {
-    const today = todayHijri();
-    const curY = parseInt(today.split('-')[0]);
+    const now = new Date();
+    const year = now.getFullYear();
     const quarters = [];
-    for (let y = curY; y >= curY - 2; y--) {
+    for (let y = year; y >= year - 2; y--) {
       for (let q = 4; q >= 1; q--) {
-        quarters.push({ val: `${y}-Q${q}`, label: `الربع ${q} · ${y}هـ` });
+        quarters.push({ val: `${y}-Q${q}`, label: `Q${q} ${y}` });
       }
     }
     if (!_selectedQuarter) _selectedQuarter = quarters[0].val;
@@ -207,15 +196,14 @@ function updatePicker() {
       render();
     };
   } else if (_period === 'year') {
-    const today = todayHijri();
-    const curY = parseInt(today.split('-')[0]);
     const years = [];
-    for (let y = curY; y >= curY - 5; y--) {
+    const now = new Date();
+    for (let y = now.getFullYear(); y >= now.getFullYear() - 5; y--) {
       years.push(y);
     }
     el.innerHTML = `
       <select id="picker-year" style="border:1.5px solid #E8E5DC;border-radius:4px;padding:6px 12px;font-family:'Tajawal',sans-serif;font-size:12px;background:white;color:#0E1A2E;font-weight:600;">
-        ${years.map(y => `<option value="${y}" ${y === _selectedYear ? 'selected' : ''}>${y}هـ</option>`).join('')}
+        ${years.map(y => `<option value="${y}" ${y === _selectedYear ? 'selected' : ''}>${y}</option>`).join('')}
       </select>`;
     document.getElementById('picker-year').onchange = (e) => {
       _selectedYear = parseInt(e.target.value);
@@ -224,18 +212,18 @@ function updatePicker() {
     };
   } else if (_period === 'custom') {
     if (!_customFrom) {
-      const t = todayHijri();
-      const [y, m] = t.split('-').map(Number);
-      _customFrom = `${y}-${String(m).padStart(2,'0')}-01`;
+      const d = new Date();
+      d.setDate(d.getDate() - 30);
+      _customFrom = d.toISOString().slice(0, 10);
     }
-    if (!_customTo) _customTo = todayHijri();
+    if (!_customTo) _customTo = new Date().toISOString().slice(0, 10);
 
     el.innerHTML = `
       <div style="display:flex;gap:6px;align-items:center;">
-        <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#6B6659;">FROM هـ</span>
-        <input type="text" id="picker-from" value="${_customFrom}" placeholder="1447-01-01" style="border:1.5px solid #E8E5DC;border-radius:4px;padding:6px 10px;font-size:12px;width:110px;font-family:'JetBrains Mono',monospace;">
-        <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#6B6659;">TO هـ</span>
-        <input type="text" id="picker-to" value="${_customTo}" placeholder="1447-12-30" style="border:1.5px solid #E8E5DC;border-radius:4px;padding:6px 10px;font-size:12px;width:110px;font-family:'JetBrains Mono',monospace;">
+        <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#6B6659;">FROM</span>
+        <input type="date" id="picker-from" value="${_customFrom}" style="border:1.5px solid #E8E5DC;border-radius:4px;padding:6px 10px;font-size:12px;">
+        <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#6B6659;">TO</span>
+        <input type="date" id="picker-to" value="${_customTo}" style="border:1.5px solid #E8E5DC;border-radius:4px;padding:6px 10px;font-size:12px;">
       </div>`;
     document.getElementById('picker-from').onchange = (e) => { _customFrom = e.target.value; applyFilters(); render(); };
     document.getElementById('picker-to').onchange = (e) => { _customTo = e.target.value; applyFilters(); render(); };
@@ -243,35 +231,53 @@ function updatePicker() {
 }
 
 function applyFilters() {
-  // Ranges are now already in Hijri format - direct string comparison
+  // Gregorian range (YYYY-MM-DD)
   let { from, to } = getPeriodRange();
 
   _filtered = _allShipments.filter(s => {
     if (!s.date) return false;
-    if (from && s.date < from) return false;
-    if (to && s.date > to) return false;
     if (!_destinations[s.destination]) return false;
+
+    // Shipment dates are stored as Hijri. Convert to Gregorian for comparison.
+    // Detect: if year starts with 14 or 15 → Hijri, else Gregorian
+    let gregDateStr;
+    const yearPart = parseInt(s.date.split('-')[0]);
+    if (yearPart >= 1300 && yearPart <= 1600) {
+      // Hijri — convert
+      try {
+        const gregDate = hijriToGregorian(s.date);
+        gregDateStr = gregDate.toISOString().slice(0, 10);
+      } catch (e) {
+        return false;
+      }
+    } else {
+      // Already Gregorian
+      gregDateStr = s.date;
+    }
+
+    if (from && gregDateStr < from) return false;
+    if (to && gregDateStr > to) return false;
     return true;
   });
 }
 
 function getPeriodRange() {
-  // All ranges returned in Hijri format YYYY-MM-DD
   if (_period === 'month') {
     const [y, m] = _selectedMonth.split('-');
     const from = `${y}-${m}-01`;
-    // Hijri months are 29 or 30 days — use 30 to be safe (comparison will still work)
-    const to = `${y}-${m}-30`;
+    const lastDay = new Date(parseInt(y), parseInt(m), 0).getDate();
+    const to = `${y}-${m}-${String(lastDay).padStart(2, '0')}`;
     return { from, to };
   } else if (_period === 'quarter') {
     const [y, q] = _selectedQuarter.split('-Q');
     const startMonth = (parseInt(q) - 1) * 3 + 1;
     const endMonth = startMonth + 2;
     const from = `${y}-${String(startMonth).padStart(2, '0')}-01`;
-    const to = `${y}-${String(endMonth).padStart(2, '0')}-30`;
+    const lastDay = new Date(parseInt(y), endMonth, 0).getDate();
+    const to = `${y}-${String(endMonth).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
     return { from, to };
   } else if (_period === 'year') {
-    return { from: `${_selectedYear}-01-01`, to: `${_selectedYear}-12-30` };
+    return { from: `${_selectedYear}-01-01`, to: `${_selectedYear}-12-31` };
   } else if (_period === 'custom') {
     return { from: _customFrom, to: _customTo };
   }
@@ -279,12 +285,12 @@ function getPeriodRange() {
 }
 
 function getPeriodLabel() {
-  const HIJRI_MONTHS = ['محرم','صفر','ربيع الأول','ربيع الآخر','جمادى الأولى','جمادى الآخرة','رجب','شعبان','رمضان','شوال','ذو القعدة','ذو الحجة'];
   if (_period === 'month') {
     const [y, m] = _selectedMonth.split('-');
-    return `${HIJRI_MONTHS[parseInt(m)-1]} ${y}هـ`;
-  } else if (_period === 'quarter') return `الربع ${_selectedQuarter.split('-Q')[1]} · ${_selectedQuarter.split('-Q')[0]}هـ`;
-  else if (_period === 'year') return `سنة ${_selectedYear}هـ`;
+    const d = new Date(parseInt(y), parseInt(m) - 1, 1);
+    return d.toLocaleDateString('ar-SA', { year: 'numeric', month: 'long', calendar: 'gregory' });
+  } else if (_period === 'quarter') return `الربع ${_selectedQuarter.split('-Q')[1]} · ${_selectedQuarter.split('-Q')[0]}`;
+  else if (_period === 'year') return `سنة ${_selectedYear}`;
   else if (_period === 'custom') return `${_customFrom} إلى ${_customTo}`;
   return '';
 }
@@ -316,18 +322,11 @@ function render() {
   const byStatus = { draft: 0, sent: 0, done: 0 };
   _filtered.forEach(s => { if (byStatus[s.status] !== undefined) byStatus[s.status]++; });
 
-  // Avg per day - approximate based on period type
-  let days = 30;
-  if (_period === 'year') days = 355;
-  else if (_period === 'quarter') days = 90;
-  else if (_period === 'month') days = 30;
-  else if (_period === 'custom') {
-    // Rough day count from hijri strings
-    const parseHij = (s) => {
-      const [y,m,d] = s.split('-').map(Number);
-      return y * 355 + m * 30 + d;
-    };
-    days = Math.max(1, parseHij(_customTo) - parseHij(_customFrom) + 1);
+  // Avg per day
+  const { from, to } = getPeriodRange();
+  let days = 1;
+  if (from && to) {
+    days = Math.max(1, Math.round((new Date(to) - new Date(from)) / 86400000) + 1);
   }
   const avgPerDay = (total / days).toFixed(1);
 
