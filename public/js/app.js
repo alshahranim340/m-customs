@@ -14,6 +14,8 @@ import { renderChess } from './pages/gameChess.js';
 import { renderPingPong } from './pages/gamePingPong.js';
 import { renderFrogger } from './pages/gameFrogger.js';
 import { renderExportReport } from './pages/exportReport.js';
+import { renderTransportRequests } from './pages/transportRequests.js';
+import { renderTransportSettings } from './pages/transportSettings.js';
 import { getShipments } from '../../src/firebase/db.js';
 import { onAuthChange, ensureAdminProfile, getUserProfile, logOut, isAdmin, getCurrentUser } from '../../src/firebase/auth.js';
 import { renderDashboard }      from './pages/dashboard.js';
@@ -70,6 +72,8 @@ const PAGES = {
   'game-pingpong':    renderPingPong,
   'game-frogger':     renderFrogger,
   'export-report':    renderExportReport,
+  'transport-requests': renderTransportRequests,
+  'transport-settings': renderTransportSettings,
 };
 
 // ─────────────────────────────────────────────
@@ -240,6 +244,8 @@ function showLoginPage() {
 // ─────────────────────────────────────────────
 function renderAppShell(profile) {
   const adminOnly = isAdmin(_currentUser);
+  const isTransport = profile?.role === 'transport';
+  const isCustoms = profile?.role === 'employee' || profile?.role === 'supervisor' || adminOnly;
 
   document.getElementById('root').innerHTML = `
     <div class="app-layout" id="app">
@@ -252,8 +258,8 @@ function renderAppShell(profile) {
           </div>
         </div>
 
-        <!-- Section Switcher -->
-        <div class="section-switcher">
+        <!-- Section Switcher (hidden for transport-only users) -->
+        <div class="section-switcher" ${isTransport ? 'style="display:none;"' : ''}>
           <button id="section-export" class="section-btn section-active" onclick="switchSection('export')">
             <i class="ti ti-truck"></i> الصادر
           </button>
@@ -261,6 +267,23 @@ function renderAppShell(profile) {
             <i class="ti ti-ship"></i> الوارد
           </button>
         </div>
+
+        ${isTransport ? `
+        <!-- Transport-only Nav -->
+        <nav class="sidebar-nav" id="nav-transport">
+          <div class="nav-group-label">قسم النقل</div>
+          <a class="nav-item active" data-page="transport-requests" onclick="navigate('transport-requests')">
+            <i class="ti ti-truck-delivery"></i> طلبات النقل
+          </a>
+          <a class="nav-item" data-page="transport-settings" onclick="navigate('transport-settings')">
+            <i class="ti ti-settings"></i> إدارة القوائم
+          </a>
+          <div class="nav-group-label">الترفيه</div>
+          <a class="nav-item" data-page="activities" onclick="navigate('activities')">
+            <i class="ti ti-device-gamepad-2"></i> الفعاليات
+          </a>
+        </nav>
+        ` : `
 
         <!-- Export Nav -->
         <nav class="sidebar-nav" id="nav-export">
@@ -280,6 +303,10 @@ function renderAppShell(profile) {
             <i class="ti ti-user"></i> السائقون
           </a>
           ${adminOnly ? `
+          <div class="nav-group-label">قسم النقل</div>
+          <a class="nav-item" data-page="transport-requests" onclick="navigate('transport-requests')">
+            <i class="ti ti-truck-delivery"></i> طلبات النقل
+          </a>
           <div class="nav-group-label">الإدارة</div>
           <a class="nav-item" data-page="users" onclick="navigate('users')">
             <i class="ti ti-users"></i> الموظفون
@@ -319,13 +346,14 @@ function renderAppShell(profile) {
             <i class="ti ti-device-gamepad-2"></i> الفعاليات
           </a>
         </nav>
+        `}
 
         <div class="sidebar-footer">
           <div class="user-chip">
             <div class="user-avatar">${profile?.name?.charAt(0)||'م'}</div>
             <div class="user-info">
               <div class="user-name">${profile?.name||'موظف'}</div>
-              <div class="user-role">${profile?.role==='admin'?'مدير النظام':'موظف تخليص'}</div>
+              <div class="user-role">${profile?.role==='admin'?'مدير النظام':profile?.role==='transport'?'موظف نقل':profile?.role==='supervisor'?'مشرف':'موظف تخليص'}</div>
             </div>
           </div>
           <button onclick="doLogout()"
@@ -349,7 +377,12 @@ function renderAppShell(profile) {
   window.closeModal    = closeModal;
 
   updateBadges();
-  navigate('dashboard');
+  // Transport users go straight to their requests page
+  if (profile?.role === 'transport') {
+    navigate('transport-requests');
+  } else {
+    navigate('dashboard');
+  }
 }
 
 // ─────────────────────────────────────────────
