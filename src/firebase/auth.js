@@ -19,6 +19,7 @@ export const ROLES = {
   admin:      { ar: 'مدير',           color: '#c8943a' },
   supervisor: { ar: 'مشرف',           color: '#2563a8' },
   employee:   { ar: 'موظف تخليص',     color: '#1a7a50' },
+  transport:  { ar: 'موظف نقل',       color: '#3B82F6' },
 };
 
 // ─────────────────────────────────────────────
@@ -79,7 +80,7 @@ export async function getAllUsers() {
   return snap.docs.map(d => ({ id: d.id, ...d.data() }))
     .sort((a, b) => {
       // المدير أولاً ثم المشرف ثم الموظفين
-      const order = { admin: 0, supervisor: 1, employee: 2 };
+      const order = { admin: 0, supervisor: 1, employee: 2, transport: 3 };
       return (order[a.role]||2) - (order[b.role]||2);
     });
 }
