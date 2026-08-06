@@ -121,7 +121,13 @@ function pad(n) { return String(n).padStart(2,'0'); }
 
 function renderStats() {
   const total = _drivers.length;
-  const missingAr = _drivers.filter(d => !d.name_ar || d.name_ar.trim() === '').length;
+  // A driver is "missing arabic" if:
+  //  - has name_en but no name_ar (from transport)
+  //  - has no name at all (edge case)
+  const missingAr = _drivers.filter(d => {
+    const hasAr = (d.name_ar && d.name_ar.trim()) || (!d.name_en && d.name && d.name.trim());
+    return !hasAr;
+  }).length;
   const complete = total - missingAr;
 
   document.getElementById('drv-stats').innerHTML = `
@@ -145,27 +151,41 @@ function renderStats() {
 function renderList() {
   const el = document.getElementById('drv-list');
 
+  // Normalize old drivers: if they have 'name' but no 'name_ar', treat 'name' as the arabic name
+  // (old drivers were created by customs staff who wrote arabic names)
+  _drivers.forEach(d => {
+    if (!d.name_ar && !d.name_en && d.name) {
+      // Legacy driver - the 'name' field is arabic
+      d._displayNameAr = d.name;
+      d._displayNameEn = '';
+    } else {
+      d._displayNameAr = d.name_ar || '';
+      d._displayNameEn = d.name_en || '';
+    }
+  });
+
   let list = [..._drivers];
 
   // Filter
-  if (_filter === 'missing_ar') list = list.filter(d => !d.name_ar || !d.name_ar.trim());
-  else if (_filter === 'complete') list = list.filter(d => d.name_ar && d.name_ar.trim());
+  if (_filter === 'missing_ar') list = list.filter(d => !d._displayNameAr || !d._displayNameAr.trim());
+  else if (_filter === 'complete') list = list.filter(d => d._displayNameAr && d._displayNameAr.trim());
 
   // Search
   if (_search) {
     list = list.filter(d =>
-      (d.name_en || '').toLowerCase().includes(_search) ||
-      (d.name_ar || '').toLowerCase().includes(_search) ||
+      (d._displayNameEn || '').toLowerCase().includes(_search) ||
+      (d._displayNameAr || '').toLowerCase().includes(_search) ||
+      (d.name || '').toLowerCase().includes(_search) ||
       (d.iqama || '').toLowerCase().includes(_search)
     );
   }
 
-  // Sort: missing_ar first, then by name_en
+  // Sort: missing_ar first, then by name
   list.sort((a, b) => {
-    const aMiss = !a.name_ar || !a.name_ar.trim();
-    const bMiss = !b.name_ar || !b.name_ar.trim();
+    const aMiss = !a._displayNameAr || !a._displayNameAr.trim();
+    const bMiss = !b._displayNameAr || !b._displayNameAr.trim();
     if (aMiss !== bMiss) return aMiss ? -1 : 1;
-    return (a.name_en || '').localeCompare(b.name_en || '');
+    return (a._displayNameEn || a._displayNameAr || '').localeCompare(b._displayNameEn || b._displayNameAr || '');
   });
 
   if (list.length === 0) {
@@ -182,23 +202,32 @@ function renderList() {
 }
 
 function renderCard(d, num) {
-  const missingAr = !d.name_ar || !d.name_ar.trim();
+  const missingAr = !d._displayNameAr || !d._displayNameAr.trim();
   const cardClass = missingAr ? 'drv-card missing-ar' : 'drv-card';
+
+  // Support legacy drivers: get plate from vehicles array (last one)
+  let plate = d.truck_number || '';
+  if (!plate && d.vehicles && d.vehicles.length > 0) {
+    plate = d.vehicles[d.vehicles.length - 1].plate || '';
+  }
 
   return `
     <div class="${cardClass}">
       <div class="drv-code">#${pad(num)}</div>
       <div class="drv-names">
-        <div class="drv-name-en">${d.name_en || '—'}</div>
+        ${d._displayNameEn
+          ? `<div class="drv-name-en">${d._displayNameEn}</div>`
+          : ''
+        }
         ${missingAr
           ? `<div class="drv-name-missing"><i class="ti ti-alert-triangle"></i> يحتاج اسم عربي</div>`
-          : `<div class="drv-name-ar">${d.name_ar}</div>`
+          : `<div class="drv-name-ar">${d._displayNameAr}</div>`
         }
       </div>
       <div class="drv-info">
         <div class="drv-info-item">
           <i class="ti ti-id drv-info-icon"></i>
-          <span>${d.iqama || '—'}</span>
+          <span>${d.iqama || d.passport_country || '—'}</span>
         </div>
         <div class="drv-info-item">
           <i class="ti ti-flag drv-info-icon"></i>
@@ -212,7 +241,7 @@ function renderCard(d, num) {
         </div>
         <div class="drv-info-item">
           <i class="ti ti-truck drv-info-icon"></i>
-          <span>${d.truck_number || '—'}</span>
+          <span>${plate || '—'}</span>
         </div>
       </div>
       <div class="drv-actions">
@@ -227,8 +256,9 @@ function renderCard(d, num) {
 async function editArabicName(id) {
   const driver = _drivers.find(d => d.id === id);
   if (!driver) return;
-  const current = driver.name_ar || '';
-  const val = prompt(`الاسم بالعربي لـ:\n${driver.name_en}`, current);
+  const displayName = driver._displayNameEn || driver.name || '(بلا اسم)';
+  const current = driver._displayNameAr || '';
+  const val = prompt(`الاسم بالعربي لـ:\n${displayName}`, current);
   if (val === null) return;
   const trimmed = val.trim();
   if (!trimmed) {
@@ -249,12 +279,17 @@ async function editDriver(id) {
   const driver = _drivers.find(d => d.id === id);
   if (!driver) return;
 
-  // Build a simple prompt-based edit for all mutable fields
-  const nameAr = prompt(`الاسم العربي:`, driver.name_ar || '');
+  // Get plate from legacy vehicles array if not set
+  let currentPlate = driver.truck_number || '';
+  if (!currentPlate && driver.vehicles && driver.vehicles.length > 0) {
+    currentPlate = driver.vehicles[driver.vehicles.length - 1].plate || '';
+  }
+
+  const nameAr = prompt(`الاسم العربي:`, driver._displayNameAr || driver.name_ar || driver.name || '');
   if (nameAr === null) return;
   const phone = prompt(`رقم الجوال:`, driver.phone || '');
   if (phone === null) return;
-  const truck = prompt(`رقم الشاحنة الحالي:`, driver.truck_number || '');
+  const truck = prompt(`رقم الشاحنة الحالي:`, currentPlate);
   if (truck === null) return;
   const nationality = prompt(`الجنسية:`, driver.nationality || '');
   if (nationality === null) return;
