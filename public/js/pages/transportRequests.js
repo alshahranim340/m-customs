@@ -1,5 +1,5 @@
 import { getCurrentUser, isAdmin } from '../../../src/firebase/auth.js';
-import { getUserProfile } from '../../../src/firebase/db.js';
+import { getUserProfile } from '../../../src/firebase/auth.js';
 import {
   getTransportRequests, createTransportRequest, updateTransportRequest,
   deleteTransportRequest, getTransportDropdowns, addDropdownValue

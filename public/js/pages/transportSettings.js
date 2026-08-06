@@ -1,5 +1,5 @@
 import { getCurrentUser } from '../../../src/firebase/auth.js';
-import { getUserProfile } from '../../../src/firebase/db.js';
+import { getUserProfile } from '../../../src/firebase/auth.js';
 import { getTransportDropdowns, updateTransportDropdowns } from '../../../src/firebase/transportDb.js';
 import { toast } from '../app.js';
 
