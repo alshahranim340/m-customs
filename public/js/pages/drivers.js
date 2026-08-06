@@ -256,56 +256,311 @@ function renderCard(d, num) {
 async function editArabicName(id) {
   const driver = _drivers.find(d => d.id === id);
   if (!driver) return;
-  const displayName = driver._displayNameEn || driver.name || '(بلا اسم)';
-  const current = driver._displayNameAr || '';
-  const val = prompt(`الاسم بالعربي لـ:\n${displayName}`, current);
-  if (val === null) return;
-  const trimmed = val.trim();
-  if (!trimmed) {
-    toast('اكتب اسماً صحيحاً', 'error');
+  openDriverModal(driver, 'ar-only');
+}
+
+async function editDriver(id) {
+  const driver = _drivers.find(d => d.id === id);
+  if (!driver) return;
+  openDriverModal(driver, 'full');
+}
+
+function openDriverModal(driver, mode) {
+  // Remove any existing modal
+  const existing = document.getElementById('drv-modal');
+  if (existing) existing.remove();
+
+  const displayNameEn = driver._displayNameEn || driver.name_en || '';
+  const displayNameAr = driver._displayNameAr || driver.name_ar || driver.name || '';
+
+  // Get current plate
+  let currentPlate = driver.truck_number || '';
+  if (!currentPlate && driver.vehicles && driver.vehicles.length > 0) {
+    currentPlate = driver.vehicles[driver.vehicles.length - 1].plate || '';
+  }
+
+  const modal = document.createElement('div');
+  modal.id = 'drv-modal';
+  modal.innerHTML = `
+    <div class="drv-modal-backdrop" onclick="_closeDriverModal(event)"></div>
+    <div class="drv-modal-box">
+
+      <!-- Header -->
+      <div class="drv-modal-header">
+        <div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#8A8578;letter-spacing:2px;font-weight:700;">SDS/DRIVER/EDIT</div>
+          <div style="font-size:20px;color:#0E1A2E;font-weight:800;margin-top:2px;">
+            ${mode === 'ar-only' ? '✏ إضافة اسم عربي' : '✏ تعديل بيانات السائق'}
+          </div>
+          ${displayNameEn ? `<div style="font-family:'Inter',sans-serif;font-size:13px;color:#6B6659;margin-top:4px;direction:ltr;text-align:right;">${displayNameEn}</div>` : ''}
+        </div>
+        <button class="drv-modal-close" onclick="_closeDriverModal(true)">
+          <i class="ti ti-x"></i>
+        </button>
+      </div>
+
+      <!-- Body -->
+      <div class="drv-modal-body">
+
+        <!-- Arabic name (always shown) -->
+        <div class="drv-field">
+          <label class="drv-label">
+            <span class="drv-label-num">01</span>
+            <span>الاسم بالعربي</span>
+            <span class="drv-label-hint">AR NAME · Required</span>
+          </label>
+          <input type="text" id="drv-input-name-ar" value="${displayNameAr}"
+            placeholder="مثال: بارامجيت كشمير"
+            class="drv-input" style="direction:rtl;">
+        </div>
+
+        ${mode === 'full' ? `
+          <!-- English name -->
+          <div class="drv-field">
+            <label class="drv-label">
+              <span class="drv-label-num">02</span>
+              <span>الاسم بالإنجليزي</span>
+              <span class="drv-label-hint">EN NAME</span>
+            </label>
+            <input type="text" id="drv-input-name-en" value="${displayNameEn}"
+              placeholder="EXAMPLE: PARAMJIT KASHMIR"
+              class="drv-input" style="direction:ltr;text-align:left;">
+          </div>
+
+          <!-- Iqama -->
+          <div class="drv-field">
+            <label class="drv-label">
+              <span class="drv-label-num">03</span>
+              <span>رقم الإقامة</span>
+              <span class="drv-label-hint">IQAMA / ID</span>
+            </label>
+            <input type="text" id="drv-input-iqama" value="${driver.iqama || ''}"
+              placeholder="2481671556"
+              class="drv-input" style="direction:ltr;text-align:right;font-family:'JetBrains Mono',monospace;">
+          </div>
+
+          <!-- Nationality + Phone (grid) -->
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+            <div class="drv-field">
+              <label class="drv-label">
+                <span class="drv-label-num">04</span>
+                <span>الجنسية</span>
+                <span class="drv-label-hint">NATIONALITY</span>
+              </label>
+              <input type="text" id="drv-input-nationality" value="${driver.nationality || ''}"
+                placeholder="هندي"
+                class="drv-input" style="direction:rtl;">
+            </div>
+            <div class="drv-field">
+              <label class="drv-label">
+                <span class="drv-label-num">05</span>
+                <span>رقم الجوال</span>
+                <span class="drv-label-hint">PHONE</span>
+              </label>
+              <input type="text" id="drv-input-phone" value="${driver.phone || ''}"
+                placeholder="0501234567"
+                class="drv-input" style="direction:ltr;text-align:right;font-family:'JetBrains Mono',monospace;">
+            </div>
+          </div>
+
+          <!-- Truck -->
+          <div class="drv-field">
+            <label class="drv-label">
+              <span class="drv-label-num">06</span>
+              <span>رقم الشاحنة الحالي</span>
+              <span class="drv-label-hint">CURRENT TRUCK #</span>
+            </label>
+            <input type="text" id="drv-input-truck" value="${currentPlate}"
+              placeholder="9691"
+              class="drv-input" style="direction:ltr;text-align:right;font-family:'JetBrains Mono',monospace;">
+          </div>
+        ` : `
+          <!-- Info card in ar-only mode -->
+          <div class="drv-info-card">
+            <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:#8A8578;letter-spacing:2px;font-weight:700;margin-bottom:8px;">DRIVER INFO</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;font-size:13px;">
+              <div>
+                <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:#8A8578;letter-spacing:1px;">IQAMA</div>
+                <div style="font-family:'JetBrains Mono',monospace;color:#0E1A2E;font-weight:700;margin-top:2px;">${driver.iqama || '—'}</div>
+              </div>
+              <div>
+                <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:#8A8578;letter-spacing:1px;">NATIONALITY</div>
+                <div style="color:#0E1A2E;font-weight:700;margin-top:2px;">${driver.nationality || '—'}</div>
+              </div>
+              <div>
+                <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:#8A8578;letter-spacing:1px;">PHONE</div>
+                <div style="font-family:'JetBrains Mono',monospace;color:#0E1A2E;font-weight:700;margin-top:2px;">${driver.phone || '—'}</div>
+              </div>
+              <div>
+                <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:#8A8578;letter-spacing:1px;">TRUCK #</div>
+                <div style="font-family:'JetBrains Mono',monospace;color:#0E1A2E;font-weight:700;margin-top:2px;">${currentPlate || '—'}</div>
+              </div>
+            </div>
+          </div>
+        `}
+
+      </div>
+
+      <!-- Footer -->
+      <div class="drv-modal-footer">
+        <button class="drv-btn" onclick="_closeDriverModal(true)">إلغاء</button>
+        <button class="drv-btn drv-btn-primary" onclick="_saveDriverModal('${driver.id}', '${mode}')">
+          <i class="ti ti-device-floppy"></i> حفظ التعديلات
+        </button>
+      </div>
+
+    </div>
+
+    <style>
+      #drv-modal {
+        position:fixed;inset:0;z-index:9999;
+        display:flex;align-items:center;justify-content:center;
+        padding:20px;
+        font-family:'Tajawal',sans-serif;
+        animation:drvFadeIn 0.15s ease-out;
+      }
+      @keyframes drvFadeIn { from { opacity:0; } to { opacity:1; } }
+      .drv-modal-backdrop {
+        position:absolute;inset:0;
+        background:rgba(14,26,46,0.65);
+        backdrop-filter:blur(2px);
+      }
+      .drv-modal-box {
+        position:relative;background:#FAFAF7;
+        border:1px solid #E8E5DC;border-radius:10px;
+        width:100%;max-width:560px;max-height:90vh;
+        display:flex;flex-direction:column;
+        overflow:hidden;
+        box-shadow:0 20px 50px rgba(14,26,46,0.25);
+        animation:drvSlideUp 0.2s ease-out;
+      }
+      @keyframes drvSlideUp {
+        from { transform:translateY(20px);opacity:0; }
+        to { transform:translateY(0);opacity:1; }
+      }
+      .drv-modal-header {
+        display:flex;justify-content:space-between;align-items:flex-start;
+        padding:20px 24px;background:white;
+        border-bottom:1px solid #E8E5DC;
+      }
+      .drv-modal-close {
+        background:transparent;border:1.5px solid #E8E5DC;
+        border-radius:6px;width:34px;height:34px;
+        display:flex;align-items:center;justify-content:center;
+        cursor:pointer;color:#6B6659;transition:all 0.15s;
+      }
+      .drv-modal-close:hover {
+        background:#FEF2F2;border-color:#CC2229;color:#CC2229;
+      }
+      .drv-modal-body {
+        padding:20px 24px;overflow-y:auto;
+        display:flex;flex-direction:column;gap:14px;
+      }
+      .drv-modal-footer {
+        display:flex;justify-content:flex-end;gap:8px;
+        padding:16px 24px;background:white;
+        border-top:1px solid #E8E5DC;
+      }
+      .drv-field { display:flex;flex-direction:column;gap:6px; }
+      .drv-label {
+        display:flex;align-items:center;gap:8px;
+        font-size:13px;font-weight:700;color:#0E1A2E;
+      }
+      .drv-label-num {
+        font-family:'JetBrains Mono',monospace;font-size:10px;
+        background:#0E1A2E;color:white;
+        padding:2px 6px;border-radius:3px;
+        letter-spacing:1px;font-weight:800;
+      }
+      .drv-label-hint {
+        font-family:'JetBrains Mono',monospace;font-size:9px;
+        color:#8A8578;letter-spacing:1.5px;
+        margin-right:auto;font-weight:700;
+      }
+      .drv-input {
+        width:100%;border:1.5px solid #E8E5DC;border-radius:6px;
+        padding:10px 14px;font-family:'Tajawal',sans-serif;font-size:14px;
+        color:#0E1A2E;background:white;
+        transition:all 0.15s;outline:none;
+      }
+      .drv-input:focus {
+        border-color:#1C4B8E;
+        box-shadow:0 0 0 3px rgba(28,75,142,0.1);
+      }
+      .drv-info-card {
+        background:white;border:1px solid #E8E5DC;
+        border-radius:6px;padding:14px;
+      }
+    </style>
+  `;
+
+  document.body.appendChild(modal);
+
+  // Focus the first input
+  setTimeout(() => {
+    const firstInput = mode === 'ar-only'
+      ? document.getElementById('drv-input-name-ar')
+      : document.getElementById('drv-input-name-ar');
+    if (firstInput) {
+      firstInput.focus();
+      firstInput.select();
+    }
+  }, 100);
+
+  // Close on Escape
+  const escHandler = (e) => {
+    if (e.key === 'Escape') {
+      closeDriverModal(true);
+      document.removeEventListener('keydown', escHandler);
+    }
+  };
+  document.addEventListener('keydown', escHandler);
+}
+
+function closeDriverModal(force) {
+  // Ignore clicks on the box itself (only close on backdrop or explicit)
+  if (force !== true && !(force?.target?.classList?.contains?.('drv-modal-backdrop'))) return;
+  const modal = document.getElementById('drv-modal');
+  if (modal) modal.remove();
+}
+
+async function saveDriverModal(id, mode) {
+  const nameAr = document.getElementById('drv-input-name-ar')?.value.trim() || '';
+
+  if (!nameAr) {
+    toast('اكتب الاسم العربي أولاً', 'error');
     return;
   }
+
+  const updates = {
+    name_ar: nameAr,
+    updated_at: serverTimestamp(),
+  };
+
+  if (mode === 'full') {
+    const nameEn = document.getElementById('drv-input-name-en')?.value.trim() || '';
+    const iqama = document.getElementById('drv-input-iqama')?.value.trim() || '';
+    const nationality = document.getElementById('drv-input-nationality')?.value.trim() || '';
+    const phone = document.getElementById('drv-input-phone')?.value.trim() || '';
+    const truck = document.getElementById('drv-input-truck')?.value.trim() || '';
+
+    if (nameEn) updates.name_en = nameEn;
+    if (iqama) updates.iqama = iqama;
+    if (nationality) updates.nationality = nationality;
+    if (phone) updates.phone = phone;
+    if (truck) updates.truck_number = truck;
+  }
+
   try {
-    await updateDriverArabicName(id, trimmed);
+    await updateDoc(doc(db, 'drivers', id), updates);
+    closeDriverModal(true);
     await loadData();
-    toast('✓ تم حفظ الاسم العربي', 'success');
+    toast('✓ تم الحفظ', 'success');
   } catch (e) {
     console.error(e);
     toast('خطأ في الحفظ', 'error');
   }
 }
 
-async function editDriver(id) {
-  const driver = _drivers.find(d => d.id === id);
-  if (!driver) return;
-
-  // Get plate from legacy vehicles array if not set
-  let currentPlate = driver.truck_number || '';
-  if (!currentPlate && driver.vehicles && driver.vehicles.length > 0) {
-    currentPlate = driver.vehicles[driver.vehicles.length - 1].plate || '';
-  }
-
-  const nameAr = prompt(`الاسم العربي:`, driver._displayNameAr || driver.name_ar || driver.name || '');
-  if (nameAr === null) return;
-  const phone = prompt(`رقم الجوال:`, driver.phone || '');
-  if (phone === null) return;
-  const truck = prompt(`رقم الشاحنة الحالي:`, currentPlate);
-  if (truck === null) return;
-  const nationality = prompt(`الجنسية:`, driver.nationality || '');
-  if (nationality === null) return;
-
-  try {
-    await updateDoc(doc(db, 'drivers', id), {
-      name_ar: nameAr.trim(),
-      phone: phone.trim(),
-      truck_number: truck.trim(),
-      nationality: nationality.trim(),
-      updated_at: serverTimestamp(),
-    });
-    await loadData();
-    toast('✓ تم التحديث', 'success');
-  } catch (e) {
-    console.error(e);
-    toast('خطأ في التحديث', 'error');
-  }
-}
+window._closeDriverModal = closeDriverModal;
+window._saveDriverModal = saveDriverModal;
