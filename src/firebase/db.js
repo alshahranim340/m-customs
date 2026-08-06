@@ -19,6 +19,93 @@ export async function searchDrivers(nameQuery) {
     .filter(d => d.name?.toLowerCase().includes(lower));
 }
 
+// ─────────────────────────────────────────────
+// TRANSPORT DRIVER LOOKUP
+// ─────────────────────────────────────────────
+// Match a driver by english name or iqama. Returns null if not found.
+export async function findDriverByEnOrIqama(nameEn, iqama) {
+  const snap = await getDocs(collection(db, "drivers"));
+  const list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  const normalize = (s) => (s || '').trim().toLowerCase();
+  const nameEnN = normalize(nameEn);
+  const iqamaN = normalize(iqama);
+  if (iqamaN) {
+    const byIqama = list.find(d => normalize(d.iqama) === iqamaN);
+    if (byIqama) return byIqama;
+  }
+  if (nameEnN) {
+    const byEn = list.find(d => normalize(d.name_en) === nameEnN);
+    if (byEn) return byEn;
+  }
+  return null;
+}
+
+// Get all drivers - for autocomplete lists
+export async function getAllDrivers() {
+  const snap = await getDocs(collection(db, "drivers"));
+  return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+}
+
+// Get drivers that are missing arabic name (for admin alert)
+export async function getDriversMissingArabic() {
+  const snap = await getDocs(collection(db, "drivers"));
+  return snap.docs
+    .map(d => ({ id: d.id, ...d.data() }))
+    .filter(d => !d.name_ar || d.name_ar.trim() === '');
+}
+
+// Upsert driver from transport department input
+// - If exists (by iqama or name_en): update phone/truck_number, keep name_ar
+// - If new: create with name_ar empty
+export async function upsertTransportDriver(data) {
+  const existing = await findDriverByEnOrIqama(data.name_en, data.iqama);
+
+  if (existing) {
+    // Update mutable fields (phone, truck_number, nationality if changed)
+    const updates = {
+      updated_at: serverTimestamp(),
+    };
+    if (data.phone && data.phone !== existing.phone) updates.phone = data.phone;
+    if (data.truck_number && data.truck_number !== existing.truck_number) {
+      updates.truck_number = data.truck_number;
+    }
+    if (data.nationality && data.nationality !== existing.nationality) {
+      updates.nationality = data.nationality;
+    }
+    // Also update name_en/iqama if user filled the missing one
+    if (data.name_en && !existing.name_en) updates.name_en = data.name_en;
+    if (data.iqama && !existing.iqama) updates.iqama = data.iqama;
+
+    if (Object.keys(updates).length > 1) { // more than just updated_at
+      await updateDoc(doc(db, "drivers", existing.id), updates);
+    }
+    return { id: existing.id, ...existing, ...updates };
+  }
+
+  // Create new driver
+  const ref = await addDoc(collection(db, "drivers"), {
+    name_en: data.name_en || '',
+    name_ar: '', // empty — admin fills later
+    iqama: data.iqama || '',
+    nationality: data.nationality || '',
+    phone: data.phone || '',
+    truck_number: data.truck_number || '',
+    source: 'transport',
+    created_at: serverTimestamp(),
+    updated_at: serverTimestamp(),
+  });
+  return { id: ref.id, name_en: data.name_en, name_ar: '', iqama: data.iqama,
+    nationality: data.nationality, phone: data.phone, truck_number: data.truck_number };
+}
+
+// Update just the arabic name (for admin)
+export async function updateDriverArabicName(driverId, nameAr) {
+  await updateDoc(doc(db, "drivers", driverId), {
+    name_ar: nameAr,
+    updated_at: serverTimestamp(),
+  });
+}
+
 /**
  * Get a single driver by ID
  */
