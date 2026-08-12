@@ -359,14 +359,15 @@ function renderManifestRow(s, isUnassigned) {
       <input type="checkbox" class="modern-row-check" ${checked?'checked':''}
         onchange="toggleSelect('${s.id}')" onclick="event.stopPropagation()">
       <div class="modern-row-stripe ${stripeClass}"></div>
-      <div class="modern-row-code">${s.declaration_no || '—'}</div>
+      <div class="modern-row-code">${s.declaration_no || '<span style="color:#C2410C;font-family:\'JetBrains Mono\',monospace;font-size:11px;">📝 NO#</span>'}</div>
       <div class="modern-row-body">
         <div class="modern-row-title">
           ${driver || '<span class="muted">— no driver</span>'}
           ${plate ? `<span class="modern-row-plate">${plate}</span>` : ''}
           ${exporter ? `<span class="muted"> · ${exporter}</span>` : ''}
+          ${s.source === 'transport' ? '<span style="background:#DBEAFE;color:#1E40AF;font-family:\'JetBrains Mono\',monospace;font-size:9px;padding:2px 6px;border-radius:3px;font-weight:800;letter-spacing:1px;margin-right:6px;">🚛 TRANSPORT</span>' : ''}
         </div>
-        <div class="modern-row-sub">→ ${destCode}${s.goods_description ? ' · ' + s.goods_description : ''}</div>
+        <div class="modern-row-sub">→ ${destCode}${s.goods_description ? ' · ' + s.goods_description : ''}${s.material ? ' · ' + s.material : ''}</div>
       </div>
       <span class="modern-badge ${badgeClass}">${stKey}</span>
       <span class="modern-row-date">${s.date || '—'}</span>

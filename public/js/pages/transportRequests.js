@@ -2,9 +2,10 @@ import { getCurrentUser, isAdmin } from '../../../src/firebase/auth.js';
 import { getUserProfile } from '../../../src/firebase/auth.js';
 import {
   getTransportRequests, createTransportRequest, updateTransportRequest,
-  deleteTransportRequest, getTransportDropdowns, addDropdownValue
+  deleteTransportRequest, getTransportDropdowns, addDropdownValue,
+  linkRequestToShipment
 } from '../../../src/firebase/transportDb.js';
-import { getAllDrivers, upsertTransportDriver } from '../../../src/firebase/db.js';
+import { getAllDrivers, upsertTransportDriver, createShipmentFromTransportRequest, findDriverByEnOrIqama } from '../../../src/firebase/db.js';
 import { toast } from '../app.js';
 import { todayHijri, buildHijriPicker } from '../../../src/utils/hijriDate.js';
 
@@ -432,23 +433,222 @@ async function sendRow(id) {
     return;
   }
 
-  if (!confirm('هل تريد إرسال هذا الطلب للتخليص؟\nلن يمكن التعديل عليه بعد الإرسال.')) return;
+  // Show confirmation modal
+  showSendConfirmModal(id, data);
+}
+
+function showSendConfirmModal(id, data) {
+  const existing = document.getElementById('tr-send-modal');
+  if (existing) existing.remove();
+
+  const destLabel = DEST_LABELS[data.destination]?.ar || data.destination;
+
+  const modal = document.createElement('div');
+  modal.id = 'tr-send-modal';
+  modal.innerHTML = `
+    <div class="tr-modal-backdrop" onclick="_closeSendModal(event)"></div>
+    <div class="tr-modal-box">
+
+      <div class="tr-modal-header">
+        <div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#8A8578;letter-spacing:2px;font-weight:700;">SDS/TRANSPORT/SEND</div>
+          <div style="font-size:20px;color:#0E1A2E;font-weight:800;margin-top:2px;">📤 تأكيد إرسال للتخليص</div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#6B6659;margin-top:4px;">
+            REVIEW BEFORE SENDING · WILL CREATE SHIPMENT
+          </div>
+        </div>
+        <button class="tr-modal-close" onclick="_closeSendModal(true)">
+          <i class="ti ti-x"></i>
+        </button>
+      </div>
+
+      <div class="tr-modal-body">
+
+        <div style="background:#FEF9E7;border:1px solid #C2410C;border-radius:6px;padding:12px 14px;margin-bottom:14px;">
+          <div style="display:flex;align-items:center;gap:8px;font-weight:700;color:#C2410C;font-size:13px;">
+            <i class="ti ti-alert-triangle"></i>
+            <span>بعد الإرسال لن يمكن التعديل على هذا الطلب</span>
+          </div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#8A6B33;margin-top:6px;letter-spacing:.3px;">
+            → سيتم إنشاء شحنة مسودة تلقائياً في قسم الصادر
+          </div>
+        </div>
+
+        <!-- Data preview -->
+        <div class="tr-preview-grid">
+          <div class="tr-preview-item">
+            <div class="tr-preview-lbl">TRUCK</div>
+            <div class="tr-preview-val" style="font-family:'JetBrains Mono',monospace;">${data.truck_number || '—'}</div>
+          </div>
+          <div class="tr-preview-item">
+            <div class="tr-preview-lbl">DRIVER</div>
+            <div class="tr-preview-val" style="direction:ltr;text-align:right;">${data.driver_name || '—'}</div>
+          </div>
+          <div class="tr-preview-item">
+            <div class="tr-preview-lbl">IQAMA</div>
+            <div class="tr-preview-val" style="font-family:'JetBrains Mono',monospace;">${data.driver_id_number || '—'}</div>
+          </div>
+          <div class="tr-preview-item">
+            <div class="tr-preview-lbl">NATIONALITY</div>
+            <div class="tr-preview-val">${data.driver_nationality || '—'}</div>
+          </div>
+          <div class="tr-preview-item">
+            <div class="tr-preview-lbl">CUSTOMER</div>
+            <div class="tr-preview-val">${data.customer || '—'}</div>
+          </div>
+          <div class="tr-preview-item">
+            <div class="tr-preview-lbl">MATERIAL</div>
+            <div class="tr-preview-val">${data.material || '—'}</div>
+          </div>
+          <div class="tr-preview-item">
+            <div class="tr-preview-lbl">QUANTITY</div>
+            <div class="tr-preview-val" style="font-family:'JetBrains Mono',monospace;">${data.quantity || '—'}</div>
+          </div>
+          <div class="tr-preview-item">
+            <div class="tr-preview-lbl">DATE</div>
+            <div class="tr-preview-val" style="font-family:'JetBrains Mono',monospace;">${data.dispatch_date || '—'}</div>
+          </div>
+          <div class="tr-preview-item">
+            <div class="tr-preview-lbl">DELIVERY #</div>
+            <div class="tr-preview-val" style="font-family:'JetBrains Mono',monospace;">${data.delivery_number || '—'}</div>
+          </div>
+          <div class="tr-preview-item">
+            <div class="tr-preview-lbl">DESTINATION</div>
+            <div class="tr-preview-val" style="font-weight:800;">${destLabel}</div>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="tr-modal-footer">
+        <button class="tr-btn" onclick="_closeSendModal(true)">إلغاء</button>
+        <button class="tr-btn tr-btn-primary" onclick="_confirmSend('${id}')">
+          <i class="ti ti-send"></i> تأكيد وإرسال
+        </button>
+      </div>
+
+    </div>
+
+    <style>
+      #tr-send-modal {
+        position:fixed;inset:0;z-index:9999;
+        display:flex;align-items:center;justify-content:center;
+        padding:20px;font-family:'Tajawal',sans-serif;
+        animation:trFadeIn 0.15s ease-out;
+      }
+      @keyframes trFadeIn { from { opacity:0; } to { opacity:1; } }
+      .tr-modal-backdrop {
+        position:absolute;inset:0;
+        background:rgba(14,26,46,0.65);
+        backdrop-filter:blur(2px);
+      }
+      .tr-modal-box {
+        position:relative;background:#FAFAF7;
+        border:1px solid #E8E5DC;border-radius:10px;
+        width:100%;max-width:640px;max-height:90vh;
+        display:flex;flex-direction:column;overflow:hidden;
+        box-shadow:0 20px 50px rgba(14,26,46,0.25);
+        animation:trSlideUp 0.2s ease-out;
+      }
+      @keyframes trSlideUp {
+        from { transform:translateY(20px);opacity:0; }
+        to { transform:translateY(0);opacity:1; }
+      }
+      .tr-modal-header {
+        display:flex;justify-content:space-between;align-items:flex-start;
+        padding:20px 24px;background:white;border-bottom:1px solid #E8E5DC;
+      }
+      .tr-modal-close {
+        background:transparent;border:1.5px solid #E8E5DC;
+        border-radius:6px;width:34px;height:34px;
+        display:flex;align-items:center;justify-content:center;
+        cursor:pointer;color:#6B6659;transition:all 0.15s;
+      }
+      .tr-modal-close:hover {
+        background:#FEF2F2;border-color:#CC2229;color:#CC2229;
+      }
+      .tr-modal-body {
+        padding:20px 24px;overflow-y:auto;
+      }
+      .tr-modal-footer {
+        display:flex;justify-content:flex-end;gap:8px;
+        padding:16px 24px;background:white;border-top:1px solid #E8E5DC;
+      }
+      .tr-preview-grid {
+        display:grid;grid-template-columns:1fr 1fr;gap:10px;
+        background:white;border:1px solid #E8E5DC;border-radius:6px;padding:14px;
+      }
+      .tr-preview-item {
+        padding:8px 10px;background:#FAFAF7;border-radius:4px;
+        border-right:3px solid #1C4B8E;
+      }
+      .tr-preview-lbl {
+        font-family:'JetBrains Mono',monospace;font-size:9px;
+        color:#8A8578;letter-spacing:1.5px;font-weight:700;
+      }
+      .tr-preview-val {
+        font-size:13px;color:#0E1A2E;font-weight:600;margin-top:2px;
+      }
+      .tr-btn {
+        background:white;border:1.5px solid #E8E5DC;border-radius:6px;
+        padding:9px 18px;font-family:'Tajawal',sans-serif;font-size:13px;
+        cursor:pointer;color:#0E1A2E;font-weight:700;
+        transition:all 0.15s;display:inline-flex;align-items:center;gap:6px;
+      }
+      .tr-btn:hover { background:#F5F3EC; }
+      .tr-btn-primary {
+        background:#2E8B57;border-color:#2E8B57;color:white;
+      }
+      .tr-btn-primary:hover { background:#1F6640; }
+    </style>
+  `;
+
+  document.body.appendChild(modal);
+
+  const escHandler = (e) => {
+    if (e.key === 'Escape') {
+      closeSendModal(true);
+      document.removeEventListener('keydown', escHandler);
+    }
+  };
+  document.addEventListener('keydown', escHandler);
+}
+
+function closeSendModal(force) {
+  if (force !== true && !(force?.target?.classList?.contains?.('tr-modal-backdrop'))) return;
+  const modal = document.getElementById('tr-send-modal');
+  if (modal) modal.remove();
+}
+
+async function confirmSend(id) {
+  const row = document.querySelector(`tr[data-id="${id}"]`);
+  if (!row) { closeSendModal(true); return; }
+
+  // Disable buttons
+  const modal = document.getElementById('tr-send-modal');
+  if (modal) {
+    modal.querySelectorAll('button').forEach(b => b.disabled = true);
+    const confirmBtn = modal.querySelector('.tr-btn-primary');
+    if (confirmBtn) confirmBtn.innerHTML = '<i class="ti ti-loader"></i> جاري الإرسال...';
+  }
+
+  const updates = {};
+  row.querySelectorAll('[data-field]').forEach(el => {
+    const f = el.dataset.field;
+    let v = el.value;
+    if (f === 'quantity') v = parseFloat(v) || 0;
+    updates[f] = v;
+  });
+  updates.status = 'sent';
 
   try {
-    // Save first, then mark as sent
-    const updates = {};
-    inputs.forEach(el => {
-      const f = el.dataset.field;
-      let v = el.value;
-      if (f === 'quantity') v = parseFloat(v) || 0;
-      updates[f] = v;
-    });
-    updates.status = 'sent';
+    // 1. Save request updates
     await updateTransportRequest(id, updates);
 
-    // Upsert driver record
+    // 2. Upsert driver
+    let driver = null;
     if (updates.driver_name && updates.driver_name.trim()) {
-      await upsertTransportDriver({
+      driver = await upsertTransportDriver({
         name_en:      updates.driver_name.trim(),
         iqama:        updates.driver_id_number || '',
         nationality:  updates.driver_nationality || '',
@@ -457,7 +657,7 @@ async function sendRow(id) {
       });
     }
 
-    // Learn dropdowns
+    // 3. Learn dropdowns
     if (updates.customer && !_dropdowns.customers.includes(updates.customer)) {
       await addDropdownValue('customers', updates.customer);
     }
@@ -468,13 +668,29 @@ async function sendRow(id) {
       await addDropdownValue('nationalities', updates.driver_nationality);
     }
 
+    // 4. Create shipment from request
+    const reqObj = { id, ...updates };
+    const shipmentId = await createShipmentFromTransportRequest(reqObj, driver);
+
+    // 5. Link request → shipment
+    await linkRequestToShipment(id, shipmentId);
+
+    closeSendModal(true);
     await loadData();
-    toast('✓ تم الإرسال للتخليص', 'success');
+    toast('✓ تم الإرسال وإنشاء الشحنة تلقائياً', 'success');
   } catch (e) {
     console.error(e);
     toast('خطأ في الإرسال', 'error');
+    if (modal) {
+      modal.querySelectorAll('button').forEach(b => b.disabled = false);
+      const confirmBtn = modal.querySelector('.tr-btn-primary');
+      if (confirmBtn) confirmBtn.innerHTML = '<i class="ti ti-send"></i> تأكيد وإرسال';
+    }
   }
 }
+
+window._closeSendModal = closeSendModal;
+window._confirmSend = confirmSend;
 
 async function deleteRow(id) {
   const req = _requests.find(r => r.id === id);
