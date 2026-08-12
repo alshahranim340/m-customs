@@ -1,5 +1,5 @@
 import { getAllDrivers, updateDriverArabicName, getDriversMissingArabic } from '../../../src/firebase/db.js';
-import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, updateDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../../../src/firebase/config.js';
 import { toast } from '../app.js';
 
@@ -30,7 +30,7 @@ export async function renderDrivers(container) {
         <div class="modern-stats modern-stats-3" id="drv-stats"></div>
 
         <div class="modern-search-bar" style="gap:8px;">
-          <input type="text" id="drv-search" placeholder="🔍 بحث بالاسم أو الإقامة..."
+          <input type="text" id="drv-search" placeholder="🔍 بحث بالاسم، الإقامة، أو رقم الشاحنة..."
             style="flex:1;border:1.5px solid #E8E5DC;border-radius:6px;padding:8px 14px;font-family:Tajawal,sans-serif;font-size:13px;outline:none;">
           <button class="drv-filter-btn active" data-filter="all">الكل</button>
           <button class="drv-filter-btn" data-filter="missing_ar">⚠ يحتاج ترجمة</button>
@@ -88,6 +88,13 @@ export async function renderDrivers(container) {
       .drv-btn:hover { background:#F5F3EC; }
       .drv-btn-primary { background:#1C4B8E;color:white;border-color:#1C4B8E; }
       .drv-btn-primary:hover { background:#0E1A2E; }
+      .drv-btn-danger {
+        background:transparent;border-color:#E8E5DC;color:#6B6659;
+        padding:6px 10px;
+      }
+      .drv-btn-danger:hover {
+        background:#FEF2F2;border-color:#CC2229;color:#CC2229;
+      }
     </style>`;
 
   // Wire up
@@ -172,12 +179,21 @@ function renderList() {
 
   // Search
   if (_search) {
-    list = list.filter(d =>
-      (d._displayNameEn || '').toLowerCase().includes(_search) ||
-      (d._displayNameAr || '').toLowerCase().includes(_search) ||
-      (d.name || '').toLowerCase().includes(_search) ||
-      (d.iqama || '').toLowerCase().includes(_search)
-    );
+    list = list.filter(d => {
+      // Search truck number (current + legacy vehicles array)
+      let trucks = [d.truck_number || ''];
+      if (d.vehicles && Array.isArray(d.vehicles)) {
+        trucks = trucks.concat(d.vehicles.map(v => v.plate || ''));
+      }
+      const truckMatch = trucks.some(t => t.toLowerCase().includes(_search));
+      return (
+        (d._displayNameEn || '').toLowerCase().includes(_search) ||
+        (d._displayNameAr || '').toLowerCase().includes(_search) ||
+        (d.name || '').toLowerCase().includes(_search) ||
+        (d.iqama || '').toLowerCase().includes(_search) ||
+        truckMatch
+      );
+    });
   }
 
   // Sort: missing_ar first, then by name
@@ -249,6 +265,9 @@ function renderCard(d, num) {
           ? `<button class="drv-btn drv-btn-primary" onclick="_editArabicName('${d.id}')"><i class="ti ti-language"></i> اسم عربي</button>`
           : `<button class="drv-btn" onclick="_editDriver('${d.id}')"><i class="ti ti-edit"></i> تعديل</button>`
         }
+        <button class="drv-btn drv-btn-danger" onclick="_deleteDriver('${d.id}')" title="حذف السائق">
+          <i class="ti ti-trash"></i>
+        </button>
       </div>
     </div>`;
 }
@@ -564,3 +583,97 @@ async function saveDriverModal(id, mode) {
 
 window._closeDriverModal = closeDriverModal;
 window._saveDriverModal = saveDriverModal;
+
+// ═════════════════════════════════════════════
+// DELETE DRIVER
+// ═════════════════════════════════════════════
+async function deleteDriver(id) {
+  const driver = _drivers.find(d => d.id === id);
+  if (!driver) return;
+
+  const existing = document.getElementById('drv-delete-modal');
+  if (existing) existing.remove();
+
+  const displayName = driver._displayNameAr || driver._displayNameEn || driver.name || 'السائق';
+
+  const modal = document.createElement('div');
+  modal.id = 'drv-delete-modal';
+  modal.innerHTML = `
+    <div class="drv-modal-backdrop" onclick="_closeDeleteModal(event)"></div>
+    <div class="drv-modal-box" style="max-width:440px;">
+
+      <div class="drv-modal-header" style="background:#FEF2F2;border-bottom-color:#FCA5A5;">
+        <div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#8A8578;letter-spacing:2px;font-weight:700;">SDS/DRIVER/DELETE</div>
+          <div style="font-size:20px;color:#CC2229;font-weight:800;margin-top:2px;">🗑 حذف السائق</div>
+        </div>
+        <button class="drv-modal-close" onclick="_closeDeleteModal(true)">
+          <i class="ti ti-x"></i>
+        </button>
+      </div>
+
+      <div class="drv-modal-body">
+        <div style="background:#FEF2F2;border:1px solid #FCA5A5;border-radius:6px;padding:14px 16px;">
+          <div style="display:flex;align-items:center;gap:8px;color:#CC2229;font-weight:800;font-size:14px;">
+            <i class="ti ti-alert-triangle"></i>
+            <span>هذا الإجراء لا يمكن التراجع عنه</span>
+          </div>
+          <div style="font-size:13px;color:#0E1A2E;margin-top:8px;line-height:1.6;">
+            سيتم حذف السائق: <span style="font-weight:800;">${displayName}</span>
+            <br>
+            الشحنات والطلبات المرتبطة به لن تُحذف، لكن ستفقد الربط.
+          </div>
+        </div>
+
+        <div style="background:white;border:1px solid #E8E5DC;border-radius:6px;padding:12px;margin-top:14px;">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:#8A8578;letter-spacing:1.5px;font-weight:700;">DRIVER INFO</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:12px;margin-top:8px;">
+            ${driver._displayNameEn ? `<div><span style="color:#8A8578;">EN:</span> <span style="direction:ltr;">${driver._displayNameEn}</span></div>` : ''}
+            ${driver._displayNameAr ? `<div><span style="color:#8A8578;">AR:</span> ${driver._displayNameAr}</div>` : ''}
+            ${driver.iqama ? `<div><span style="color:#8A8578;">IQAMA:</span> <span style="font-family:'JetBrains Mono',monospace;">${driver.iqama}</span></div>` : ''}
+            ${driver.nationality ? `<div><span style="color:#8A8578;">NAT:</span> ${driver.nationality}</div>` : ''}
+          </div>
+        </div>
+      </div>
+
+      <div class="drv-modal-footer">
+        <button class="drv-btn" onclick="_closeDeleteModal(true)">إلغاء</button>
+        <button class="drv-btn" style="background:#CC2229;color:white;border-color:#CC2229;" onclick="_confirmDeleteDriver('${id}')">
+          <i class="ti ti-trash"></i> نعم، احذف
+        </button>
+      </div>
+
+    </div>`;
+
+  document.body.appendChild(modal);
+}
+
+function closeDeleteModal(force) {
+  if (force !== true && !(force?.target?.classList?.contains?.('drv-modal-backdrop'))) return;
+  const modal = document.getElementById('drv-delete-modal');
+  if (modal) modal.remove();
+}
+
+async function confirmDeleteDriver(id) {
+  const modal = document.getElementById('drv-delete-modal');
+  if (modal) {
+    modal.querySelectorAll('button').forEach(b => b.disabled = true);
+    const confirmBtn = modal.querySelector('button[style*="CC2229"]');
+    if (confirmBtn) confirmBtn.innerHTML = '<i class="ti ti-loader"></i> جاري الحذف...';
+  }
+
+  try {
+    await deleteDoc(doc(db, 'drivers', id));
+    closeDeleteModal(true);
+    await loadData();
+    toast('✓ تم حذف السائق', 'success');
+  } catch (e) {
+    console.error(e);
+    toast('خطأ في الحذف', 'error');
+    if (modal) modal.querySelectorAll('button').forEach(b => b.disabled = false);
+  }
+}
+
+window._deleteDriver = deleteDriver;
+window._closeDeleteModal = closeDeleteModal;
+window._confirmDeleteDriver = confirmDeleteDriver;
