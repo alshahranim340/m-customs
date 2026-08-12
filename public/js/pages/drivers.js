@@ -646,7 +646,53 @@ async function deleteDriver(id) {
         </button>
       </div>
 
-    </div>`;
+    </div>
+
+    <style>
+      #drv-delete-modal {
+        position:fixed;inset:0;z-index:99999;
+        display:flex;align-items:center;justify-content:center;
+        padding:20px;font-family:'Tajawal',sans-serif;
+      }
+      #drv-delete-modal .drv-modal-backdrop {
+        position:absolute;inset:0;
+        background:rgba(14,26,46,0.65);backdrop-filter:blur(2px);
+      }
+      #drv-delete-modal .drv-modal-box {
+        position:relative;background:#FAFAF7;
+        border:1px solid #E8E5DC;border-radius:10px;
+        width:100%;max-width:440px;
+        display:flex;flex-direction:column;overflow:hidden;
+        box-shadow:0 20px 50px rgba(14,26,46,0.25);
+      }
+      #drv-delete-modal .drv-modal-header {
+        display:flex;justify-content:space-between;align-items:flex-start;
+        padding:20px 24px;border-bottom:1px solid #E8E5DC;
+      }
+      #drv-delete-modal .drv-modal-close {
+        background:transparent;border:1.5px solid #E8E5DC;
+        border-radius:6px;width:34px;height:34px;
+        display:flex;align-items:center;justify-content:center;
+        cursor:pointer;color:#6B6659;transition:all 0.15s;
+      }
+      #drv-delete-modal .drv-modal-close:hover {
+        background:#FEF2F2;border-color:#CC2229;color:#CC2229;
+      }
+      #drv-delete-modal .drv-modal-body {
+        padding:20px 24px;overflow-y:auto;
+      }
+      #drv-delete-modal .drv-modal-footer {
+        display:flex;justify-content:flex-end;gap:8px;
+        padding:16px 24px;background:white;border-top:1px solid #E8E5DC;
+      }
+      #drv-delete-modal .drv-btn {
+        background:white;border:1.5px solid #E8E5DC;border-radius:6px;
+        padding:9px 18px;font-family:'Tajawal',sans-serif;font-size:13px;
+        cursor:pointer;color:#0E1A2E;font-weight:700;
+        transition:all 0.15s;display:inline-flex;align-items:center;gap:6px;
+      }
+      #drv-delete-modal .drv-btn:hover { background:#F5F3EC; }
+    </style>`;
 
   document.body.appendChild(modal);
 }
