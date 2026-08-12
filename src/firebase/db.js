@@ -240,3 +240,52 @@ export async function updateShipment(shipmentId, updates) {
     updated_at: serverTimestamp()
   });
 }
+
+// ─────────────────────────────────────────────
+// CREATE SHIPMENT FROM TRANSPORT REQUEST
+// ─────────────────────────────────────────────
+// Automatically creates a shipment from a transport request.
+// Uses driver.name_ar if available, falls back to name_en.
+// Creates as 'draft' status - admin fills declaration#, date, attachments later.
+export async function createShipmentFromTransportRequest(req, driver) {
+  // Get plate from driver's most recent truck (or from request if driver is new)
+  const plate = req.truck_number || driver?.truck_number || '';
+
+  // Use arabic name if driver has one, otherwise english name
+  const driverDisplayName = driver?.name_ar?.trim() || driver?.name_en || req.driver_name || '';
+
+  const ref = await addDoc(collection(db, "shipments"), {
+    // Empty declaration# - admin fills later
+    declaration_no: '',
+    // Use dispatch_date as initial date (admin can change)
+    date: req.dispatch_date || '',
+    destination: req.destination || 'uae',
+    exporter: req.customer || '',
+    // Driver snapshot at time of creation
+    driver_id: driver?.id || null,
+    driver_snapshot: {
+      name: driverDisplayName,
+      name_en: driver?.name_en || req.driver_name || '',
+      nationality: driver?.nationality || req.driver_nationality || '',
+      passport_country: driver?.iqama || req.driver_id_number || '',
+      plate: plate,
+      plate_nationality: '',
+      vehicle_type: '',
+      carrier_type: '',
+      movement_ref: req.delivery_number || ''
+    },
+    // Extra transport info
+    material: req.material || '',
+    quantity: req.quantity || 0,
+    delivery_number: req.delivery_number || '',
+    // Link back to transport request
+    transport_request_id: req.id,
+    source: 'transport',
+    status: 'draft',
+    notes: req.notes || '',
+    created_at: serverTimestamp(),
+    updated_at: serverTimestamp()
+  });
+
+  return ref.id;
+}
