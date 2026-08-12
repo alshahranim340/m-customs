@@ -109,6 +109,9 @@ export async function renderDrivers(container) {
 
   window._editArabicName = editArabicName;
   window._editDriver = editDriver;
+  window._deleteDriver = deleteDriver;
+  window._closeDeleteModal = closeDeleteModal;
+  window._confirmDeleteDriver = confirmDeleteDriver;
 
   await loadData();
 }
