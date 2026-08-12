@@ -13,6 +13,7 @@ let _profile = null;
 let _requests = [];
 let _dropdowns = { customers: [], materials: [], nationalities: [] };
 let _drivers = []; // all drivers cached for autocomplete
+let _selected = new Set(); // selected request IDs for bulk print/export
 let _filter = 'all'; // all | draft | sent | converted
 let _search = '';
 
@@ -66,6 +67,12 @@ export async function renderTransportRequests(container) {
             <div class="modern-header-sub">TRANSPORT REQUESTS · EXCEL-LIKE ENTRY</div>
           </div>
           <div class="modern-header-actions">
+            <button class="modern-btn" id="btn-print-selected" onclick="_printSelected()" style="display:none;">
+              <i class="ti ti-printer"></i> طباعة <span id="print-count">0</span>
+            </button>
+            <button class="modern-btn" id="btn-excel-selected" onclick="_exportSelectedExcel()" style="display:none;">
+              <i class="ti ti-file-spreadsheet"></i> Excel
+            </button>
             <button class="modern-btn" onclick="navigate('transport-settings')">
               <i class="ti ti-settings"></i> إدارة القوائم
             </button>
@@ -95,6 +102,9 @@ export async function renderTransportRequests(container) {
               <table class="tr-table" style="width:100%;border-collapse:collapse;font-size:12px;min-width:1400px;">
                 <thead>
                   <tr style="background:#0E1A2E;color:white;">
+                    <th style="padding:10px 6px;text-align:center;width:36px;">
+                      <input type="checkbox" id="chk-select-all" style="accent-color:#2E8B57;cursor:pointer;" onclick="_toggleSelectAll(this)">
+                    </th>
                     <th style="padding:10px 6px;text-align:center;font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:1.5px;font-weight:800;width:40px;">#</th>
                     <th style="padding:10px 6px;text-align:right;font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:1.5px;font-weight:800;">TRUCK</th>
                     <th style="padding:10px 6px;text-align:right;font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:1.5px;font-weight:800;">DRIVER NAME</th>
@@ -235,7 +245,7 @@ function renderTable() {
 
   if (list.length === 0) {
     tbody.innerHTML = `
-      <tr><td colspan="13" style="padding:40px;text-align:center;">
+      <tr><td colspan="14" style="padding:40px;text-align:center;">
         <div style="font-size:44px;">🚛</div>
         <div style="font-size:14px;color:#0E1A2E;font-weight:700;margin-top:8px;">لا توجد طلبات نقل</div>
         <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#6B6659;margin-top:4px;letter-spacing:1px;">CLICK "صف جديد" TO ADD</div>
@@ -294,9 +304,13 @@ function renderRow(r, num) {
   const isSent = r.status === 'sent' || r.status === 'converted' || r.status === 'done';
   const rowClass = isSent ? 'tr-row tr-sent' : 'tr-row';
   const roCss = isSent ? 'readonly' : '';
+  const isSelected = _selected.has(r.id);
 
   return `
     <tr class="${rowClass}" data-id="${r.id}">
+      <td style="text-align:center;">
+        ${isSent ? `<input type="checkbox" class="tr-select" data-req-id="${r.id}" ${isSelected ? 'checked' : ''} onclick="_toggleSelect('${r.id}')" style="accent-color:#2E8B57;cursor:pointer;">` : ''}
+      </td>
       <td style="text-align:center;font-family:'JetBrains Mono',monospace;font-size:11px;color:#8A8578;font-weight:700;">${String(num).padStart(2,'0')}</td>
       <td><input type="text" class="tr-cell" data-field="truck_number" value="${r.truck_number||''}" ${roCss} placeholder="9691"></td>
       <td>
@@ -709,3 +723,239 @@ async function deleteRow(id) {
     toast('خطأ في الحذف', 'error');
   }
 }
+
+// ═════════════════════════════════════════════
+// SELECTION & PRINT / EXCEL EXPORT
+// ═════════════════════════════════════════════
+function toggleSelect(id) {
+  if (_selected.has(id)) _selected.delete(id);
+  else _selected.add(id);
+  updateBulkButtons();
+}
+
+function toggleSelectAll(el) {
+  const sentIds = _requests
+    .filter(r => r.status === 'sent' || r.status === 'converted' || r.status === 'done')
+    .map(r => r.id);
+  if (el.checked) {
+    sentIds.forEach(id => _selected.add(id));
+  } else {
+    sentIds.forEach(id => _selected.delete(id));
+  }
+  document.querySelectorAll('.tr-select').forEach(cb => { cb.checked = el.checked; });
+  updateBulkButtons();
+}
+
+function updateBulkButtons() {
+  const btnPrint = document.getElementById('btn-print-selected');
+  const btnExcel = document.getElementById('btn-excel-selected');
+  const cnt = document.getElementById('print-count');
+  if (!btnPrint) return;
+  if (_selected.size > 0) {
+    btnPrint.style.display = '';
+    btnExcel.style.display = '';
+    if (cnt) cnt.textContent = _selected.size;
+  } else {
+    btnPrint.style.display = 'none';
+    btnExcel.style.display = 'none';
+  }
+}
+
+function getSelectedRequests() {
+  return _requests.filter(r => _selected.has(r.id));
+}
+
+function printSelected() {
+  const items = getSelectedRequests();
+  if (items.length === 0) {
+    toast('حدد طلباً أولاً', 'error');
+    return;
+  }
+
+  const printWindow = window.open('', '_blank');
+  const now = new Date();
+  const dateStr = now.toLocaleDateString('ar-SA', { calendar: 'gregory' });
+  const timeStr = now.toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' });
+
+  const html = `
+<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+  <meta charset="UTF-8">
+  <title>طلبات النقل - ${dateStr}</title>
+  <style>
+    @page { size: A4 landscape; margin: 10mm; }
+    body {
+      font-family: 'Segoe UI', 'Tajawal', Arial, sans-serif;
+      padding: 0; margin: 0; color: #0E1A2E;
+    }
+    .print-header {
+      display: flex; justify-content: space-between; align-items: flex-start;
+      padding: 12px 16px; border-bottom: 3px solid #0E1A2E; margin-bottom: 12px;
+    }
+    .print-title-block h1 { font-size: 20px; margin: 0; font-weight: 800; }
+    .print-title-block .subtitle { font-size: 11px; color: #6B6659; margin-top: 2px; letter-spacing: 1px; }
+    .print-meta { text-align: left; font-size: 10px; color: #6B6659; }
+    .print-meta .code { font-family: 'Courier New', monospace; font-weight: 700; letter-spacing: 1.5px; color: #0E1A2E; }
+    table {
+      width: 100%; border-collapse: collapse; font-size: 10px;
+      table-layout: fixed;
+    }
+    thead th {
+      background: #E8F1FA; color: #0E1A2E;
+      border: 1px solid #7FA3C7;
+      padding: 6px 4px; text-align: center; font-weight: 700;
+      font-size: 9px; letter-spacing: .5px;
+    }
+    tbody td {
+      border: 1px solid #C0C6CE;
+      padding: 5px 4px; text-align: center;
+      background: white;
+    }
+    tbody tr:nth-child(even) td { background: #FBFBFB; }
+    .col-en { direction: ltr; font-family: 'Segoe UI', Arial, sans-serif; font-weight: 700; }
+    .col-num { font-family: 'Courier New', monospace; font-weight: 700; direction: ltr; }
+    .col-ar { direction: rtl; }
+    .print-footer {
+      margin-top: 20px; display: flex; justify-content: space-between;
+      padding: 12px 16px; border-top: 1px solid #E8E5DC;
+      font-size: 10px; color: #6B6659;
+    }
+    .signature-block { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 40px; margin-top: 30px; }
+    .sig { text-align: center; }
+    .sig-line { border-bottom: 1px solid #0E1A2E; height: 30px; margin-bottom: 4px; }
+    .sig-label { font-size: 10px; color: #6B6659; font-weight: 700; }
+    @media print {
+      .no-print { display: none !important; }
+    }
+    .no-print {
+      position: fixed; top: 10px; left: 10px; z-index: 100;
+      background: #0E1A2E; color: white; border: none;
+      padding: 10px 20px; border-radius: 6px; cursor: pointer;
+      font-family: 'Tajawal', sans-serif; font-size: 13px; font-weight: 700;
+    }
+  </style>
+</head>
+<body>
+  <button class="no-print" onclick="window.print()">🖨️ طباعة الآن</button>
+
+  <div class="print-header">
+    <div class="print-title-block">
+      <h1>🚛 طلبات النقل - قوة الفنيين</h1>
+      <div class="subtitle">TRANSPORT REQUESTS · SDS LOGISTICS</div>
+    </div>
+    <div class="print-meta">
+      <div class="code">SDS/TRANSPORT/${now.getFullYear()}</div>
+      <div style="margin-top:4px;">${dateStr} · ${timeStr}</div>
+      <div style="margin-top:2px;">${items.length} طلب</div>
+    </div>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th style="width:3%;">S/L</th>
+        <th style="width:6%;">Truck#</th>
+        <th style="width:16%;">Driver Name</th>
+        <th style="width:9%;">Driver#</th>
+        <th style="width:8%;">Nationality</th>
+        <th style="width:8%;">Customer</th>
+        <th style="width:7%;">Material</th>
+        <th style="width:5%;">Qty(M/T)</th>
+        <th style="width:7%;">Dispatch Date</th>
+        <th style="width:7%;">Delivery#</th>
+        <th style="width:6%;">Dest</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${items.map((r, i) => `
+        <tr>
+          <td class="col-num">${i + 1}</td>
+          <td class="col-num">${r.truck_number || '—'}</td>
+          <td class="col-en">${r.driver_name || '—'}</td>
+          <td class="col-num">${r.driver_id_number || '—'}</td>
+          <td class="col-ar">${r.driver_nationality || '—'}</td>
+          <td class="col-ar">${r.customer || '—'}</td>
+          <td class="col-ar">${r.material || '—'}</td>
+          <td class="col-num">${r.quantity || '—'}</td>
+          <td class="col-num">${r.dispatch_date || '—'}</td>
+          <td class="col-num">${r.delivery_number || '—'}</td>
+          <td class="col-ar">${(DEST_LABELS[r.destination]?.en || r.destination || '—').toUpperCase()}</td>
+        </tr>
+      `).join('')}
+    </tbody>
+  </table>
+
+  <div class="signature-block">
+    <div class="sig">
+      <div class="sig-line"></div>
+      <div class="sig-label">أُعدَّ بواسطة / PREPARED BY</div>
+    </div>
+    <div class="sig">
+      <div class="sig-line"></div>
+      <div class="sig-label">مسؤول النقل / TRANSPORT MANAGER</div>
+    </div>
+    <div class="sig">
+      <div class="sig-line"></div>
+      <div class="sig-label">مسؤول التخليص / CUSTOMS MANAGER</div>
+    </div>
+  </div>
+
+  <div class="print-footer">
+    <div>M-Customs System · قوة الفنيين</div>
+    <div>Page 1 of 1</div>
+  </div>
+
+  <script>
+    setTimeout(() => window.print(), 300);
+  </script>
+</body>
+</html>`;
+
+  printWindow.document.write(html);
+  printWindow.document.close();
+}
+
+function exportSelectedExcel() {
+  const items = getSelectedRequests();
+  if (items.length === 0) {
+    toast('حدد طلباً أولاً', 'error');
+    return;
+  }
+
+  const BOM = '\uFEFF';
+  let csv = BOM;
+
+  const now = new Date();
+  const dateStr = now.toLocaleDateString('ar-SA', { calendar: 'gregory' });
+
+  csv += `طلبات النقل - قوة الفنيين,${dateStr}\n`;
+  csv += `عدد الطلبات,${items.length}\n\n`;
+
+  csv += `S/L,Truck#,Driver Name,Driver#,Nationality,Customer,Material,Qty(M/T),Dispatch Date,Delivery#,Destination\n`;
+  items.forEach((r, i) => {
+    const dest = (DEST_LABELS[r.destination]?.en || r.destination || '').toUpperCase();
+    const nat = (r.driver_nationality || '').replace(/,/g, '،');
+    const cust = (r.customer || '').replace(/,/g, '،');
+    const mat = (r.material || '').replace(/,/g, '،');
+    const drv = (r.driver_name || '').replace(/,/g, ' ');
+    csv += `${i+1},${r.truck_number||''},"${drv}",${r.driver_id_number||''},"${nat}","${cust}","${mat}",${r.quantity||''},${r.dispatch_date||''},${r.delivery_number||''},${dest}\n`;
+  });
+
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `طلبات_النقل_${now.toISOString().slice(0,10)}.csv`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+
+  toast(`✓ تم تصدير ${items.length} طلب`, 'success');
+}
+
+window._toggleSelect = toggleSelect;
+window._toggleSelectAll = toggleSelectAll;
+window._printSelected = printSelected;
+window._exportSelectedExcel = exportSelectedExcel;
