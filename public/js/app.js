@@ -17,7 +17,7 @@ import { renderExportReport } from './pages/exportReport.js';
 import { renderTransportRequests } from './pages/transportRequests.js';
 import { renderTransportSettings } from './pages/transportSettings.js';
 import { getShipments } from '../../src/firebase/db.js';
-import { onAuthChange, ensureAdminProfile, getUserProfile, logOut, isAdmin, getCurrentUser, signInWithEmail } from '../../src/firebase/auth.js';
+import { onAuthChange, ensureAdminProfile, getUserProfile, logOut, isAdmin, getCurrentUser, signIn } from '../../src/firebase/auth.js';
 import { renderDashboard }      from './pages/dashboard.js';
 import { renderNewShipment }    from './pages/newShipment.js';
 import { renderShipments }      from './pages/shipments.js';
@@ -1479,7 +1479,7 @@ body{
     btn.innerHTML = '<div style="width:20px;height:20px;border:2px solid rgba(255,255,255,0.3);border-top-color:white;border-radius:50%;animation:spin 0.8s linear infinite;"></div>';
 
     try {
-      await signInWithEmail(email, password);
+      await signIn(email, password);
     } catch (e) {
       btn.disabled = false;
       btn.innerHTML = 'دخول <span class="btn-arrow">←</span>';
