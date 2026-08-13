@@ -61,7 +61,8 @@ export async function upsertTransportDriver(data) {
   const existing = await findDriverByEnOrIqama(data.name_en, data.iqama);
 
   if (existing) {
-    // Update mutable fields (phone, truck_number, nationality if changed)
+    // ALWAYS update mutable fields when they have new values
+    // (any change from transport dept is treated as authoritative for these)
     const updates = {
       updated_at: serverTimestamp(),
     };
@@ -72,9 +73,11 @@ export async function upsertTransportDriver(data) {
     if (data.nationality && data.nationality !== existing.nationality) {
       updates.nationality = data.nationality;
     }
-    // Also update name_en/iqama if user filled the missing one
+    if (data.iqama && data.iqama !== existing.iqama) {
+      updates.iqama = data.iqama;
+    }
+    // Fill english name if missing
     if (data.name_en && !existing.name_en) updates.name_en = data.name_en;
-    if (data.iqama && !existing.iqama) updates.iqama = data.iqama;
 
     if (Object.keys(updates).length > 1) { // more than just updated_at
       await updateDoc(doc(db, "drivers", existing.id), updates);
