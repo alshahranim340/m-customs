@@ -200,49 +200,201 @@ function showLoginPage() {
           </g>
         </svg>
 
-        <!-- Vehicle 1: Airplane (crosses top) -->
+        <!-- Vehicle 1: Realistic Airliner -->
         <div class="vehicle vehicle-plane">
-          <svg viewBox="0 0 64 64" width="64" height="64" fill="white">
-            <path d="M32 8c-1 0-2 .5-2.5 1.5L26 20 4 26c-1 .3-1.5 1-1.5 2v3c0 .8 1 1.3 1.7 1L26 26v10l-6 3v3l10-2 2 4 2-4 10 2v-3l-6-3V26l21.8 6c.7.3 1.7-.2 1.7-1v-3c0-1-.5-1.7-1.5-2L38 20l-3.5-10.5C34 8.5 33 8 32 8z"/>
+          <svg viewBox="0 0 200 80" width="180" height="72" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <linearGradient id="planeBody" x1="0" x2="0" y1="0" y2="1">
+                <stop offset="0" stop-color="#F5F7FA"/>
+                <stop offset="0.5" stop-color="#FFFFFF"/>
+                <stop offset="1" stop-color="#C7CED8"/>
+              </linearGradient>
+              <linearGradient id="planeStripe" x1="0" x2="1">
+                <stop offset="0" stop-color="#2563a8"/>
+                <stop offset="1" stop-color="#1C2D4E"/>
+              </linearGradient>
+            </defs>
+            <!-- Contrail -->
+            <ellipse cx="195" cy="42" rx="60" ry="1.5" fill="rgba(255,255,255,0.5)"/>
+            <ellipse cx="195" cy="42" rx="30" ry="0.8" fill="rgba(255,255,255,0.8)"/>
+            <!-- Main fuselage -->
+            <path d="M 20 40 Q 12 38 5 40 L 5 44 Q 12 46 20 44 L 175 44 Q 190 44 195 42 Q 190 40 175 40 Z" fill="url(#planeBody)" stroke="#8A93A0" stroke-width="0.4"/>
+            <!-- Blue stripe -->
+            <rect x="20" y="41.5" width="155" height="1.2" fill="url(#planeStripe)"/>
+            <!-- Windows row -->
+            <g fill="#0E1A2E">
+              ${Array.from({length: 25}, (_, i) => `<circle cx="${28 + i * 5.5}" cy="41.5" r="0.6"/>`).join('')}
+            </g>
+            <!-- Cockpit windows -->
+            <path d="M 8 41 L 18 39 L 18 42 L 8 42 Z" fill="#4A5A6E"/>
+            <!-- Main wing -->
+            <path d="M 85 44 L 60 60 L 78 60 L 105 46 Z" fill="url(#planeBody)" stroke="#8A93A0" stroke-width="0.3"/>
+            <path d="M 105 44 L 130 58 L 148 58 L 115 44 Z" fill="url(#planeBody)" stroke="#8A93A0" stroke-width="0.3" opacity="0.9"/>
+            <!-- Engine 1 -->
+            <ellipse cx="82" cy="52" rx="6" ry="3.2" fill="#3A4552"/>
+            <ellipse cx="79" cy="52" rx="2" ry="2.6" fill="#1C2D4E"/>
+            <!-- Engine 2 -->
+            <ellipse cx="128" cy="50" rx="5" ry="2.8" fill="#3A4552"/>
+            <ellipse cx="125.5" cy="50" rx="1.8" ry="2.3" fill="#1C2D4E"/>
+            <!-- Tail wings -->
+            <path d="M 165 40 L 180 30 L 185 32 L 175 42 Z" fill="url(#planeBody)" stroke="#8A93A0" stroke-width="0.3"/>
+            <path d="M 165 44 L 180 52 L 185 50 L 175 42 Z" fill="url(#planeBody)" stroke="#8A93A0" stroke-width="0.3"/>
+            <!-- Vertical stabilizer -->
+            <path d="M 170 40 L 188 26 L 195 30 L 178 42 Z" fill="url(#planeStripe)"/>
+            <!-- Nose highlight -->
+            <ellipse cx="8" cy="41" rx="3" ry="2" fill="rgba(255,255,255,0.5)"/>
           </svg>
         </div>
 
-        <!-- Vehicle 2: Ship (crosses middle) -->
+        <!-- Vehicle 2: Realistic Cargo Ship with containers -->
         <div class="vehicle vehicle-ship">
-          <svg viewBox="0 0 80 60" width="80" height="60" fill="white">
-            <!-- Waves -->
-            <path d="M0 48 Q 10 44 20 48 T 40 48 T 60 48 T 80 48 V 60 H 0 Z" opacity="0.4"/>
-            <!-- Hull -->
-            <path d="M8 38 L 72 38 L 66 48 L 14 48 Z"/>
-            <!-- Container stacks -->
-            <rect x="18" y="26" width="10" height="12" fill="#2563a8"/>
-            <rect x="30" y="26" width="10" height="12" fill="#CC2229"/>
-            <rect x="42" y="26" width="10" height="12" fill="#2E8B57"/>
-            <rect x="22" y="18" width="10" height="8" fill="#c8943a"/>
-            <rect x="34" y="18" width="10" height="8" fill="#1C2D4E"/>
-            <!-- Bridge -->
-            <rect x="52" y="20" width="14" height="18"/>
-            <rect x="56" y="14" width="6" height="6"/>
+          <svg viewBox="0 0 260 120" width="240" height="110" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <linearGradient id="hullGrad" x1="0" x2="0" y1="0" y2="1">
+                <stop offset="0" stop-color="#1C2D4E"/>
+                <stop offset="1" stop-color="#0B1628"/>
+              </linearGradient>
+              <linearGradient id="waterGrad" x1="0" x2="0" y1="0" y2="1">
+                <stop offset="0" stop-color="rgba(79,209,197,0.4)"/>
+                <stop offset="1" stop-color="rgba(37,99,168,0.2)"/>
+              </linearGradient>
+            </defs>
+            <!-- Water waves -->
+            <path d="M 0 88 Q 15 84 30 88 T 60 88 T 90 88 T 120 88 T 150 88 T 180 88 T 210 88 T 240 88 T 260 88 V 120 H 0 Z" fill="url(#waterGrad)"/>
+            <path d="M 0 94 Q 20 90 40 94 T 80 94 T 120 94 T 160 94 T 200 94 T 240 94 T 260 94 V 120 H 0 Z" fill="rgba(255,255,255,0.15)"/>
+            <!-- Hull (main body) -->
+            <path d="M 20 60 L 235 60 L 250 78 L 235 92 L 25 92 L 10 78 Z" fill="url(#hullGrad)" stroke="#0E1A2E" stroke-width="0.5"/>
+            <!-- Waterline stripe -->
+            <path d="M 20 82 L 235 82 L 240 88 L 20 88 Z" fill="#CC2229"/>
+            <!-- Hull details/portholes -->
+            <g fill="rgba(255,255,255,0.15)">
+              ${Array.from({length: 12}, (_, i) => `<circle cx="${35 + i * 15}" cy="72" r="1.5"/>`).join('')}
+            </g>
+            <!-- Container stacks (multiple rows and columns) -->
+            <!-- Row 1 (bottom) -->
+            ${['#CC2229', '#2E8B57', '#c8943a', '#2563a8', '#8B4513', '#CC2229', '#2E8B57', '#c8943a', '#2563a8', '#CC2229'].map((color, i) => `
+              <rect x="${28 + i * 20}" y="46" width="18" height="14" fill="${color}" stroke="#0E1A2E" stroke-width="0.4"/>
+              <line x1="${28 + i * 20}" y1="52" x2="${46 + i * 20}" y2="52" stroke="rgba(0,0,0,0.3)" stroke-width="0.3"/>
+              <line x1="${37 + i * 20}" y1="46" x2="${37 + i * 20}" y2="60" stroke="rgba(0,0,0,0.3)" stroke-width="0.3"/>
+            `).join('')}
+            <!-- Row 2 (middle) -->
+            ${['#2563a8', '#CC2229', '#c8943a', '#2E8B57', '#8B4513', '#2E8B57', '#CC2229', '#c8943a', '#2563a8'].map((color, i) => `
+              <rect x="${38 + i * 20}" y="32" width="18" height="14" fill="${color}" stroke="#0E1A2E" stroke-width="0.4" opacity="0.95"/>
+              <line x1="${38 + i * 20}" y1="38" x2="${56 + i * 20}" y2="38" stroke="rgba(0,0,0,0.3)" stroke-width="0.3"/>
+            `).join('')}
+            <!-- Row 3 (top, fewer containers) -->
+            ${['#c8943a', '#2E8B57', '#CC2229', '#2563a8', '#c8943a'].map((color, i) => `
+              <rect x="${58 + i * 20}" y="18" width="18" height="14" fill="${color}" stroke="#0E1A2E" stroke-width="0.4" opacity="0.9"/>
+            `).join('')}
+            <!-- Bridge/Superstructure -->
+            <rect x="200" y="30" width="28" height="30" fill="#F5F7FA" stroke="#8A93A0" stroke-width="0.4"/>
+            <rect x="203" y="34" width="22" height="4" fill="#2563a8"/>
+            <rect x="203" y="41" width="22" height="4" fill="#2563a8"/>
+            <rect x="203" y="48" width="22" height="4" fill="#2563a8"/>
+            <!-- Antenna/mast -->
+            <line x1="214" y1="30" x2="214" y2="12" stroke="#8A93A0" stroke-width="0.6"/>
+            <circle cx="214" cy="12" r="1.2" fill="#CC2229"/>
+            <!-- Smoke stack -->
+            <rect x="215" y="20" width="8" height="14" fill="#3A4552"/>
+            <rect x="216" y="18" width="6" height="4" fill="#1C2D4E"/>
+            <!-- Smoke puffs -->
+            <circle cx="219" cy="14" r="2.5" fill="rgba(200,200,200,0.4)"/>
+            <circle cx="222" cy="10" r="3" fill="rgba(200,200,200,0.3)"/>
+            <circle cx="225" cy="6" r="3.5" fill="rgba(200,200,200,0.2)"/>
+            <!-- Bow anchor detail -->
+            <path d="M 15 68 L 22 72 L 15 76 Z" fill="#F5F7FA" opacity="0.6"/>
           </svg>
         </div>
 
-        <!-- Vehicle 3: Truck (crosses bottom) -->
+        <!-- Vehicle 3: Realistic Semi-Truck with trailer -->
         <div class="vehicle vehicle-truck">
-          <svg viewBox="0 0 100 50" width="100" height="50" fill="white">
-            <!-- Trailer -->
-            <rect x="0" y="12" width="60" height="26" rx="2"/>
-            <!-- Cab -->
-            <rect x="60" y="18" width="24" height="20" rx="2"/>
-            <rect x="66" y="22" width="14" height="10" fill="#1C2D4E"/>
-            <!-- Wheels -->
-            <circle cx="14" cy="42" r="6" fill="#1C2D4E"/>
-            <circle cx="14" cy="42" r="3" fill="white"/>
-            <circle cx="46" cy="42" r="6" fill="#1C2D4E"/>
-            <circle cx="46" cy="42" r="3" fill="white"/>
-            <circle cx="74" cy="42" r="6" fill="#1C2D4E"/>
-            <circle cx="74" cy="42" r="3" fill="white"/>
-            <!-- Logo detail -->
-            <rect x="8" y="20" width="44" height="10" fill="rgba(28,45,78,0.3)" rx="1"/>
+          <svg viewBox="0 0 220 90" width="200" height="82" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <linearGradient id="trailerGrad" x1="0" x2="0" y1="0" y2="1">
+                <stop offset="0" stop-color="#F8FAFB"/>
+                <stop offset="0.5" stop-color="#E8ECF1"/>
+                <stop offset="1" stop-color="#B8C0CB"/>
+              </linearGradient>
+              <linearGradient id="cabGrad" x1="0" x2="0" y1="0" y2="1">
+                <stop offset="0" stop-color="#2563a8"/>
+                <stop offset="1" stop-color="#1C2D4E"/>
+              </linearGradient>
+            </defs>
+            <!-- Trailer body -->
+            <rect x="8" y="20" width="130" height="45" fill="url(#trailerGrad)" stroke="#5A6474" stroke-width="0.5" rx="1"/>
+            <!-- Trailer horizontal ribbing -->
+            ${Array.from({length: 8}, (_, i) => `<line x1="8" y1="${25 + i * 5}" x2="138" y2="${25 + i * 5}" stroke="#8A93A0" stroke-width="0.2" opacity="0.5"/>`).join('')}
+            <!-- Company logo panel on trailer -->
+            <rect x="30" y="35" width="80" height="18" fill="rgba(28,45,78,0.08)" stroke="rgba(28,45,78,0.2)" stroke-width="0.5" rx="1"/>
+            <text x="70" y="46" fill="#1C2D4E" font-family="Segoe UI, sans-serif" font-size="9" font-weight="800" text-anchor="middle" opacity="0.6">SDS · LOGISTICS</text>
+            <!-- Trailer door lines -->
+            <line x1="8" y1="20" x2="8" y2="65" stroke="#5A6474" stroke-width="0.8"/>
+            <line x1="12" y1="24" x2="12" y2="61" stroke="#8A93A0" stroke-width="0.3"/>
+            <!-- Trailer support -->
+            <rect x="140" y="55" width="6" height="10" fill="#3A4552"/>
+            <!-- Cab/Tractor -->
+            <path d="M 148 30 L 178 30 L 195 40 L 195 65 L 148 65 Z" fill="url(#cabGrad)" stroke="#0B1628" stroke-width="0.4"/>
+            <!-- Windshield -->
+            <path d="M 152 35 L 176 35 L 190 43 L 190 50 L 152 50 Z" fill="#4A6580" opacity="0.9"/>
+            <path d="M 154 37 L 174 37 L 186 43 L 186 47 L 154 47 Z" fill="#7BA0C0" opacity="0.7"/>
+            <!-- Grille -->
+            <rect x="190" y="52" width="5" height="10" fill="#0B1628"/>
+            <line x1="190" y1="54" x2="195" y2="54" stroke="#8A93A0" stroke-width="0.3"/>
+            <line x1="190" y1="56" x2="195" y2="56" stroke="#8A93A0" stroke-width="0.3"/>
+            <line x1="190" y1="58" x2="195" y2="58" stroke="#8A93A0" stroke-width="0.3"/>
+            <!-- Headlight -->
+            <circle cx="192" cy="47" r="1.8" fill="#FFF6C1" stroke="#8A93A0" stroke-width="0.3"/>
+            <!-- Side mirror -->
+            <rect x="180" y="30" width="3" height="4" fill="#1C2D4E"/>
+            <!-- Exhaust stack -->
+            <rect x="149" y="18" width="3" height="14" fill="#3A4552"/>
+            <rect x="148.5" y="17" width="4" height="1.5" fill="#1C2D4E"/>
+            <!-- Fuel tank -->
+            <ellipse cx="163" cy="68" rx="6" ry="4" fill="#8A93A0"/>
+            <!-- Wheels: Trailer (4 wheels — 2 axles at back) -->
+            <g>
+              <circle cx="30" cy="68" r="8" fill="#0B1628"/>
+              <circle cx="30" cy="68" r="5" fill="#3A4552"/>
+              <circle cx="30" cy="68" r="1.5" fill="#8A93A0"/>
+              <line x1="24" y1="68" x2="36" y2="68" stroke="#8A93A0" stroke-width="0.4"/>
+              <line x1="30" y1="62" x2="30" y2="74" stroke="#8A93A0" stroke-width="0.4"/>
+            </g>
+            <g>
+              <circle cx="50" cy="68" r="8" fill="#0B1628"/>
+              <circle cx="50" cy="68" r="5" fill="#3A4552"/>
+              <circle cx="50" cy="68" r="1.5" fill="#8A93A0"/>
+              <line x1="44" y1="68" x2="56" y2="68" stroke="#8A93A0" stroke-width="0.4"/>
+              <line x1="50" y1="62" x2="50" y2="74" stroke="#8A93A0" stroke-width="0.4"/>
+            </g>
+            <g>
+              <circle cx="110" cy="68" r="8" fill="#0B1628"/>
+              <circle cx="110" cy="68" r="5" fill="#3A4552"/>
+              <circle cx="110" cy="68" r="1.5" fill="#8A93A0"/>
+              <line x1="104" y1="68" x2="116" y2="68" stroke="#8A93A0" stroke-width="0.4"/>
+              <line x1="110" y1="62" x2="110" y2="74" stroke="#8A93A0" stroke-width="0.4"/>
+            </g>
+            <g>
+              <circle cx="130" cy="68" r="8" fill="#0B1628"/>
+              <circle cx="130" cy="68" r="5" fill="#3A4552"/>
+              <circle cx="130" cy="68" r="1.5" fill="#8A93A0"/>
+              <line x1="124" y1="68" x2="136" y2="68" stroke="#8A93A0" stroke-width="0.4"/>
+              <line x1="130" y1="62" x2="130" y2="74" stroke="#8A93A0" stroke-width="0.4"/>
+            </g>
+            <!-- Cab wheels -->
+            <g>
+              <circle cx="160" cy="68" r="9" fill="#0B1628"/>
+              <circle cx="160" cy="68" r="5.5" fill="#3A4552"/>
+              <circle cx="160" cy="68" r="1.8" fill="#8A93A0"/>
+              <line x1="154" y1="68" x2="166" y2="68" stroke="#8A93A0" stroke-width="0.4"/>
+              <line x1="160" y1="62" x2="160" y2="74" stroke="#8A93A0" stroke-width="0.4"/>
+            </g>
+            <g>
+              <circle cx="185" cy="68" r="9" fill="#0B1628"/>
+              <circle cx="185" cy="68" r="5.5" fill="#3A4552"/>
+              <circle cx="185" cy="68" r="1.8" fill="#8A93A0"/>
+              <line x1="179" y1="68" x2="191" y2="68" stroke="#8A93A0" stroke-width="0.4"/>
+              <line x1="185" y1="62" x2="185" y2="74" stroke="#8A93A0" stroke-width="0.4"/>
+            </g>
           </svg>
         </div>
 
@@ -268,7 +420,7 @@ function showLoginPage() {
               <div class="logo-year">EST · 2026</div>
             </div>
             <div class="login-title">مرحباً بعودتك</div>
-            <div class="login-subtitle">نظام التخليص الجمركي — قوة الفنيين</div>
+            <div class="login-subtitle">نظام التخليص الجمركي — السديس اللوجستية</div>
           </div>
 
           ${wasIdleLogout ? `
@@ -324,7 +476,7 @@ function showLoginPage() {
           <div class="login-footer">
             <div class="footer-line">
               <span class="footer-dot"></span>
-              <span>شركة قوة الفنيين للخدمات اللوجستية</span>
+              <span>شركة السديس اللوجستية</span>
               <span class="footer-dot"></span>
             </div>
             <div class="footer-code">SDS/AUTH/${new Date().getFullYear()}</div>
@@ -392,39 +544,64 @@ function showLoginPage() {
       /* Vehicles */
       .vehicle {
         position: absolute;
-        filter: drop-shadow(0 4px 12px rgba(0,0,0,0.3));
+        filter: drop-shadow(0 6px 20px rgba(0,0,0,0.4));
       }
       .vehicle-plane {
-        top: 12%;
-        animation: flyRTL 18s linear infinite;
+        top: 8%;
+        animation: flyAcross 22s linear infinite;
       }
       .vehicle-ship {
-        top: 52%;
-        animation: sailRTL 25s linear infinite;
+        top: 48%;
+        animation: sailAcross 32s linear infinite;
       }
       .vehicle-truck {
-        top: 78%;
-        animation: driveRTL 20s linear infinite 3s;
+        top: 76%;
+        animation: driveAcross 24s linear infinite 4s;
       }
-      @keyframes flyRTL {
-        0% { transform: translateX(-100px) rotate(-8deg); opacity: 0; }
-        10% { opacity: 1; }
-        50% { transform: translateX(50vw) rotate(-8deg) translateY(-15px); opacity: 1; }
-        90% { opacity: 1; }
-        100% { transform: translateX(calc(100vw + 100px)) rotate(-8deg); opacity: 0; }
-      }
-      @keyframes sailRTL {
-        0% { transform: translateX(-120px); opacity: 0; }
+      /* Planes come from right side (like reading direction) and go left, with subtle vertical movement */
+      @keyframes flyAcross {
+        0% {
+          transform: translateX(calc(100vw + 200px)) translateY(0);
+          opacity: 0;
+        }
         8% { opacity: 1; }
-        50% { transform: translateX(50vw) translateY(-4px); }
+        50% {
+          transform: translateX(50vw) translateY(-20px);
+        }
         92% { opacity: 1; }
-        100% { transform: translateX(calc(100vw + 120px)); opacity: 0; }
+        100% {
+          transform: translateX(-250px) translateY(0);
+          opacity: 0;
+        }
       }
-      @keyframes driveRTL {
-        0% { transform: translateX(-120px); opacity: 0; }
-        10% { opacity: 1; }
-        90% { opacity: 1; }
-        100% { transform: translateX(calc(100vw + 120px)); opacity: 0; }
+      /* Ship sails slowly with gentle bobbing */
+      @keyframes sailAcross {
+        0% {
+          transform: translateX(calc(100vw + 260px)) translateY(0);
+          opacity: 0;
+        }
+        6% { opacity: 1; }
+        25% { transform: translateX(70vw) translateY(-3px); }
+        50% { transform: translateX(50vw) translateY(0); }
+        75% { transform: translateX(30vw) translateY(-3px); }
+        94% { opacity: 1; }
+        100% {
+          transform: translateX(-260px) translateY(0);
+          opacity: 0;
+        }
+      }
+      /* Truck drives steadily across */
+      @keyframes driveAcross {
+        0% {
+          transform: translateX(calc(100vw + 220px));
+          opacity: 0;
+        }
+        8% { opacity: 1; }
+        92% { opacity: 1; }
+        100% {
+          transform: translateX(-220px);
+          opacity: 0;
+        }
       }
 
       /* Floating particles */
