@@ -178,25 +178,70 @@ function showLoginPage() {
 
       <!-- Animated background -->
       <div class="login-bg">
-        <!-- World map SVG -->
-        <svg class="world-map" viewBox="0 0 1200 600" xmlns="http://www.w3.org/2000/svg">
-          <!-- Simplified continents as dots pattern -->
-          <g class="continents" fill="rgba(255,255,255,0.15)">
-            ${_generateWorldDots()}
+        <!-- World map SVG (proper continents) -->
+        <svg class="world-map" viewBox="0 0 1000 500" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet">
+          <g class="continents" fill="rgba(255,255,255,0.13)" stroke="rgba(255,255,255,0.22)" stroke-width="0.7">
+            <!-- North America -->
+            <path d="M 145 95 Q 130 105 122 130 L 118 158 Q 122 175 135 188 L 155 210 Q 175 218 195 220 L 220 218 L 235 208 Q 245 198 250 185 L 255 168 L 258 145 L 252 128 L 240 115 L 220 108 L 200 98 L 175 92 Z"/>
+            <path d="M 130 195 L 140 215 L 155 225 L 168 245 L 185 265 L 195 285 L 200 260 L 195 240 L 185 225 L 172 215 L 160 205 Z"/>
+            <!-- South America -->
+            <path d="M 235 260 L 245 285 L 255 315 L 262 345 L 268 375 L 265 400 L 258 420 L 248 428 L 238 420 L 232 400 L 228 375 L 225 345 L 222 315 L 225 285 L 230 268 Z"/>
+            <!-- Europe -->
+            <path d="M 465 110 L 490 105 L 515 108 L 535 115 L 545 130 L 540 148 L 528 158 L 510 162 L 490 160 L 475 155 L 460 145 L 455 128 Z"/>
+            <path d="M 490 165 L 505 175 L 512 190 L 508 200 L 495 198 L 485 188 L 482 175 Z"/>
+            <!-- Africa -->
+            <path d="M 475 195 L 495 195 L 520 200 L 545 215 L 560 240 L 570 268 L 575 300 L 570 328 L 555 355 L 535 375 L 510 385 L 490 380 L 475 365 L 465 340 L 460 310 L 458 280 L 462 245 L 468 220 Z"/>
+            <!-- Middle East / Arabia (highlighted region) -->
+            <path d="M 555 195 L 585 198 L 605 205 L 615 220 L 610 235 L 595 245 L 578 248 L 565 238 L 555 220 Z" fill="rgba(200,148,58,0.25)" stroke="rgba(200,148,58,0.4)"/>
+            <!-- Asia -->
+            <path d="M 555 108 L 590 100 L 625 98 L 665 105 L 705 115 L 745 128 L 785 145 L 820 165 L 838 185 L 830 200 L 800 210 L 765 208 L 730 205 L 700 200 L 670 195 L 640 190 L 615 185 L 590 175 L 570 160 L 558 140 Z"/>
+            <!-- India -->
+            <path d="M 660 205 L 685 210 L 700 225 L 705 245 L 695 265 L 680 275 L 665 268 L 655 250 L 655 225 Z"/>
+            <!-- Southeast Asia -->
+            <path d="M 745 220 L 770 225 L 790 235 L 800 250 L 795 265 L 780 268 L 760 260 L 745 245 L 740 230 Z"/>
+            <!-- Indonesia (scattered islands) -->
+            <ellipse cx="800" cy="285" rx="18" ry="6"/>
+            <ellipse cx="825" cy="290" rx="14" ry="5"/>
+            <ellipse cx="850" cy="295" rx="12" ry="5"/>
+            <ellipse cx="775" cy="278" rx="10" ry="4"/>
+            <!-- Australia -->
+            <path d="M 810 335 L 845 332 L 880 338 L 895 355 L 890 375 L 865 385 L 830 385 L 810 375 L 800 358 Z"/>
+            <!-- Japan -->
+            <ellipse cx="880" cy="175" rx="8" ry="18" transform="rotate(-20 880 175)"/>
+            <!-- UK -->
+            <ellipse cx="470" cy="128" rx="7" ry="12"/>
+            <!-- Madagascar -->
+            <ellipse cx="590" cy="330" rx="6" ry="14"/>
           </g>
-          <!-- Trade routes (animated dashed lines) -->
-          <g class="routes" stroke="rgba(255,255,255,0.35)" stroke-width="1.5" fill="none" stroke-dasharray="4 6">
-            <path class="route-1" d="M 200,300 Q 500,150 800,280" />
-            <path class="route-2" d="M 300,400 Q 600,500 950,350" />
-            <path class="route-3" d="M 150,200 Q 400,350 700,180" />
+          <!-- Trade routes -->
+          <g class="routes" stroke="rgba(200,148,58,0.55)" stroke-width="1.5" fill="none" stroke-dasharray="5 8">
+            <!-- Jeddah → UAE -->
+            <path class="route-1" d="M 585 225 Q 610 218 640 220" />
+            <!-- Jeddah → Europe -->
+            <path class="route-2" d="M 585 225 Q 540 180 495 145" />
+            <!-- Jeddah → East Asia -->
+            <path class="route-3" d="M 585 225 Q 680 220 780 235" />
+            <!-- Trans-Atlantic -->
+            <path class="route-4" d="M 470 130 Q 340 145 195 175" stroke="rgba(79,209,197,0.45)"/>
           </g>
-          <!-- Cities as glowing dots -->
+          <!-- Cities (glowing pulse dots) -->
           <g class="cities">
-            <circle cx="220" cy="290" r="4" class="city-dot city-1" />
-            <circle cx="800" cy="280" r="4" class="city-dot city-2" />
-            <circle cx="300" cy="400" r="4" class="city-dot city-3" />
-            <circle cx="950" cy="350" r="4" class="city-dot city-4" />
-            <circle cx="600" cy="220" r="4" class="city-dot city-5" />
+            <!-- Jeddah (hub, larger, gold) -->
+            <circle cx="585" cy="225" r="5" class="city-dot city-hub" fill="#c8943a"/>
+            <circle cx="585" cy="225" r="10" fill="none" stroke="rgba(200,148,58,0.4)" stroke-width="1">
+              <animate attributeName="r" values="7;18;7" dur="3s" repeatCount="indefinite"/>
+              <animate attributeName="opacity" values="0.8;0;0.8" dur="3s" repeatCount="indefinite"/>
+            </circle>
+            <!-- Dubai -->
+            <circle cx="640" cy="220" r="4" class="city-dot city-1" fill="#4FD1C5"/>
+            <!-- Bahrain -->
+            <circle cx="622" cy="218" r="3" class="city-dot city-2" fill="#4FD1C5"/>
+            <!-- London -->
+            <circle cx="470" cy="128" r="4" class="city-dot city-3" fill="#4FD1C5"/>
+            <!-- Singapore -->
+            <circle cx="780" cy="260" r="4" class="city-dot city-4" fill="#4FD1C5"/>
+            <!-- New York -->
+            <circle cx="195" cy="175" r="4" class="city-dot city-5" fill="#4FD1C5"/>
           </g>
         </svg>
 
@@ -353,12 +398,14 @@ function showLoginPage() {
         position: absolute;
         top: 50%; left: 50%;
         transform: translate(-50%, -50%);
-        width: 90%; height: 90%;
-        opacity: 0.4;
+        width: 92%; height: 92%;
+        opacity: 0.55;
       }
       .city-dot {
-        fill: #4FD1C5;
-        filter: drop-shadow(0 0 6px rgba(79, 209, 197, 0.8));
+        filter: drop-shadow(0 0 8px rgba(79, 209, 197, 0.9));
+      }
+      .city-hub {
+        filter: drop-shadow(0 0 12px rgba(200, 148, 58, 1));
       }
       .city-1 { animation: cityPulse 2s ease-in-out infinite; }
       .city-2 { animation: cityPulse 2s ease-in-out infinite 0.4s; }
@@ -366,14 +413,15 @@ function showLoginPage() {
       .city-4 { animation: cityPulse 2s ease-in-out infinite 1.2s; }
       .city-5 { animation: cityPulse 2s ease-in-out infinite 1.6s; }
       @keyframes cityPulse {
-        0%, 100% { opacity: 0.5; r: 4; }
-        50% { opacity: 1; r: 6; }
+        0%, 100% { opacity: 0.55; r: 3.5; }
+        50% { opacity: 1; r: 5.5; }
       }
-      .route-1 { animation: dashFlow 6s linear infinite; }
-      .route-2 { animation: dashFlow 8s linear infinite reverse; }
-      .route-3 { animation: dashFlow 10s linear infinite; }
+      .route-1 { animation: dashFlow 8s linear infinite; }
+      .route-2 { animation: dashFlow 10s linear infinite reverse; }
+      .route-3 { animation: dashFlow 12s linear infinite; }
+      .route-4 { animation: dashFlow 14s linear infinite reverse; }
       @keyframes dashFlow {
-        to { stroke-dashoffset: -50; }
+        to { stroke-dashoffset: -60; }
       }
 
       /* Vehicles orbit around the card in curved 3D paths */
@@ -406,11 +454,11 @@ function showLoginPage() {
 
       /* Plane: crosses top of screen from right to left */
       @keyframes orbitPlane {
-        0%   { transform: translate(60vw, -35vh) scale(0.55); opacity: 0; }
+        0%   { transform: translate(60vw, -22vh) scale(0.55); opacity: 0; }
         8%   { opacity: 1; }
-        50%  { transform: translate(0, -32vh) scale(0.9); }
+        50%  { transform: translate(0, -18vh) scale(0.9); }
         92%  { opacity: 1; }
-        100% { transform: translate(-60vw, -35vh) scale(0.55); opacity: 0; }
+        100% { transform: translate(-60vw, -22vh) scale(0.55); opacity: 0; }
       }
 
       /* Ship: sails across middle from right to left */
@@ -903,39 +951,6 @@ function showLoginPage() {
     s.textContent = '@keyframes spin { to { transform: rotate(360deg); } }';
     document.head.appendChild(s);
   }
-}
-
-// Generate world map dots
-function _generateWorldDots() {
-  // Simplified continents outline (approximate coordinates)
-  const continents = [
-    // Europe
-    {x: 550, y: 180, w: 90, h: 70},
-    // Asia
-    {x: 700, y: 170, w: 200, h: 130},
-    // Africa
-    {x: 570, y: 260, w: 100, h: 180},
-    // N. America
-    {x: 150, y: 170, w: 180, h: 130},
-    // S. America
-    {x: 280, y: 320, w: 80, h: 160},
-    // Australia
-    {x: 880, y: 400, w: 90, h: 60},
-  ];
-  let dots = '';
-  continents.forEach(c => {
-    for (let y = c.y; y < c.y + c.h; y += 12) {
-      for (let x = c.x; x < c.x + c.w; x += 12) {
-        // Random offset for organic look
-        const jitterX = (Math.sin(x * y) + 1) * 3;
-        const jitterY = (Math.cos(x + y) + 1) * 3;
-        if (Math.random() > 0.3) {
-          dots += `<circle cx="${x + jitterX}" cy="${y + jitterY}" r="1.5"/>`;
-        }
-      }
-    }
-  });
-  return dots;
 }
 
 // ─────────────────────────────────────────────
