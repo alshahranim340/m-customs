@@ -157,6 +157,27 @@ export async function renderTransportRequests(container) {
       .tr-icon-btn:hover { background:#F0EDE4;color:#0E1A2E; }
       .tr-icon-btn.tr-danger:hover { color:#CC2229;background:#FEF2F2; }
       .tr-icon-btn.tr-success:hover { color:#2E8B57;background:#E7F5EE; }
+
+      #tr-driver-dropdown {
+        position:absolute;
+        display:none;
+        background:white;
+        border:2px solid #0E1A2E;
+        border-radius:6px;
+        box-shadow:0 8px 24px rgba(14,26,46,0.18);
+        z-index:9998;
+        max-height:400px;
+        overflow-y:auto;
+        font-family:'Tajawal',sans-serif;
+      }
+      .tr-dd-item {
+        padding:10px 12px;
+        border-bottom:1px solid #F0EDE4;
+        cursor:pointer;
+        transition:background 0.1s;
+      }
+      .tr-dd-item:last-child { border-bottom:none; }
+      .tr-dd-item:hover { background:#F5F3EC; }
     </style>
   `;
 
@@ -255,47 +276,177 @@ function renderTable() {
 
   tbody.innerHTML = list.map((r, idx) => renderRow(r, idx + 1)).join('');
 
-  // Global datalist for drivers (used by all rows)
-  let dl = document.getElementById('dl-drivers');
-  if (!dl) {
-    dl = document.createElement('datalist');
-    dl.id = 'dl-drivers';
-    document.body.appendChild(dl);
-  }
-  dl.innerHTML = _drivers
-    .filter(d => d.name_en)
-    .map(d => `<option value="${d.name_en}"></option>`)
-    .join('');
-
-  // Attach auto-fill on driver name change
+  // Attach custom driver search dropdown
   document.querySelectorAll('.tr-driver-name').forEach(input => {
+    if (input.readOnly || input.hasAttribute('readonly')) return;
+
+    // Show dropdown on focus
+    input.addEventListener('focus', (e) => {
+      showDriverDropdown(e.target);
+    });
+
+    // Filter dropdown on input
+    input.addEventListener('input', (e) => {
+      showDriverDropdown(e.target);
+    });
+
+    // Hide dropdown on blur (with delay to allow click)
+    input.addEventListener('blur', () => {
+      setTimeout(() => hideDriverDropdown(), 200);
+    });
+
+    // Also auto-fill on plain typed name match (e.g. paste)
     input.addEventListener('change', (e) => {
-      const val = e.target.value.trim();
-      if (!val) return;
-      const driver = _drivers.find(d =>
-        (d.name_en || '').toLowerCase() === val.toLowerCase()
-      );
-      if (driver) {
-        // Auto-fill sibling cells in the same row
-        const row = e.target.closest('tr');
-        if (!row) return;
-        const fillIfEmpty = (field, value) => {
-          const cell = row.querySelector(`[data-field="${field}"]`);
-          if (cell && value && !cell.value) cell.value = value;
-        };
-        const fillAlways = (field, value) => {
-          const cell = row.querySelector(`[data-field="${field}"]`);
-          if (cell && value) cell.value = value;
-        };
-        // Fill iqama & nationality only if empty (they rarely change)
-        fillIfEmpty('driver_id_number', driver.iqama);
-        fillIfEmpty('driver_nationality', driver.nationality);
-        // Fill truck# with last known (user can change it)
-        fillAlways('truck_number', driver.truck_number);
-        toast(`✓ بيانات ${driver.name_en} تم تعبئتها`, 'success');
-      }
+      autoFillFromDriverName(e.target);
     });
   });
+}
+
+// ═════════════════════════════════════════════
+// CUSTOM DRIVER DROPDOWN
+// ═════════════════════════════════════════════
+let _activeInput = null;
+
+function showDriverDropdown(input) {
+  _activeInput = input;
+  const query = input.value.trim().toLowerCase();
+
+  // Filter drivers by name (en/ar), iqama, truck#
+  let matches = _drivers.filter(d => {
+    if (!d.name_en && !d.name_ar) return false;
+    if (!query) return true; // show all if empty
+    const inNameEn = (d.name_en || '').toLowerCase().includes(query);
+    const inNameAr = (d.name_ar || '').toLowerCase().includes(query);
+    const inIqama = (d.iqama || '').toLowerCase().includes(query);
+    const inTruck = (d.truck_number || '').toLowerCase().includes(query);
+    return inNameEn || inNameAr || inIqama || inTruck;
+  });
+
+  // Sort: exact match first, then partial
+  matches.sort((a, b) => {
+    const aExact = (a.name_en || '').toLowerCase() === query;
+    const bExact = (b.name_en || '').toLowerCase() === query;
+    if (aExact !== bExact) return aExact ? -1 : 1;
+    return (a.name_en || '').localeCompare(b.name_en || '');
+  });
+
+  // Limit to first 15
+  matches = matches.slice(0, 15);
+
+  // Get or create dropdown
+  let dd = document.getElementById('tr-driver-dropdown');
+  if (!dd) {
+    dd = document.createElement('div');
+    dd.id = 'tr-driver-dropdown';
+    document.body.appendChild(dd);
+  }
+
+  if (matches.length === 0) {
+    dd.innerHTML = `
+      <div style="padding:14px;text-align:center;color:#8A8578;font-size:12px;">
+        ${query ? '🔍 لا يوجد سائق مطابق — سيُنشأ سائق جديد' : 'ابدأ بالكتابة'}
+      </div>`;
+  } else {
+    dd.innerHTML = matches.map(d => {
+      const missingAr = !d.name_ar || !d.name_ar.trim();
+      return `
+        <div class="tr-dd-item" data-driver-id="${d.id}">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">
+            <div style="flex:1;min-width:0;">
+              <div style="font-family:'Inter','Segoe UI',sans-serif;font-weight:800;font-size:13px;color:#0E1A2E;direction:ltr;text-align:right;">
+                ${d.name_en || '—'}
+              </div>
+              ${missingAr
+                ? `<div style="font-size:10px;color:#C2410C;font-weight:700;margin-top:2px;">⚠ يحتاج اسم عربي</div>`
+                : `<div style="font-size:12px;color:#1C4B8E;font-weight:700;margin-top:2px;">${d.name_ar}</div>`
+              }
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px;font-family:'JetBrains Mono',monospace;font-size:10px;color:#6B6659;">
+            <div>
+              <span style="color:#8A8578;">IQAMA:</span>
+              <span style="color:#0E1A2E;font-weight:700;">${d.iqama || '—'}</span>
+            </div>
+            <div>
+              <span style="color:#8A8578;">NAT:</span>
+              <span style="color:#0E1A2E;font-weight:700;">${d.nationality || '—'}</span>
+            </div>
+            <div>
+              <span style="color:#8A8578;">TRUCK:</span>
+              <span style="color:#0E1A2E;font-weight:700;">${d.truck_number || '—'}</span>
+            </div>
+            <div>
+              <span style="color:#8A8578;">PHONE:</span>
+              <span style="color:#0E1A2E;font-weight:700;">${d.phone || '—'}</span>
+            </div>
+          </div>
+        </div>`;
+    }).join('');
+
+    // Attach click handlers
+    dd.querySelectorAll('.tr-dd-item').forEach(item => {
+      item.addEventListener('mousedown', (e) => {
+        e.preventDefault(); // prevent input blur
+        const driverId = item.dataset.driverId;
+        selectDriverFromDropdown(driverId);
+      });
+    });
+  }
+
+  // Position dropdown below input
+  const rect = input.getBoundingClientRect();
+  dd.style.display = 'block';
+  dd.style.top = `${rect.bottom + window.scrollY + 2}px`;
+  dd.style.left = `${rect.left + window.scrollX}px`;
+  dd.style.width = `${Math.max(rect.width, 320)}px`;
+}
+
+function hideDriverDropdown() {
+  const dd = document.getElementById('tr-driver-dropdown');
+  if (dd) dd.style.display = 'none';
+}
+
+function selectDriverFromDropdown(driverId) {
+  const driver = _drivers.find(d => d.id === driverId);
+  if (!driver || !_activeInput) return;
+
+  const row = _activeInput.closest('tr');
+  if (!row) return;
+
+  // Fill driver name (english)
+  _activeInput.value = driver.name_en || '';
+
+  // Always overwrite these fields (user chose this driver)
+  const setCell = (field, value) => {
+    const cell = row.querySelector(`[data-field="${field}"]`);
+    if (cell && value !== undefined && value !== null) cell.value = value;
+  };
+  setCell('driver_id_number', driver.iqama || '');
+  setCell('driver_nationality', driver.nationality || '');
+  setCell('truck_number', driver.truck_number || '');
+
+  hideDriverDropdown();
+  toast(`✓ ${driver.name_en || driver.name_ar} — البيانات تم تعبئتها`, 'success');
+}
+
+// Fallback: if user typed a name that matches exactly, auto-fill
+function autoFillFromDriverName(input) {
+  const val = input.value.trim();
+  if (!val) return;
+  const driver = _drivers.find(d =>
+    (d.name_en || '').toLowerCase() === val.toLowerCase()
+  );
+  if (driver) {
+    const row = input.closest('tr');
+    if (!row) return;
+    const fillIfEmpty = (field, value) => {
+      const cell = row.querySelector(`[data-field="${field}"]`);
+      if (cell && value && !cell.value) cell.value = value;
+    };
+    fillIfEmpty('driver_id_number', driver.iqama);
+    fillIfEmpty('driver_nationality', driver.nationality);
+    fillIfEmpty('truck_number', driver.truck_number);
+  }
 }
 
 function renderRow(r, num) {
@@ -314,7 +465,7 @@ function renderRow(r, num) {
       <td style="text-align:center;font-family:'JetBrains Mono',monospace;font-size:11px;color:#8A8578;font-weight:700;">${String(num).padStart(2,'0')}</td>
       <td><input type="text" class="tr-cell" data-field="truck_number" value="${r.truck_number||''}" ${roCss} placeholder="9691"></td>
       <td>
-        <input list="dl-drivers" type="text" class="tr-cell tr-driver-name" data-field="driver_name" value="${r.driver_name||''}" ${roCss} placeholder="DRIVER NAME" style="direction:ltr;text-align:right;">
+        <input type="text" class="tr-cell tr-driver-name" data-field="driver_name" value="${r.driver_name||''}" ${roCss} placeholder="اكتب للبحث..." style="direction:ltr;text-align:right;" autocomplete="off">
       </td>
       <td><input type="text" class="tr-cell" data-field="driver_id_number" value="${r.driver_id_number||''}" ${roCss} placeholder="2481671556" style="direction:ltr;text-align:right;"></td>
       <td>${renderSelect('driver_nationality', r.driver_nationality || '', _dropdowns.nationalities, isSent, 'الجنسية')}</td>
