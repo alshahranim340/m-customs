@@ -311,23 +311,35 @@ function showDriverDropdown(input) {
   _activeInput = input;
   const query = input.value.trim().toLowerCase();
 
-  // Filter drivers by name (en/ar), iqama, truck#
+  // Filter drivers by name (en/ar/legacy name), iqama, truck#
   let matches = _drivers.filter(d => {
-    if (!d.name_en && !d.name_ar) return false;
+    // Support legacy drivers: get any name they have
+    const anyName = d.name_en || d.name_ar || d.name || '';
+    if (!anyName) return false;
     if (!query) return true; // show all if empty
+
+    // Also check legacy vehicles array for truck matches
+    let trucks = [d.truck_number || ''];
+    if (d.vehicles && Array.isArray(d.vehicles)) {
+      trucks = trucks.concat(d.vehicles.map(v => (v.plate || '')));
+    }
+
     const inNameEn = (d.name_en || '').toLowerCase().includes(query);
     const inNameAr = (d.name_ar || '').toLowerCase().includes(query);
+    const inLegacyName = (d.name || '').toLowerCase().includes(query);
     const inIqama = (d.iqama || '').toLowerCase().includes(query);
-    const inTruck = (d.truck_number || '').toLowerCase().includes(query);
-    return inNameEn || inNameAr || inIqama || inTruck;
+    const inTruck = trucks.some(t => t.toLowerCase().includes(query));
+    return inNameEn || inNameAr || inLegacyName || inIqama || inTruck;
   });
 
-  // Sort: exact match first, then partial
+  // Sort: exact match first, then by name
   matches.sort((a, b) => {
-    const aExact = (a.name_en || '').toLowerCase() === query;
-    const bExact = (b.name_en || '').toLowerCase() === query;
+    const aName = (a.name_en || a.name_ar || a.name || '').toLowerCase();
+    const bName = (b.name_en || b.name_ar || b.name || '').toLowerCase();
+    const aExact = aName === query;
+    const bExact = bName === query;
     if (aExact !== bExact) return aExact ? -1 : 1;
-    return (a.name_en || '').localeCompare(b.name_en || '');
+    return aName.localeCompare(bName);
   });
 
   // Limit to first 15
@@ -349,16 +361,26 @@ function showDriverDropdown(input) {
   } else {
     dd.innerHTML = matches.map(d => {
       const missingAr = !d.name_ar || !d.name_ar.trim();
+      // Support legacy: if no name_en, use 'name' as the display
+      const displayEn = d.name_en || '';
+      const displayAr = d.name_ar || (!d.name_en && d.name) || '';
+      // Support legacy: get plate from vehicles array
+      let plate = d.truck_number || '';
+      if (!plate && d.vehicles && d.vehicles.length > 0) {
+        plate = d.vehicles[d.vehicles.length - 1].plate || '';
+      }
       return `
         <div class="tr-dd-item" data-driver-id="${d.id}">
           <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">
             <div style="flex:1;min-width:0;">
-              <div style="font-family:'Inter','Segoe UI',sans-serif;font-weight:800;font-size:13px;color:#0E1A2E;direction:ltr;text-align:right;">
-                ${d.name_en || '—'}
-              </div>
-              ${missingAr
-                ? `<div style="font-size:10px;color:#C2410C;font-weight:700;margin-top:2px;">⚠ يحتاج اسم عربي</div>`
-                : `<div style="font-size:12px;color:#1C4B8E;font-weight:700;margin-top:2px;">${d.name_ar}</div>`
+              ${displayEn ? `
+                <div style="font-family:'Inter','Segoe UI',sans-serif;font-weight:800;font-size:13px;color:#0E1A2E;direction:ltr;text-align:right;">
+                  ${displayEn}
+                </div>` : ''
+              }
+              ${displayAr
+                ? `<div style="font-size:12px;color:#1C4B8E;font-weight:700;margin-top:2px;">${displayAr}</div>`
+                : `<div style="font-size:10px;color:#C2410C;font-weight:700;margin-top:2px;">⚠ يحتاج اسم عربي</div>`
               }
             </div>
           </div>
@@ -373,7 +395,7 @@ function showDriverDropdown(input) {
             </div>
             <div>
               <span style="color:#8A8578;">TRUCK:</span>
-              <span style="color:#0E1A2E;font-weight:700;">${d.truck_number || '—'}</span>
+              <span style="color:#0E1A2E;font-weight:700;">${plate || '—'}</span>
             </div>
             <div>
               <span style="color:#8A8578;">PHONE:</span>
@@ -413,8 +435,14 @@ function selectDriverFromDropdown(driverId) {
   const row = _activeInput.closest('tr');
   if (!row) return;
 
-  // Fill driver name (english)
-  _activeInput.value = driver.name_en || '';
+  // Fill driver name: prefer english; fallback to arabic (legacy)
+  _activeInput.value = driver.name_en || driver.name_ar || driver.name || '';
+
+  // Get plate from vehicles array if truck_number is empty (legacy)
+  let plate = driver.truck_number || '';
+  if (!plate && driver.vehicles && driver.vehicles.length > 0) {
+    plate = driver.vehicles[driver.vehicles.length - 1].plate || '';
+  }
 
   // Always overwrite these fields (user chose this driver)
   const setCell = (field, value) => {
@@ -423,10 +451,11 @@ function selectDriverFromDropdown(driverId) {
   };
   setCell('driver_id_number', driver.iqama || '');
   setCell('driver_nationality', driver.nationality || '');
-  setCell('truck_number', driver.truck_number || '');
+  setCell('truck_number', plate);
 
   hideDriverDropdown();
-  toast(`✓ ${driver.name_en || driver.name_ar} — البيانات تم تعبئتها`, 'success');
+  const displayName = driver.name_en || driver.name_ar || driver.name || 'السائق';
+  toast(`✓ ${displayName} — البيانات تم تعبئتها`, 'success');
 }
 
 // Fallback: if user typed a name that matches exactly, auto-fill
