@@ -1418,14 +1418,15 @@ body{
 
     <div class="field">
       <label><span class="ic">✉</span> البريد الإلكتروني</label>
-      <input type="email" value="alshahranim340@gmail.com">
+      <input type="email" id="email" value="alshahranim340@gmail.com">
     </div>
     <div class="field">
       <label><span class="ic">🔒</span> كلمة المرور</label>
-      <input type="password" value="demo1234">
+      <input type="password" id="password" value="demo1234">
     </div>
 
-    <button class="login-btn">
+    <div id="err" style="display:none;padding:10px;margin-bottom:10px;background:rgba(196,24,24,0.1);color:#c41818;border:1px solid rgba(196,24,24,0.3);border-radius:6px;font-size:13px;align-items:center;gap:8px;"></div>
+    <button class="login-btn" id="login-btn" onclick="doLogin()">
       <span>تسجيل الدخول</span>
       <span class="btn-arrow">←</span>
     </button>
