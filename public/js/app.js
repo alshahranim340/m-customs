@@ -404,23 +404,36 @@ function showLoginPage() {
         </div>
       </div>
 
-      <!-- Login card -->
+      <!-- Login card (business card style) -->
       <div class="login-card-wrap">
-        <div class="login-card">
+        <div class="business-card">
 
-          <!-- Header -->
-          <div class="login-header">
-            <div class="login-logo">
-              <div class="logo-dots">
-                <span class="logo-dot" style="background:#CC2229"></span>
-                <span class="logo-dot" style="background:#c8943a"></span>
-                <span class="logo-dot" style="background:#2E8B57"></span>
+          <!-- Decorative diagonal ribbon -->
+          <div class="card-ribbon"></div>
+          <div class="card-corner-tl"></div>
+          <div class="card-corner-br"></div>
+
+          <!-- Header with logo and brand -->
+          <div class="card-header">
+            <div class="logo-placeholder" id="company-logo">
+              <div class="logo-inner">
+                <img src="/logo.png" style="width:100%;height:100%;object-fit:contain;" alt="السديس اللوجستية">
               </div>
-              <div class="logo-brand">M-CUSTOMS</div>
-              <div class="logo-year">EST · 2026</div>
             </div>
-            <div class="login-title">مرحباً بعودتك</div>
-            <div class="login-subtitle">نظام التخليص الجمركي — السديس اللوجستية</div>
+            <div class="card-brand">
+              <div class="card-company">السديس اللوجستية</div>
+              <div class="card-company-en">SDS LOGISTICS</div>
+              <div class="card-divider"></div>
+              <div class="card-tagline">نظام التخليص الجمركي</div>
+              <div class="card-tagline-en">CUSTOMS CLEARANCE PLATFORM</div>
+            </div>
+          </div>
+
+          <!-- Serial number bar (like real business cards) -->
+          <div class="card-serial">
+            <span class="serial-lbl">CARD NO</span>
+            <span class="serial-val">SDS · AUTH · ${new Date().getFullYear()}</span>
+            <span class="serial-dot"></span>
           </div>
 
           ${wasIdleLogout ? `
@@ -433,53 +446,62 @@ function showLoginPage() {
           <!-- Error box -->
           <div id="login-error" class="login-error" style="display:none;"></div>
 
-          <!-- Email -->
-          <div class="login-field">
-            <label>
-              <span class="field-num">01</span>
-              <span>البريد الإلكتروني</span>
-              <span class="field-hint">EMAIL</span>
-            </label>
-            <div class="input-wrap">
-              <i class="ti ti-mail input-icon"></i>
-              <input type="email" id="login-email" placeholder="name@company.com"
-                autocomplete="username"
-                onkeydown="if(event.key==='Enter')document.getElementById('login-password').focus()">
+          <!-- Login form area -->
+          <div class="card-form">
+
+            <div class="form-welcome">
+              <span class="welcome-line"></span>
+              <span class="welcome-text">مرحباً بعودتك</span>
+              <span class="welcome-line"></span>
             </div>
+
+            <!-- Email -->
+            <div class="login-field">
+              <label>
+                <i class="ti ti-mail"></i>
+                <span>البريد الإلكتروني</span>
+              </label>
+              <div class="input-wrap">
+                <input type="email" id="login-email" placeholder="name@sds.com"
+                  autocomplete="username"
+                  onkeydown="if(event.key==='Enter')document.getElementById('login-password').focus()">
+              </div>
+            </div>
+
+            <!-- Password -->
+            <div class="login-field">
+              <label>
+                <i class="ti ti-lock"></i>
+                <span>كلمة المرور</span>
+              </label>
+              <div class="input-wrap">
+                <input type="password" id="login-password" placeholder="••••••••••"
+                  autocomplete="current-password"
+                  onkeydown="if(event.key==='Enter')doLogin()">
+                <button type="button" class="pwd-toggle" onclick="_togglePwd()" title="إظهار/إخفاء">
+                  <i class="ti ti-eye" id="pwd-toggle-icon"></i>
+                </button>
+              </div>
+            </div>
+
+            <!-- Login button -->
+            <button onclick="doLogin()" id="login-btn" class="login-btn">
+              <span class="login-btn-text">تسجيل الدخول</span>
+              <i class="ti ti-arrow-left login-btn-icon"></i>
+            </button>
+
           </div>
 
-          <!-- Password -->
-          <div class="login-field">
-            <label>
-              <span class="field-num">02</span>
-              <span>كلمة المرور</span>
-              <span class="field-hint">PASSWORD</span>
-            </label>
-            <div class="input-wrap">
-              <i class="ti ti-lock input-icon"></i>
-              <input type="password" id="login-password" placeholder="••••••••••"
-                autocomplete="current-password"
-                onkeydown="if(event.key==='Enter')doLogin()">
-              <button type="button" class="pwd-toggle" onclick="_togglePwd()" title="إظهار/إخفاء">
-                <i class="ti ti-eye" id="pwd-toggle-icon"></i>
-              </button>
+          <!-- Footer with contact-style info -->
+          <div class="card-footer">
+            <div class="footer-item">
+              <i class="ti ti-map-pin"></i>
+              <span>جدة · المملكة العربية السعودية</span>
             </div>
-          </div>
-
-          <!-- Login button -->
-          <button onclick="doLogin()" id="login-btn" class="login-btn">
-            <span class="login-btn-text">تسجيل الدخول</span>
-            <i class="ti ti-arrow-left login-btn-icon"></i>
-          </button>
-
-          <!-- Footer -->
-          <div class="login-footer">
-            <div class="footer-line">
-              <span class="footer-dot"></span>
-              <span>شركة السديس اللوجستية</span>
-              <span class="footer-dot"></span>
+            <div class="footer-item">
+              <i class="ti ti-world"></i>
+              <span>الإمارات · البحرين · عمان</span>
             </div>
-            <div class="footer-code">SDS/AUTH/${new Date().getFullYear()}</div>
           </div>
 
         </div>
@@ -541,65 +563,88 @@ function showLoginPage() {
         to { stroke-dashoffset: -50; }
       }
 
-      /* Vehicles */
+      /* Vehicles orbit around the card in curved 3D paths */
       .vehicle {
         position: absolute;
-        filter: drop-shadow(0 6px 20px rgba(0,0,0,0.4));
+        top: 50%; left: 50%;
+        filter: drop-shadow(0 8px 24px rgba(0,0,0,0.5));
+        transform-origin: center;
       }
       .vehicle-plane {
-        top: 8%;
-        animation: flyAcross 22s linear infinite;
+        animation: orbitPlane 24s linear infinite;
       }
       .vehicle-ship {
-        top: 48%;
-        animation: sailAcross 32s linear infinite;
+        animation: orbitShip 32s linear infinite;
       }
       .vehicle-truck {
-        top: 76%;
-        animation: driveAcross 24s linear infinite 4s;
+        animation: orbitTruck 28s linear infinite;
       }
-      /* Planes come from right side (like reading direction) and go left, with subtle vertical movement */
-      @keyframes flyAcross {
+
+      /* Plane: high orbit — comes from top-right, arcs over card, exits bottom-left */
+      @keyframes orbitPlane {
         0% {
-          transform: translateX(calc(100vw + 200px)) translateY(0);
+          transform: translate(40vw, -35vh) scale(0.4) rotate(-15deg);
           opacity: 0;
         }
-        8% { opacity: 1; }
+        10% { opacity: 0.9; }
+        25% {
+          transform: translate(30vw, -25vh) scale(0.7) rotate(-25deg);
+        }
         50% {
-          transform: translateX(50vw) translateY(-20px);
+          transform: translate(0, -30vh) scale(1) rotate(-40deg);
         }
-        92% { opacity: 1; }
+        75% {
+          transform: translate(-30vw, -25vh) scale(0.7) rotate(-55deg);
+        }
+        90% { opacity: 0.9; }
         100% {
-          transform: translateX(-250px) translateY(0);
+          transform: translate(-40vw, -35vh) scale(0.4) rotate(-65deg);
           opacity: 0;
         }
       }
-      /* Ship sails slowly with gentle bobbing */
-      @keyframes sailAcross {
+
+      /* Ship: mid orbit — sails behind/around card on horizon */
+      @keyframes orbitShip {
         0% {
-          transform: translateX(calc(100vw + 260px)) translateY(0);
+          transform: translate(45vw, 20vh) scale(0.5);
           opacity: 0;
         }
-        6% { opacity: 1; }
-        25% { transform: translateX(70vw) translateY(-3px); }
-        50% { transform: translateX(50vw) translateY(0); }
-        75% { transform: translateX(30vw) translateY(-3px); }
-        94% { opacity: 1; }
+        8% { opacity: 0.85; }
+        30% {
+          transform: translate(28vw, 25vh) scale(0.8);
+        }
+        50% {
+          transform: translate(0, 30vh) scale(1.05);
+        }
+        70% {
+          transform: translate(-28vw, 25vh) scale(0.8);
+        }
+        92% { opacity: 0.85; }
         100% {
-          transform: translateX(-260px) translateY(0);
+          transform: translate(-45vw, 20vh) scale(0.5);
           opacity: 0;
         }
       }
-      /* Truck drives steadily across */
-      @keyframes driveAcross {
+
+      /* Truck: low orbit — drives at ground level in front of card */
+      @keyframes orbitTruck {
         0% {
-          transform: translateX(calc(100vw + 220px));
+          transform: translate(50vw, 35vh) scale(0.6) rotateY(0deg);
           opacity: 0;
         }
-        8% { opacity: 1; }
-        92% { opacity: 1; }
+        10% { opacity: 1; }
+        30% {
+          transform: translate(30vw, 40vh) scale(0.85);
+        }
+        50% {
+          transform: translate(0, 42vh) scale(1);
+        }
+        70% {
+          transform: translate(-30vw, 40vh) scale(0.85);
+        }
+        90% { opacity: 1; }
         100% {
-          transform: translateX(-220px);
+          transform: translate(-50vw, 35vh) scale(0.6);
           opacity: 0;
         }
       }
@@ -628,89 +673,203 @@ function showLoginPage() {
         }
       `).join('')}
 
-      /* Login card */
+      /* Business card */
       .login-card-wrap {
         position: relative;
         z-index: 10;
         padding: 20px;
-        max-width: 460px;
+        max-width: 520px;
         width: 100%;
-        animation: cardEntry 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) 0.3s both;
+        animation: cardEntry 1s cubic-bezier(0.34, 1.56, 0.64, 1) 0.3s both;
+        perspective: 1200px;
       }
       @keyframes cardEntry {
         from {
           opacity: 0;
-          transform: translateY(30px) scale(0.95);
+          transform: translateY(40px) rotateX(-15deg);
         }
         to {
           opacity: 1;
-          transform: translateY(0) scale(1);
+          transform: translateY(0) rotateX(0);
         }
       }
-      .login-card {
-        background: rgba(255,255,255,0.98);
-        backdrop-filter: blur(20px);
-        border: 1px solid rgba(255,255,255,0.3);
-        border-radius: 16px;
-        padding: 36px 32px;
+      .business-card {
+        position: relative;
+        background:
+          linear-gradient(135deg,
+            #FDFCF9 0%,
+            #F5F2EA 100%);
+        border-radius: 12px;
+        padding: 0;
+        overflow: hidden;
         box-shadow:
-          0 20px 60px rgba(0,0,0,0.3),
-          0 8px 20px rgba(0,0,0,0.15),
-          inset 0 1px 0 rgba(255,255,255,0.5);
+          0 30px 80px rgba(0,0,0,0.5),
+          0 12px 30px rgba(0,0,0,0.3),
+          inset 0 1px 0 rgba(255,255,255,0.8),
+          inset 0 -1px 0 rgba(0,0,0,0.05);
+        border: 1px solid rgba(200,148,58,0.3);
       }
 
-      /* Header */
-      .login-header {
-        text-align: center;
-        margin-bottom: 28px;
+      /* Diagonal gold ribbon */
+      .card-ribbon {
+        position: absolute;
+        top: -40px; left: -40px;
+        width: 200px; height: 80px;
+        background: linear-gradient(135deg,
+          #c8943a 0%,
+          #d4a94f 50%,
+          #b57e2c 100%);
+        transform: rotate(-45deg);
+        opacity: 0.15;
+        pointer-events: none;
       }
-      .login-logo {
-        margin-bottom: 20px;
+      .card-corner-tl {
+        position: absolute;
+        top: 0; right: 0;
+        width: 60px; height: 60px;
+        border-top: 3px solid #c8943a;
+        border-right: 3px solid #c8943a;
+        border-top-right-radius: 12px;
+        opacity: 0.6;
+        pointer-events: none;
       }
-      .logo-dots {
+      .card-corner-br {
+        position: absolute;
+        bottom: 0; left: 0;
+        width: 60px; height: 60px;
+        border-bottom: 3px solid #c8943a;
+        border-left: 3px solid #c8943a;
+        border-bottom-left-radius: 12px;
+        opacity: 0.6;
+        pointer-events: none;
+      }
+
+      /* Card header */
+      .card-header {
         display: flex;
+        align-items: center;
+        gap: 20px;
+        padding: 28px 32px 20px;
+        background: linear-gradient(135deg,
+          rgba(28,45,78,0.03) 0%,
+          rgba(37,99,168,0.06) 100%);
+        border-bottom: 2px solid rgba(200,148,58,0.2);
+      }
+      .logo-placeholder {
+        position: relative;
+        width: 72px; height: 72px;
+        border: 2px dashed rgba(200,148,58,0.4);
+        border-radius: 8px;
+        background: rgba(255,255,255,0.6);
+        display: flex;
+        align-items: center;
         justify-content: center;
-        gap: 6px;
-        margin-bottom: 10px;
+        flex-shrink: 0;
+        overflow: hidden;
       }
-      .logo-dot {
-        display: inline-block;
-        width: 10px; height: 10px;
-        border-radius: 50%;
-        animation: dotBounce 1.4s ease-in-out infinite;
+      .logo-inner {
+        width: 100%; height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
       }
-      .logo-dot:nth-child(1) { animation-delay: 0s; }
-      .logo-dot:nth-child(2) { animation-delay: 0.15s; }
-      .logo-dot:nth-child(3) { animation-delay: 0.3s; }
-      @keyframes dotBounce {
-        0%, 100% { transform: translateY(0); }
-        50% { transform: translateY(-6px); }
+
+      .card-brand {
+        flex: 1;
       }
-      .logo-brand {
-        font-family: 'JetBrains Mono', monospace;
+      .card-company {
         font-size: 22px;
         font-weight: 800;
         color: #0E1A2E;
-        letter-spacing: 3px;
+        line-height: 1.1;
       }
-      .logo-year {
+      .card-company-en {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 11px;
+        color: #c8943a;
+        letter-spacing: 3px;
+        font-weight: 800;
+        margin-top: 2px;
+      }
+      .card-divider {
+        width: 40px;
+        height: 2px;
+        background: linear-gradient(90deg, #c8943a, transparent);
+        margin: 8px 0;
+      }
+      .card-tagline {
+        font-size: 13px;
+        color: #4a5568;
+        font-weight: 600;
+      }
+      .card-tagline-en {
         font-family: 'JetBrains Mono', monospace;
         font-size: 9px;
         color: #8A8578;
-        letter-spacing: 3px;
+        letter-spacing: 1.5px;
         font-weight: 700;
         margin-top: 2px;
       }
-      .login-title {
-        font-size: 24px;
-        font-weight: 800;
-        color: #0E1A2E;
-        margin-top: 8px;
+
+      /* Serial number bar */
+      .card-serial {
+        background: #0E1A2E;
+        color: white;
+        padding: 8px 32px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 10px;
       }
-      .login-subtitle {
-        font-size: 12px;
-        color: #6B6659;
-        margin-top: 4px;
+      .serial-lbl {
+        color: #c8943a;
+        font-weight: 800;
+        letter-spacing: 2px;
+      }
+      .serial-val {
+        color: #F5F2EA;
+        letter-spacing: 2px;
+        font-weight: 700;
+      }
+      .serial-dot {
+        width: 6px; height: 6px;
+        background: #2E8B57;
+        border-radius: 50%;
+        margin-right: auto;
+        animation: serialPulse 2s ease-in-out infinite;
+        box-shadow: 0 0 8px rgba(46,139,87,0.6);
+      }
+      @keyframes serialPulse {
+        0%, 100% { opacity: 0.7; }
+        50% { opacity: 1; }
+      }
+
+      /* Card form */
+      .card-form {
+        padding: 24px 32px 20px;
+      }
+
+      /* Welcome divider */
+      .form-welcome {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 20px;
+      }
+      .welcome-line {
+        flex: 1;
+        height: 1px;
+        background: linear-gradient(90deg,
+          transparent,
+          rgba(200,148,58,0.4),
+          transparent);
+      }
+      .welcome-text {
+        font-size: 13px;
+        font-weight: 700;
+        color: #0E1A2E;
+        letter-spacing: 1px;
       }
 
       /* Idle notice */
@@ -719,7 +878,7 @@ function showLoginPage() {
         border: 1px solid #F0C674;
         border-radius: 8px;
         padding: 10px 14px;
-        margin-bottom: 16px;
+        margin: 16px 32px 0;
         display: flex;
         align-items: center;
         gap: 8px;
@@ -730,65 +889,42 @@ function showLoginPage() {
 
       /* Fields */
       .login-field {
-        margin-bottom: 16px;
+        margin-bottom: 14px;
       }
       .login-field label {
         display: flex;
         align-items: center;
-        gap: 8px;
+        gap: 6px;
         font-size: 12px;
         font-weight: 700;
         color: #0E1A2E;
         margin-bottom: 6px;
       }
-      .field-num {
-        font-family: 'JetBrains Mono', monospace;
-        font-size: 9px;
-        background: #0E1A2E;
-        color: white;
-        padding: 2px 6px;
-        border-radius: 3px;
-        letter-spacing: 1px;
-        font-weight: 800;
-      }
-      .field-hint {
-        font-family: 'JetBrains Mono', monospace;
-        font-size: 9px;
-        color: #8A8578;
-        letter-spacing: 1.5px;
-        margin-right: auto;
-        font-weight: 700;
+      .login-field label i {
+        color: #c8943a;
+        font-size: 15px;
       }
       .input-wrap {
         position: relative;
       }
-      .input-icon {
-        position: absolute;
-        right: 14px;
-        top: 50%;
-        transform: translateY(-50%);
-        color: #8A8578;
-        font-size: 18px;
-        pointer-events: none;
-      }
       .login-field input {
         width: 100%;
-        padding: 13px 42px 13px 42px;
-        border: 1.5px solid #E8E5DC;
-        border-radius: 8px;
+        padding: 12px 14px;
+        border: 1.5px solid #E0DBC7;
+        border-radius: 6px;
         font-size: 14px;
         font-family: 'Tajawal', sans-serif;
         color: #0E1A2E;
-        background: #FAFAF7;
+        background: rgba(255,255,255,0.7);
         outline: none;
         transition: all 0.2s;
         direction: ltr;
         text-align: right;
       }
       .login-field input:focus {
-        border-color: #2563a8;
+        border-color: #c8943a;
         background: white;
-        box-shadow: 0 0 0 3px rgba(37, 99, 168, 0.12);
+        box-shadow: 0 0 0 3px rgba(200, 148, 58, 0.15);
       }
       .pwd-toggle {
         position: absolute;
@@ -805,7 +941,7 @@ function showLoginPage() {
       }
       .pwd-toggle:hover {
         background: #F0EDE4;
-        color: #0E1A2E;
+        color: #c8943a;
       }
 
       /* Login button */
@@ -815,7 +951,7 @@ function showLoginPage() {
         background: linear-gradient(135deg, #1C2D4E 0%, #2563a8 100%);
         color: white;
         border: none;
-        border-radius: 8px;
+        border-radius: 6px;
         font-size: 15px;
         font-weight: 800;
         font-family: 'Tajawal', sans-serif;
@@ -824,24 +960,32 @@ function showLoginPage() {
         align-items: center;
         justify-content: center;
         gap: 8px;
-        margin-top: 8px;
+        margin-top: 6px;
         transition: all 0.2s;
-        box-shadow: 0 4px 12px rgba(37, 99, 168, 0.3);
+        box-shadow:
+          0 4px 12px rgba(37, 99, 168, 0.3),
+          inset 0 1px 0 rgba(255,255,255,0.15);
         position: relative;
         overflow: hidden;
+        border-top: 1px solid rgba(200,148,58,0.4);
       }
       .login-btn::before {
         content: '';
         position: absolute;
         top: 0; left: -100%;
         width: 100%; height: 100%;
-        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+        background: linear-gradient(90deg,
+          transparent,
+          rgba(200,148,58,0.3),
+          transparent);
         transition: left 0.6s;
       }
       .login-btn:hover::before { left: 100%; }
       .login-btn:hover {
         transform: translateY(-2px);
-        box-shadow: 0 8px 20px rgba(37, 99, 168, 0.4);
+        box-shadow:
+          0 8px 20px rgba(37, 99, 168, 0.4),
+          inset 0 1px 0 rgba(255,255,255,0.2);
       }
       .login-btn:active { transform: translateY(0); }
       .login-btn:disabled {
@@ -866,7 +1010,7 @@ function showLoginPage() {
         padding: 10px 14px;
         font-size: 13px;
         font-weight: 600;
-        margin-bottom: 16px;
+        margin: 16px 32px 0;
         display: flex;
         align-items: center;
         gap: 8px;
@@ -878,43 +1022,40 @@ function showLoginPage() {
         75% { transform: translateX(6px); }
       }
 
-      /* Footer */
-      .login-footer {
-        margin-top: 24px;
-        padding-top: 20px;
-        border-top: 1px solid #F0EDE4;
-        text-align: center;
+      /* Card footer — contact info style */
+      .card-footer {
+        background: linear-gradient(135deg,
+          rgba(28,45,78,0.04) 0%,
+          rgba(37,99,168,0.06) 100%);
+        border-top: 1px dashed rgba(200,148,58,0.3);
+        padding: 14px 32px;
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: space-between;
+        gap: 10px;
       }
-      .footer-line {
+      .footer-item {
         display: flex;
         align-items: center;
-        justify-content: center;
-        gap: 8px;
+        gap: 6px;
         font-size: 11px;
-        color: #6B6659;
+        color: #4a5568;
         font-weight: 600;
       }
-      .footer-dot {
-        width: 4px; height: 4px;
-        border-radius: 50%;
-        background: #C8C4B8;
-      }
-      .footer-code {
-        font-family: 'JetBrains Mono', monospace;
-        font-size: 9px;
-        color: #8A8578;
-        letter-spacing: 2px;
-        font-weight: 700;
-        margin-top: 6px;
+      .footer-item i {
+        color: #c8943a;
+        font-size: 13px;
       }
 
       /* Mobile */
       @media (max-width: 500px) {
-        .login-card {
-          padding: 28px 24px;
-        }
-        .vehicle-plane, .vehicle-ship { display: none; }
-        .vehicle-truck { top: 85%; }
+        .card-header { padding: 20px 20px 16px; gap: 14px; }
+        .card-serial { padding: 6px 20px; }
+        .card-form { padding: 20px; }
+        .card-footer { padding: 12px 20px; }
+        .card-company { font-size: 18px; }
+        .logo-placeholder { width: 60px; height: 60px; }
+        .card-corner-tl, .card-corner-br { width: 40px; height: 40px; }
       }
     </style>
   `;
