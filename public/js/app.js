@@ -1444,21 +1444,7 @@ body{
 </div>
 </div>
 
-<script>
-const cont = document.getElementById('sparks');
-for(let i = 0; i < 25; i++){
-  const p = document.createElement('div');
-  p.className = 'spark';
-  const dur = 8 + Math.random() * 14;
-  p.style.cssText = `
-    left: ${5 + Math.random() * 55}vw;
-    bottom: ${5 + Math.random() * 30}vh;
-    animation-duration: ${dur}s;
-    animation-delay: -${Math.random() * dur}s;
-  `;
-  cont.appendChild(p);
-}
-</script>
+
 
   `;
 
@@ -1474,58 +1460,42 @@ for(let i = 0; i < 25; i++){
     for (let i = 0; i < 25; i++) {
       const s = document.createElement('div');
       s.className = 'spark';
-      s.style.left = Math.random() * 100 + '%';
-      s.style.animationDelay = (Math.random() * 8) + 's';
-      s.style.animationDuration = (6 + Math.random() * 4) + 's';
+      s.style.left = (5 + Math.random() * 90) + 'vw';
+      s.style.bottom = (5 + Math.random() * 30) + 'vh';
+      const dur = 6 + Math.random() * 4;
+      s.style.animationDuration = dur + 's';
+      s.style.animationDelay = (-Math.random() * dur) + 's';
       sparksEl.appendChild(s);
     }
   }
 
-};
-
   window.doLogin = async () => {
-    const email    = document.getElementById('login-email').value.trim();
-    const password = document.getElementById('login-password').value;
-    const btn      = document.getElementById('login-btn');
-    const errBox   = document.getElementById('login-error');
-    const btnText  = btn.querySelector('.login-btn-text');
-    const btnIcon  = btn.querySelector('.login-btn-icon');
-
-    if (!email || !password) {
-      errBox.innerHTML = '<i class="ti ti-alert-circle"></i> أدخل البريد الإلكتروني وكلمة المرور';
-      errBox.style.display = 'flex';
-      errBox.style.animation = 'none';
-      setTimeout(() => errBox.style.animation = 'shake 0.4s', 10);
-      return;
-    }
-    btn.disabled = true;
-    btnText.textContent = 'جاري تسجيل الدخول...';
-    btnIcon.className = 'ti ti-loader login-btn-icon';
-    btnIcon.style.animation = 'spin 1s linear infinite';
+    const email = document.getElementById('email').value.trim();
+    const password = document.getElementById('password').value;
+    const btn = document.getElementById('login-btn');
+    const errBox = document.getElementById('err');
     errBox.style.display = 'none';
+    btn.disabled = true;
+    btn.innerHTML = '<div style="width:20px;height:20px;border:2px solid rgba(255,255,255,0.3);border-top-color:white;border-radius:50%;animation:spin 0.8s linear infinite;"></div>';
 
     try {
-      const { signIn } = await import('../../src/firebase/auth.js');
-      await signIn(email, password);
-    } catch(e) {
+      const { signInWithEmail } = await import('../../src/firebase/auth.js');
+      await signInWithEmail(email, password);
+    } catch (e) {
       btn.disabled = false;
-      btnText.textContent = 'تسجيل الدخول';
-      btnIcon.className = 'ti ti-arrow-left login-btn-icon';
-      btnIcon.style.animation = 'none';
+      btn.innerHTML = 'دخول <span class="btn-arrow">←</span>';
       const msgs = {
-        'auth/user-not-found':     'البريد الإلكتروني غير موجود',
-        'auth/wrong-password':     'كلمة المرور غير صحيحة',
         'auth/invalid-credential': 'البريد أو كلمة المرور غير صحيحة',
-        'auth/too-many-requests':  'محاولات كثيرة — حاول لاحقاً',
+        'auth/user-not-found': 'المستخدم غير موجود',
+        'auth/wrong-password': 'كلمة المرور غير صحيحة',
+        'auth/invalid-email': 'البريد الإلكتروني غير صحيح',
+        'auth/too-many-requests': 'محاولات كثيرة، حاول لاحقاً',
       };
       errBox.innerHTML = `<i class="ti ti-alert-circle"></i> ${msgs[e.code] || 'خطأ في تسجيل الدخول'}`;
       errBox.style.display = 'flex';
-      errBox.style.animation = 'none';
-      setTimeout(() => errBox.style.animation = 'shake 0.4s', 10);
     }
   };
 
-  // Add spin animation for loader
   if (!document.getElementById('spin-style')) {
     const s = document.createElement('style');
     s.id = 'spin-style';
@@ -1533,6 +1503,8 @@ for(let i = 0; i < 25; i++){
     document.head.appendChild(s);
   }
 }
+
+
 
 // ─────────────────────────────────────────────
 // APP SHELL
