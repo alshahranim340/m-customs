@@ -8,7 +8,7 @@ const HIJRI_DAYS = ['الأحد','الإثنين','الثلاثاء','الأرب
  * Convert Gregorian date to Hijri string YYYY-MM-DD
  */
 export function toHijri(date = new Date()) {
-  const parts = new Intl.DateTimeFormat('en-u-ca-islamic-nu-latn', {
+  const parts = new Intl.DateTimeFormat('en-u-ca-islamic-umalqura-nu-latn', {
     year:'numeric', month:'2-digit', day:'2-digit'
   }).formatToParts(date);
   const y = parts.find(p=>p.type==='year')?.value.replace(/[^0-9]/g,'');
