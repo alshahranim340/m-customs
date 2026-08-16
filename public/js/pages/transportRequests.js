@@ -78,6 +78,9 @@ export async function renderTransportRequests(container) {
             <button class="modern-btn" id="btn-bulk-send" onclick="_bulkSendToClearance()" style="display:none;background:#2E8B57;color:white;border-color:#2E8B57;">
               <i class="ti ti-send"></i> إرسال دفعة للتخليص (<span id="bulk-send-count">0</span>)
             </button>
+            <button class="modern-btn" id="btn-bulk-delete" onclick="_bulkDelete()" style="display:none;background:#CC2229;color:white;border-color:#CC2229;">
+              <i class="ti ti-trash"></i> حذف <span id="bulk-delete-count">0</span>
+            </button>
             <button class="modern-btn" id="btn-print-selected" onclick="_printSelected()" style="display:none;">
               <i class="ti ti-printer"></i> طباعة <span id="print-count">0</span>
             </button>
@@ -160,6 +163,11 @@ export async function renderTransportRequests(container) {
       }
       .tr-cell:focus { border-bottom-color:#1C4B8E; background:#F5F3EC; }
       .tr-cell[readonly] { color:#8A8578; }
+      .tr-cell.tr-empty {
+        background: rgba(204, 34, 41, 0.05) !important;
+        border-bottom: 2px dashed rgba(204, 34, 41, 0.3);
+      }
+      .tr-cell.tr-empty::placeholder { color: rgba(204,34,41,0.5); }
       .tr-row { border-bottom:1px solid #F0EDE4; }
       .tr-row:hover { background:#FAFAF7; }
       .tr-row.tr-dirty { background:#FEF9E7; }
@@ -297,6 +305,17 @@ function renderTable() {
   }
 
   tbody.innerHTML = list.map((r, idx) => renderRow(r, idx + 1)).join('');
+
+  // Mark empty cells with red-tinted background so they stand out
+  tbody.querySelectorAll('.tr-cell').forEach(el => {
+    const applyEmpty = () => {
+      if (!el.value || !el.value.trim()) el.classList.add('tr-empty');
+      else el.classList.remove('tr-empty');
+    };
+    applyEmpty();
+    el.addEventListener('input', applyEmpty);
+    el.addEventListener('change', applyEmpty);
+  });
 
   // Attach custom driver search dropdown
   document.querySelectorAll('.tr-driver-name').forEach(input => {
@@ -956,14 +975,18 @@ function updateBulkButtons() {
   const btnPrint = document.getElementById('btn-print-selected');
   const btnExcel = document.getElementById('btn-excel-selected');
   const btnBulkSend = document.getElementById('btn-bulk-send');
+  const btnBulkDelete = document.getElementById('btn-bulk-delete');
   const cnt = document.getElementById('print-count');
   const bulkCnt = document.getElementById('bulk-send-count');
+  const delCnt = document.getElementById('bulk-delete-count');
   if (!btnPrint) return;
 
   if (_selected.size > 0) {
     btnPrint.style.display = '';
     btnExcel.style.display = '';
+    btnBulkDelete.style.display = '';
     if (cnt) cnt.textContent = _selected.size;
+    if (delCnt) delCnt.textContent = _selected.size;
 
     // Show bulk-send only if at least one selected is draft
     const selectedDrafts = _requests.filter(r => _selected.has(r.id) && r.status === 'draft');
@@ -977,6 +1000,32 @@ function updateBulkButtons() {
     btnPrint.style.display = 'none';
     btnExcel.style.display = 'none';
     btnBulkSend.style.display = 'none';
+    btnBulkDelete.style.display = 'none';
+  }
+}
+
+// Bulk delete selected requests
+async function bulkDelete() {
+  if (_selected.size === 0) return toast('حدد طلباً أولاً', 'error');
+  if (!confirm(`حذف ${_selected.size} طلب؟\nلا يمكن التراجع.`)) return;
+
+  try {
+    let ok = 0, fail = 0;
+    for (const id of Array.from(_selected)) {
+      try {
+        await deleteTransportRequest(id);
+        ok++;
+      } catch (e) {
+        console.error('Delete failed for', id, e);
+        fail++;
+      }
+    }
+    _selected.clear();
+    await loadData();
+    toast(`✓ حُذف ${ok}${fail > 0 ? ` (فشل ${fail})` : ''}`, fail > 0 ? 'error' : 'success');
+  } catch (e) {
+    console.error(e);
+    toast('خطأ في الحذف الجماعي', 'error');
   }
 }
 
@@ -1103,7 +1152,7 @@ function printSelected() {
 
   <div class="print-header">
     <div class="print-title-block">
-      <h1>🚛 طلبات النقل - قوة الفنيين</h1>
+      <h1>🚛 طلبات النقل - السديس اللوجستية</h1>
       <div class="subtitle">TRANSPORT REQUESTS · SDS LOGISTICS</div>
     </div>
     <div class="print-meta">
@@ -1164,7 +1213,7 @@ function printSelected() {
   </div>
 
   <div class="print-footer">
-    <div>M-Customs System · قوة الفنيين</div>
+    <div>M-Customs System · السديس اللوجستية</div>
     <div>Page 1 of 1</div>
   </div>
 
@@ -1191,7 +1240,7 @@ function exportSelectedExcel() {
   const now = new Date();
   const dateStr = now.toLocaleDateString('ar-SA', { calendar: 'gregory' });
 
-  csv += `طلبات النقل - قوة الفنيين,${dateStr}\n`;
+  csv += `طلبات النقل - السديس اللوجستية,${dateStr}\n`;
   csv += `عدد الطلبات,${items.length}\n\n`;
 
   csv += `S/L,Truck#,Driver Name,Driver#,Nationality,Customer,Material,Qty(M/T),Dispatch Date,Delivery#,Destination\n`;
@@ -1835,3 +1884,4 @@ async function exportSelectedExcelXLSX() {
 // Override the old CSV export with the new XLSX one
 window._exportSelectedExcel = exportSelectedExcelXLSX;
 window._bulkSendToClearance = bulkSendToClearance;
+window._bulkDelete = bulkDelete;
