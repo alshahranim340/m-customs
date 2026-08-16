@@ -1808,22 +1808,37 @@ async function exportSelectedExcelXLSX() {
     [`TRANSPORT REQUESTS · ${customerName.toUpperCase()} · ${dateStr}`],
     [],
     headers,
-    ...items.map((r, i) => [
-      i + 1,
-      r.loading_location || '',
-      extractPlateDigits(r.truck_number || ''),
-      '',
-      r.driver_name || '',
-      r.driver_id_number || '',
-      r.driver_nationality || '',
-      r.customer || '',
-      r.material || '',
-      r.quantity || '',
-      r.dispatch_date || '',
-      r.delivery_number || '',
-      r.driver_phone || '',
-      ''
-    ])
+    ...items.map((r, i) => {
+      // Look up driver phone from cached drivers
+      let phone = r.driver_phone || '';
+      if (!phone && r.driver_id_number) {
+        const drv = _drivers.find(d => d.iqama === r.driver_id_number);
+        if (drv) phone = drv.phone || '';
+      }
+      if (!phone && r.driver_name) {
+        const drv = _drivers.find(d =>
+          (d.name_en === r.driver_name) || (d.name_ar === r.driver_name) || (d.name === r.driver_name)
+        );
+        if (drv) phone = drv.phone || '';
+      }
+      const dash = '—';
+      return [
+        i + 1,
+        r.loading_location || dash,
+        extractPlateDigits(r.truck_number || '') || dash,
+        r.dispatch_date || dash,
+        r.driver_name || dash,
+        r.driver_id_number || dash,
+        r.driver_nationality || dash,
+        r.customer || dash,
+        r.material || dash,
+        r.quantity || dash,
+        r.dispatch_date || dash,
+        r.delivery_number || dash,
+        phone || dash,
+        dash
+      ];
+    })
   ];
 
   const ws = XLSX.utils.aoa_to_sheet(aoa);
