@@ -1658,39 +1658,89 @@ async function saveBatch(sendToClearance) {
 }
 
 // ══════════════════════════════════════════════════════════════
-// SUNARA-STYLE EXCEL EXPORT (real .xlsx via SheetJS)
+// SUNARA-STYLE EXCEL EXPORT (styled .xlsx via xlsx-js-style)
 // ══════════════════════════════════════════════════════════════
+
+// Extract only digits from a plate string (e.g. "أ ص ع 4743" → "4743")
+function extractPlateDigits(plate) {
+  if (!plate) return '';
+  const digits = String(plate).match(/\d+/g);
+  return digits ? digits.join('') : String(plate);
+}
 
 async function exportSelectedExcelXLSX() {
   const items = getSelectedRequests();
   if (items.length === 0) return toast('حدد طلباً أولاً', 'error');
 
-  // Lazy-load SheetJS from CDN
-  if (!window.XLSX) {
+  // Lazy-load xlsx-js-style (supports real cell styling)
+  if (!window.XLSX || !window.XLSX._styled) {
     await new Promise((resolve, reject) => {
       const script = document.createElement('script');
-      script.src = 'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js';
+      script.src = 'https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js';
       script.onload = resolve;
       script.onerror = reject;
       document.head.appendChild(script);
     });
+    if (window.XLSX) window.XLSX._styled = true;
   }
   const XLSX = window.XLSX;
 
-  // Group by customer (SUNARA-style: one sheet per customer, or all together)
-  // Match SUNARA columns exactly
+  // Style helpers ─────────────────────────────────
+  const BORDER = {
+    top:    { style: 'thin', color: { rgb: '8B7355' } },
+    bottom: { style: 'thin', color: { rgb: '8B7355' } },
+    left:   { style: 'thin', color: { rgb: '8B7355' } },
+    right:  { style: 'thin', color: { rgb: '8B7355' } },
+  };
+  const TITLE_STYLE = {
+    font: { bold: true, sz: 16, color: { rgb: 'FFFFFF' }, name: 'Calibri' },
+    fill: { fgColor: { rgb: '0E1A2E' } },
+    alignment: { horizontal: 'center', vertical: 'center' },
+    border: BORDER,
+  };
+  const SUBTITLE_STYLE = {
+    font: { bold: true, sz: 11, color: { rgb: 'D4B266' }, name: 'Calibri' },
+    fill: { fgColor: { rgb: '1C2B48' } },
+    alignment: { horizontal: 'center', vertical: 'center' },
+    border: BORDER,
+  };
+  const HEADER_STYLE = {
+    font: { bold: true, sz: 11, color: { rgb: 'FFFFFF' }, name: 'Calibri' },
+    fill: { fgColor: { rgb: '0E1A2E' } },
+    alignment: { horizontal: 'center', vertical: 'center', wrapText: true },
+    border: BORDER,
+  };
+  const CELL_STYLE = (isEven) => ({
+    font: { sz: 10, name: 'Calibri', color: { rgb: '0E1A2E' } },
+    fill: { fgColor: { rgb: isEven ? 'F8F5EC' : 'FFFFFF' } },
+    alignment: { horizontal: 'center', vertical: 'center' },
+    border: BORDER,
+  });
+  const CELL_STYLE_LEFT = (isEven) => ({
+    ...CELL_STYLE(isEven),
+    alignment: { horizontal: 'left', vertical: 'center', indent: 1 },
+  });
+
   const headers = [
     'S/N', 'Location', 'Truck Number', 'ETA - Loading', 'Driver Name',
     'Driver Number', 'Driver Nationality', 'Customer', 'Material',
     'Qty (MT)', 'Dispatch Date', 'Delivery SLIP', 'Phone', 'Axles'
   ];
 
-  const rows = items.map((r, i) => {
-    const location = r.loading_location || '';
-    return [
+  const now = new Date();
+  const dateStr = now.toLocaleDateString('ar-SA', { calendar: 'gregory' });
+  const customerName = items[0].customer || 'Transport';
+
+  // Build sheet data ─────────────────────────────
+  const aoa = [
+    ['السديس اللوجستية · AL SUDAIS LOGISTICS'],
+    [`TRANSPORT REQUESTS · ${customerName.toUpperCase()} · ${dateStr}`],
+    [],
+    headers,
+    ...items.map((r, i) => [
       i + 1,
-      location,
-      r.truck_number || '',
+      r.loading_location || '',
+      extractPlateDigits(r.truck_number || ''),
       '',
       r.driver_name || '',
       r.driver_id_number || '',
@@ -1702,42 +1752,81 @@ async function exportSelectedExcelXLSX() {
       r.delivery_number || '',
       r.driver_phone || '',
       ''
-    ];
-  });
-
-  const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
-
-  // Column widths (approximate SUNARA)
-  ws['!cols'] = [
-    { wch: 6 }, { wch: 10 }, { wch: 14 }, { wch: 12 }, { wch: 22 },
-    { wch: 14 }, { wch: 14 }, { wch: 18 }, { wch: 12 },
-    { wch: 10 }, { wch: 14 }, { wch: 14 }, { wch: 14 }, { wch: 8 }
+    ])
   ];
 
-  // Style header row (bold + dark bg)
-  const headerRange = XLSX.utils.decode_range(ws['!ref']);
-  for (let C = headerRange.s.c; C <= headerRange.e.c; C++) {
+  const ws = XLSX.utils.aoa_to_sheet(aoa);
+
+  // Merge title rows
+  ws['!merges'] = [
+    { s: { r: 0, c: 0 }, e: { r: 0, c: 13 } }, // title
+    { s: { r: 1, c: 0 }, e: { r: 1, c: 13 } }, // subtitle
+  ];
+
+  // Row heights
+  ws['!rows'] = [
+    { hpt: 28 }, // title
+    { hpt: 20 }, // subtitle
+    { hpt: 10 }, // spacer
+    { hpt: 30 }, // header
+    ...items.map(() => ({ hpt: 22 }))
+  ];
+
+  // Column widths (SUNARA proportions)
+  ws['!cols'] = [
+    { wch: 6 },  // S/N
+    { wch: 12 }, // Location
+    { wch: 14 }, // Truck#
+    { wch: 14 }, // ETA
+    { wch: 24 }, // Driver Name
+    { wch: 15 }, // Driver Number
+    { wch: 16 }, // Nationality
+    { wch: 20 }, // Customer
+    { wch: 12 }, // Material
+    { wch: 10 }, // Qty
+    { wch: 14 }, // Dispatch Date
+    { wch: 14 }, // Delivery SLIP
+    { wch: 14 }, // Phone
+    { wch: 8 },  // Axles
+  ];
+
+  // Apply styles cell by cell ─────────────────────
+  const range = XLSX.utils.decode_range(ws['!ref']);
+
+  // Title row (0)
+  for (let C = 0; C <= 13; C++) {
     const addr = XLSX.utils.encode_cell({ r: 0, c: C });
+    if (!ws[addr]) ws[addr] = { t: 's', v: '' };
+    ws[addr].s = TITLE_STYLE;
+  }
+  // Subtitle row (1)
+  for (let C = 0; C <= 13; C++) {
+    const addr = XLSX.utils.encode_cell({ r: 1, c: C });
+    if (!ws[addr]) ws[addr] = { t: 's', v: '' };
+    ws[addr].s = SUBTITLE_STYLE;
+  }
+  // Header row (3)
+  for (let C = 0; C <= 13; C++) {
+    const addr = XLSX.utils.encode_cell({ r: 3, c: C });
     if (!ws[addr]) continue;
-    ws[addr].s = {
-      font: { bold: true, color: { rgb: 'FFFFFF' } },
-      fill: { fgColor: { rgb: '0E1A2E' } },
-      alignment: { horizontal: 'center', vertical: 'center' },
-      border: {
-        top: { style: 'thin', color: { rgb: '000000' } },
-        bottom: { style: 'thin', color: { rgb: '000000' } },
-        left: { style: 'thin', color: { rgb: '000000' } },
-        right: { style: 'thin', color: { rgb: '000000' } }
-      }
-    };
+    ws[addr].s = HEADER_STYLE;
+  }
+  // Data rows (4..)
+  for (let R = 4; R <= range.e.r; R++) {
+    const isEven = (R - 4) % 2 === 1;
+    for (let C = 0; C <= 13; C++) {
+      const addr = XLSX.utils.encode_cell({ r: R, c: C });
+      if (!ws[addr]) ws[addr] = { t: 's', v: '' };
+      // Driver name and customer left-aligned for readability
+      ws[addr].s = (C === 4 || C === 7) ? CELL_STYLE_LEFT(isEven) : CELL_STYLE(isEven);
+    }
   }
 
   const wb = XLSX.utils.book_new();
-  const customerName = (items[0].customer || 'Transport').substring(0, 25);
-  XLSX.utils.book_append_sheet(wb, ws, customerName);
+  const sheetName = customerName.substring(0, 25).replace(/[\/\\?*[\]:]/g, '');
+  XLSX.utils.book_append_sheet(wb, ws, sheetName);
 
-  const dateStr = new Date().toISOString().slice(0, 10);
-  const filename = `${customerName}_${dateStr}.xlsx`;
+  const filename = `${customerName}_${now.toISOString().slice(0, 10)}.xlsx`;
   XLSX.writeFile(wb, filename);
 
   toast(`✓ تم تصدير ${items.length} طلب`, 'success');

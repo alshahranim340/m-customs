@@ -129,14 +129,21 @@ async function loadData() {
 
 function pad(n) { return String(n).padStart(2,'0'); }
 
+// Detect if a string contains Arabic characters
+function hasArabic(s) {
+  if (!s) return false;
+  return /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/.test(s);
+}
+
 function renderStats() {
   const total = _drivers.length;
-  // A driver is "missing arabic" if:
-  //  - has name_en but no name_ar (from transport)
-  //  - has no name at all (edge case)
+  // A driver is "missing arabic" ONLY if no field contains Arabic characters
   const missingAr = _drivers.filter(d => {
-    const hasAr = (d.name_ar && d.name_ar.trim()) || (!d.name_en && d.name && d.name.trim());
-    return !hasAr;
+    const nameAr = d.name_ar || '';
+    const nameEn = d.name_en || '';
+    const nameLegacy = d.name || '';
+    // If any field contains Arabic chars, we have the Arabic name
+    return !hasArabic(nameAr) && !hasArabic(nameEn) && !hasArabic(nameLegacy);
   }).length;
   const complete = total - missingAr;
 
@@ -161,16 +168,32 @@ function renderStats() {
 function renderList() {
   const el = document.getElementById('drv-list');
 
-  // Normalize old drivers: if they have 'name' but no 'name_ar', treat 'name' as the arabic name
-  // (old drivers were created by customs staff who wrote arabic names)
+  // Normalize drivers: figure out the best Arabic + English display names
+  // If any field contains Arabic chars, use it as the Arabic display name
   _drivers.forEach(d => {
-    if (!d.name_ar && !d.name_en && d.name) {
-      // Legacy driver - the 'name' field is arabic
-      d._displayNameAr = d.name;
-      d._displayNameEn = '';
+    const nameAr = d.name_ar || '';
+    const nameEn = d.name_en || '';
+    const nameLegacy = d.name || '';
+
+    // Arabic display: prefer name_ar, then check if legacy 'name' is Arabic, then check name_en
+    if (hasArabic(nameAr)) {
+      d._displayNameAr = nameAr;
+    } else if (hasArabic(nameLegacy)) {
+      d._displayNameAr = nameLegacy;
+    } else if (hasArabic(nameEn)) {
+      // Arabic name was written in the English field
+      d._displayNameAr = nameEn;
     } else {
-      d._displayNameAr = d.name_ar || '';
-      d._displayNameEn = d.name_en || '';
+      d._displayNameAr = '';
+    }
+
+    // English display: prefer name_en (only if not Arabic), then check legacy 'name'
+    if (nameEn && !hasArabic(nameEn)) {
+      d._displayNameEn = nameEn;
+    } else if (nameLegacy && !hasArabic(nameLegacy)) {
+      d._displayNameEn = nameLegacy;
+    } else {
+      d._displayNameEn = '';
     }
   });
 
