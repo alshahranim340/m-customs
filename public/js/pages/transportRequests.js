@@ -1004,25 +1004,40 @@ function updateBulkButtons() {
   }
 }
 
-// Bulk delete selected requests
+// Bulk delete selected requests (skip converted — they're linked to shipments)
 async function bulkDelete() {
   if (_selected.size === 0) return toast('حدد طلباً أولاً', 'error');
-  if (!confirm(`حذف ${_selected.size} طلب؟\nلا يمكن التراجع.`)) return;
+
+  const selected = _requests.filter(r => _selected.has(r.id));
+  const converted = selected.filter(r => r.status === 'converted');
+  const deletable = selected.filter(r => r.status !== 'converted');
+
+  if (deletable.length === 0) {
+    return toast(`لا يمكن حذف طلبات محوّلة لشحنات (${converted.length}) — احذف الشحنات من قسم التخليص أولاً`, 'error');
+  }
+
+  let msg = `حذف ${deletable.length} طلب؟`;
+  if (converted.length > 0) {
+    msg += `\n(${converted.length} محوّل سيُتخطى — احذفها من قسم التخليص)`;
+  }
+  msg += '\nلا يمكن التراجع.';
+  if (!confirm(msg)) return;
 
   try {
     let ok = 0, fail = 0;
-    for (const id of Array.from(_selected)) {
+    for (const r of deletable) {
       try {
-        await deleteTransportRequest(id);
+        await deleteTransportRequest(r.id);
         ok++;
       } catch (e) {
-        console.error('Delete failed for', id, e);
+        console.error('Delete failed for', r.id, e);
         fail++;
       }
     }
     _selected.clear();
     await loadData();
-    toast(`✓ حُذف ${ok}${fail > 0 ? ` (فشل ${fail})` : ''}`, fail > 0 ? 'error' : 'success');
+    const skipped = converted.length > 0 ? ` — تُخطّي ${converted.length} محوّل` : '';
+    toast(`✓ حُذف ${ok}${fail > 0 ? ` (فشل ${fail})` : ''}${skipped}`, fail > 0 ? 'error' : 'success');
   } catch (e) {
     console.error(e);
     toast('خطأ في الحذف الجماعي', 'error');
