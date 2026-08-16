@@ -514,22 +514,22 @@ function renderRow(r, num) {
         <input type="checkbox" class="tr-select" data-req-id="${r.id}" ${isSelected ? 'checked' : ''} onclick="_toggleSelect('${r.id}')" style="accent-color:#2E8B57;cursor:pointer;">
       </td>
       <td style="text-align:center;font-family:'JetBrains Mono',monospace;font-size:11px;color:#8A8578;font-weight:700;">${String(num).padStart(2,'0')}</td>
-      <td><input type="text" class="tr-cell" data-field="truck_number" value="${r.truck_number||''}" ${roCss} placeholder="9691"></td>
+      <td><input type="text" class="tr-cell" data-field="truck_number" value="${r.truck_number||''}" ${roCss}></td>
       <td>
         <input list="dl-loading-location" type="text" class="tr-cell" data-field="loading_location"
-          value="${r.loading_location||''}" ${roCss} placeholder="DAMMAM"
+          value="${r.loading_location||''}" ${roCss}
           style="direction:ltr;text-align:right;font-family:'JetBrains Mono',monospace;font-size:11px;">
       </td>
       <td>
         <input type="text" class="tr-cell tr-driver-name" data-field="driver_name" value="${r.driver_name||''}" ${roCss} placeholder="اكتب للبحث..." style="direction:ltr;text-align:right;" autocomplete="off">
       </td>
-      <td><input type="text" class="tr-cell" data-field="driver_id_number" value="${r.driver_id_number||''}" ${roCss} placeholder="2481671556" style="direction:ltr;text-align:right;"></td>
-      <td>${renderSelect('driver_nationality', r.driver_nationality || '', _dropdowns.nationalities, isSent, 'الجنسية')}</td>
-      <td>${renderSelect('customer', r.customer || '', _dropdowns.customers, isSent, 'اختر أو أضف')}</td>
-      <td>${renderSelect('material', r.material || '', _dropdowns.materials, isSent, 'اختر أو أضف')}</td>
-      <td><input type="number" class="tr-cell" data-field="quantity" value="${r.quantity||''}" ${roCss} placeholder="27.5" style="direction:ltr;text-align:right;" step="0.01"></td>
-      <td><input type="text" class="tr-cell tr-hijri" data-field="dispatch_date" value="${r.dispatch_date||''}" ${roCss} placeholder="1447-12-05" style="direction:ltr;text-align:right;"></td>
-      <td><input type="text" class="tr-cell" data-field="delivery_number" value="${r.delivery_number||''}" ${roCss} placeholder="33946" style="direction:ltr;text-align:right;"></td>
+      <td><input type="text" class="tr-cell" data-field="driver_id_number" value="${r.driver_id_number||''}" ${roCss} style="direction:ltr;text-align:right;"></td>
+      <td>${renderSelect('driver_nationality', r.driver_nationality || '', _dropdowns.nationalities, isSent, '')}</td>
+      <td>${renderSelect('customer', r.customer || '', _dropdowns.customers, isSent, '')}</td>
+      <td>${renderSelect('material', r.material || '', _dropdowns.materials, isSent, '')}</td>
+      <td><input type="number" class="tr-cell" data-field="quantity" value="${r.quantity||''}" ${roCss} style="direction:ltr;text-align:right;" step="0.01"></td>
+      <td><input type="text" class="tr-cell tr-hijri" data-field="dispatch_date" value="${r.dispatch_date||''}" ${roCss} style="direction:ltr;text-align:right;"></td>
+      <td><input type="text" class="tr-cell" data-field="delivery_number" value="${r.delivery_number||''}" ${roCss} style="direction:ltr;text-align:right;"></td>
       <td>${renderDestSelect(r.destination || 'uae', isSent)}</td>
       <td style="text-align:center;"><span class="modern-badge ${status.class}" style="font-size:9px;">${status.en}</span></td>
       <td style="text-align:center;">
