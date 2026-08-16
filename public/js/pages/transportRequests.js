@@ -87,6 +87,12 @@ export async function renderTransportRequests(container) {
             <button class="modern-btn" id="btn-excel-selected" onclick="_exportSelectedExcel()" style="display:none;">
               <i class="ti ti-file-spreadsheet"></i> Excel
             </button>
+            <button class="modern-btn" onclick="_openReports()" style="background:#1C4B8E;color:white;border-color:#1C4B8E;">
+              <i class="ti ti-chart-bar"></i> التقارير
+            </button>
+            <button class="modern-btn" id="btn-view-toggle" onclick="_toggleView()" title="عرض بطاقات/جدول">
+              <i class="ti ti-layout-grid" id="view-icon"></i> <span id="view-label">بطاقات</span>
+            </button>
             <button class="modern-btn" onclick="navigate('transport-settings')">
               <i class="ti ti-settings"></i> إدارة القوائم
             </button>
@@ -1004,28 +1010,24 @@ function updateBulkButtons() {
   }
 }
 
-// Bulk delete selected requests (skip converted — they're linked to shipments)
+// Bulk delete selected requests
 async function bulkDelete() {
   if (_selected.size === 0) return toast('حدد طلباً أولاً', 'error');
 
   const selected = _requests.filter(r => _selected.has(r.id));
   const converted = selected.filter(r => r.status === 'converted');
-  const deletable = selected.filter(r => r.status !== 'converted');
 
-  if (deletable.length === 0) {
-    return toast(`لا يمكن حذف طلبات محوّلة لشحنات (${converted.length}) — احذف الشحنات من قسم التخليص أولاً`, 'error');
-  }
-
-  let msg = `حذف ${deletable.length} طلب؟`;
+  let msg = `حذف ${selected.length} طلب؟`;
   if (converted.length > 0) {
-    msg += `\n(${converted.length} محوّل سيُتخطى — احذفها من قسم التخليص)`;
+    msg += `\n\n⚠ تحذير: ${converted.length} طلب محوّل لشحنات في قسم التخليص.`;
+    msg += `\nإذا الشحنات مو محذوفة، سيبقى الرابط مكسور.`;
   }
-  msg += '\nلا يمكن التراجع.';
+  msg += `\n\nلا يمكن التراجع. تأكيد؟`;
   if (!confirm(msg)) return;
 
   try {
     let ok = 0, fail = 0;
-    for (const r of deletable) {
+    for (const r of selected) {
       try {
         await deleteTransportRequest(r.id);
         ok++;
@@ -1036,8 +1038,7 @@ async function bulkDelete() {
     }
     _selected.clear();
     await loadData();
-    const skipped = converted.length > 0 ? ` — تُخطّي ${converted.length} محوّل` : '';
-    toast(`✓ حُذف ${ok}${fail > 0 ? ` (فشل ${fail})` : ''}${skipped}`, fail > 0 ? 'error' : 'success');
+    toast(`✓ حُذف ${ok}${fail > 0 ? ` (فشل ${fail})` : ''}`, fail > 0 ? 'error' : 'success');
   } catch (e) {
     console.error(e);
     toast('خطأ في الحذف الجماعي', 'error');
@@ -1653,6 +1654,10 @@ async function saveBatch(sendToClearance) {
       await addDropdownValue('materials', material);
     }
 
+    // Generate a unique batch_id for this whole bulk save
+    const batchId = 'B' + Date.now().toString(36).toUpperCase() + Math.random().toString(36).substring(2, 5).toUpperCase();
+    const batchLabel = `${customer} · ${new Date().toLocaleDateString('en-GB').replace(/\//g, '-')}`;
+
     const createdIds = [];
     for (const t of validTrucks) {
       const data = {
@@ -1668,6 +1673,8 @@ async function saveBatch(sendToClearance) {
         quantity: parseFloat(t.quantity) || 0,
         delivery_number: (t.delivery_number || '').trim(),
         status: 'draft',
+        batch_id: batchId,
+        batch_label: batchLabel,
       };
       const newId = await createTransportRequest(data, meta);
       createdIds.push(newId);
@@ -1900,3 +1907,446 @@ async function exportSelectedExcelXLSX() {
 window._exportSelectedExcel = exportSelectedExcelXLSX;
 window._bulkSendToClearance = bulkSendToClearance;
 window._bulkDelete = bulkDelete;
+
+// ══════════════════════════════════════════════════════════════
+// VIEW TOGGLE — Flat table vs grouped cards
+// ══════════════════════════════════════════════════════════════
+
+let _viewMode = 'table'; // 'table' | 'cards'
+
+function toggleView() {
+  _viewMode = _viewMode === 'table' ? 'cards' : 'table';
+  const icon = document.getElementById('view-icon');
+  const label = document.getElementById('view-label');
+  if (_viewMode === 'cards') {
+    icon.className = 'ti ti-table';
+    label.textContent = 'جدول';
+    renderCardsView();
+  } else {
+    icon.className = 'ti ti-layout-grid';
+    label.textContent = 'بطاقات';
+    document.getElementById('cards-view-container')?.remove();
+    document.querySelector('.tr-table').style.display = '';
+    renderTable();
+  }
+}
+
+function renderCardsView() {
+  document.querySelector('.tr-table').style.display = 'none';
+
+  // Group by batch_id (or fallback to date+customer for legacy)
+  const groups = {};
+  _requests.forEach(r => {
+    let key = r.batch_id;
+    let label = r.batch_label;
+    if (!key) {
+      // Legacy: group by customer + created date (day)
+      const d = r.created_at?.toDate ? r.created_at.toDate() : new Date(r.created_at || Date.now());
+      const dayKey = d.toISOString().slice(0, 10);
+      key = `legacy-${r.customer || '_'}-${dayKey}`;
+      label = `${r.customer || 'بلا عميل'} · ${dayKey}`;
+    }
+    if (!groups[key]) groups[key] = { key, label, items: [], firstDate: null };
+    groups[key].items.push(r);
+    const d = r.created_at?.toDate ? r.created_at.toDate() : new Date(r.created_at || 0);
+    if (!groups[key].firstDate || d < groups[key].firstDate) groups[key].firstDate = d;
+  });
+
+  // Sort groups by most recent first
+  const sortedGroups = Object.values(groups).sort((a, b) => (b.firstDate || 0) - (a.firstDate || 0));
+
+  // Remove old container if present
+  document.getElementById('cards-view-container')?.remove();
+
+  const container = document.createElement('div');
+  container.id = 'cards-view-container';
+  container.style.cssText = 'padding:0 24px 24px;';
+
+  if (sortedGroups.length === 0) {
+    container.innerHTML = `
+      <div style="background:white;border:1px solid #E8E5DC;border-radius:8px;padding:40px;text-align:center;">
+        <div style="font-size:44px;">📦</div>
+        <div style="font-size:14px;color:#0E1A2E;font-weight:700;margin-top:8px;">لا توجد دفعات</div>
+      </div>`;
+  } else {
+    container.innerHTML = sortedGroups.map(g => renderGroupCard(g)).join('');
+  }
+
+  const tableWrapper = document.querySelector('.tr-table').closest('div[style*="padding:0 24px 24px"]');
+  tableWrapper.parentNode.insertBefore(container, tableWrapper.nextSibling);
+}
+
+function renderGroupCard(group) {
+  const items = group.items;
+  const totalQty = items.reduce((s, r) => s + (parseFloat(r.quantity) || 0), 0).toFixed(2);
+  const statusCounts = { draft: 0, sent: 0, converted: 0, done: 0 };
+  items.forEach(r => statusCounts[r.status] = (statusCounts[r.status] || 0) + 1);
+  const location = items[0].loading_location || '—';
+  const material = items[0].material || '—';
+  const dateStr = group.firstDate ? group.firstDate.toLocaleDateString('en-GB') : '—';
+  const draftIds = items.filter(r => r.status === 'draft').map(r => r.id);
+  const allIds = items.map(r => r.id);
+
+  return `
+    <div class="batch-card" style="background:white;border:1px solid #E8E5DC;border-radius:10px;margin-bottom:16px;overflow:hidden;box-shadow:0 2px 8px rgba(14,26,46,0.04);">
+      <!-- Card Header -->
+      <div style="background:linear-gradient(135deg,#0E1A2E 0%,#1C2B48 100%);color:white;padding:16px 20px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
+        <div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:1.5px;color:#D4B266;font-weight:700;">
+            BATCH · ${group.key.substring(0, 12)}
+          </div>
+          <div style="font-size:16px;font-weight:900;margin-top:3px;">${items[0].customer || 'بلا عميل'}</div>
+          <div style="font-size:11px;color:#B8B0A0;margin-top:2px;font-family:'JetBrains Mono',monospace;">
+            ${dateStr} · ${location} · ${material}
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+          <div style="display:flex;gap:6px;">
+            ${statusCounts.draft > 0 ? `<span class="modern-badge gray" style="font-size:10px;">DRAFT ${statusCounts.draft}</span>` : ''}
+            ${statusCounts.sent > 0 ? `<span class="modern-badge blue" style="font-size:10px;">SENT ${statusCounts.sent}</span>` : ''}
+            ${statusCounts.converted > 0 ? `<span class="modern-badge amber" style="font-size:10px;">CONVERTED ${statusCounts.converted}</span>` : ''}
+          </div>
+          <div style="display:flex;gap:6px;">
+            <button onclick="_batchCardSelectAll('${group.key}')" style="background:rgba(255,255,255,0.1);color:white;border:1px solid rgba(255,255,255,0.3);border-radius:4px;padding:6px 10px;font-family:Tajawal,sans-serif;font-size:11px;cursor:pointer;">
+              <i class="ti ti-checks"></i> تحديد الكل
+            </button>
+            <button onclick="_batchCardExport('${group.key}')" style="background:white;color:#0E1A2E;border:none;border-radius:4px;padding:6px 10px;font-family:Tajawal,sans-serif;font-size:11px;font-weight:700;cursor:pointer;">
+              <i class="ti ti-file-spreadsheet"></i> Excel
+            </button>
+            <button onclick="_batchCardPrint('${group.key}')" style="background:white;color:#0E1A2E;border:none;border-radius:4px;padding:6px 10px;font-family:Tajawal,sans-serif;font-size:11px;font-weight:700;cursor:pointer;">
+              <i class="ti ti-printer"></i> طباعة
+            </button>
+            ${draftIds.length > 0 ? `
+              <button onclick="_batchCardSend('${group.key}')" style="background:#2E8B57;color:white;border:none;border-radius:4px;padding:6px 10px;font-family:Tajawal,sans-serif;font-size:11px;font-weight:700;cursor:pointer;">
+                <i class="ti ti-send"></i> إرسال ${draftIds.length}
+              </button>
+            ` : ''}
+          </div>
+        </div>
+      </div>
+
+      <!-- Summary Stats -->
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:1px;background:#F0EDE4;">
+        <div style="background:white;padding:12px 16px;text-align:center;">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:#8A8578;letter-spacing:1.5px;font-weight:700;">TRUCKS</div>
+          <div style="font-size:22px;font-weight:900;color:#0E1A2E;font-family:'JetBrains Mono',monospace;margin-top:2px;">${String(items.length).padStart(2, '0')}</div>
+        </div>
+        <div style="background:white;padding:12px 16px;text-align:center;">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:#8A8578;letter-spacing:1.5px;font-weight:700;">TOTAL QTY</div>
+          <div style="font-size:22px;font-weight:900;color:#2E8B57;font-family:'JetBrains Mono',monospace;margin-top:2px;">${totalQty}</div>
+        </div>
+        <div style="background:white;padding:12px 16px;text-align:center;">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:#8A8578;letter-spacing:1.5px;font-weight:700;">LOCATION</div>
+          <div style="font-size:14px;font-weight:800;color:#0E1A2E;font-family:'JetBrains Mono',monospace;margin-top:4px;">${location}</div>
+        </div>
+        <div style="background:white;padding:12px 16px;text-align:center;">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:#8A8578;letter-spacing:1.5px;font-weight:700;">MATERIAL</div>
+          <div style="font-size:14px;font-weight:800;color:#0E1A2E;font-family:'JetBrains Mono',monospace;margin-top:4px;">${material}</div>
+        </div>
+      </div>
+
+      <!-- Trucks table -->
+      <div style="overflow-x:auto;">
+        <table style="width:100%;border-collapse:collapse;font-size:12px;">
+          <thead>
+            <tr style="background:#FAFAF7;border-bottom:1px solid #E8E5DC;">
+              <th style="padding:8px;text-align:center;font-family:'JetBrains Mono',monospace;font-size:9px;color:#6B6659;letter-spacing:1px;font-weight:800;width:40px;">#</th>
+              <th style="padding:8px;text-align:right;font-family:'JetBrains Mono',monospace;font-size:9px;color:#6B6659;letter-spacing:1px;font-weight:800;">DRIVER</th>
+              <th style="padding:8px;text-align:right;font-family:'JetBrains Mono',monospace;font-size:9px;color:#6B6659;letter-spacing:1px;font-weight:800;">TRUCK</th>
+              <th style="padding:8px;text-align:right;font-family:'JetBrains Mono',monospace;font-size:9px;color:#6B6659;letter-spacing:1px;font-weight:800;">IQAMA</th>
+              <th style="padding:8px;text-align:right;font-family:'JetBrains Mono',monospace;font-size:9px;color:#6B6659;letter-spacing:1px;font-weight:800;">QTY</th>
+              <th style="padding:8px;text-align:right;font-family:'JetBrains Mono',monospace;font-size:9px;color:#6B6659;letter-spacing:1px;font-weight:800;">DELIVERY</th>
+              <th style="padding:8px;text-align:center;font-family:'JetBrains Mono',monospace;font-size:9px;color:#6B6659;letter-spacing:1px;font-weight:800;">STATUS</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${items.map((r, i) => {
+              const status = STATUS_LABELS[r.status] || STATUS_LABELS.draft;
+              return `
+                <tr style="border-bottom:1px solid #F5F3EC;">
+                  <td style="padding:8px;text-align:center;font-family:'JetBrains Mono',monospace;color:#8A8578;font-weight:700;">${String(i+1).padStart(2,'0')}</td>
+                  <td style="padding:8px;color:#0E1A2E;font-weight:600;">${r.driver_name || '—'}</td>
+                  <td style="padding:8px;font-family:'JetBrains Mono',monospace;color:#0E1A2E;direction:ltr;text-align:right;">${r.truck_number || '—'}</td>
+                  <td style="padding:8px;font-family:'JetBrains Mono',monospace;color:#6B6659;direction:ltr;text-align:right;">${r.driver_id_number || '—'}</td>
+                  <td style="padding:8px;font-family:'JetBrains Mono',monospace;color:#0E1A2E;font-weight:700;">${r.quantity || '—'}</td>
+                  <td style="padding:8px;font-family:'JetBrains Mono',monospace;color:#0E1A2E;">${r.delivery_number || '—'}</td>
+                  <td style="padding:8px;text-align:center;"><span class="modern-badge ${status.class}" style="font-size:9px;">${status.en}</span></td>
+                </tr>`;
+            }).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>`;
+}
+
+async function batchCardSelectAll(batchKey) {
+  const items = _requests.filter(r => (r.batch_id || `legacy-${r.customer}-${r.created_at?.toDate?.().toISOString?.().slice(0,10)}`) === batchKey);
+  items.forEach(r => _selected.add(r.id));
+  toast(`✓ حُدّد ${items.length} في الدفعة`, 'success');
+  updateBulkButtons();
+}
+
+async function batchCardExport(batchKey) {
+  const items = _requests.filter(r => (r.batch_id || `legacy-${r.customer}-${r.created_at?.toDate?.().toISOString?.().slice(0,10)}`) === batchKey);
+  _selected.clear();
+  items.forEach(r => _selected.add(r.id));
+  await exportSelectedExcelXLSX();
+  _selected.clear();
+  updateBulkButtons();
+}
+
+function batchCardPrint(batchKey) {
+  const items = _requests.filter(r => (r.batch_id || `legacy-${r.customer}-${r.created_at?.toDate?.().toISOString?.().slice(0,10)}`) === batchKey);
+  _selected.clear();
+  items.forEach(r => _selected.add(r.id));
+  printSelected();
+  _selected.clear();
+  updateBulkButtons();
+}
+
+async function batchCardSend(batchKey) {
+  const items = _requests.filter(r =>
+    (r.batch_id || `legacy-${r.customer}-${r.created_at?.toDate?.().toISOString?.().slice(0,10)}`) === batchKey
+    && r.status === 'draft'
+  );
+  if (items.length === 0) return;
+  _selected.clear();
+  items.forEach(r => _selected.add(r.id));
+  await bulkSendToClearance();
+  if (_viewMode === 'cards') renderCardsView();
+}
+
+window._toggleView = toggleView;
+window._batchCardSelectAll = batchCardSelectAll;
+window._batchCardExport = batchCardExport;
+window._batchCardPrint = batchCardPrint;
+window._batchCardSend = batchCardSend;
+
+// ══════════════════════════════════════════════════════════════
+// REPORTS MODAL — Period-based report (monthly / custom)
+// ══════════════════════════════════════════════════════════════
+
+function openReportsModal() {
+  document.getElementById('tr-reports-modal')?.remove();
+
+  const now = new Date();
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10);
+  const today = now.toISOString().slice(0, 10);
+
+  // Extract unique customers from requests
+  const customers = [...new Set(_requests.map(r => r.customer).filter(Boolean))].sort();
+
+  const modal = document.createElement('div');
+  modal.id = 'tr-reports-modal';
+  modal.style.cssText = `
+    position:fixed;inset:0;background:rgba(14,26,46,0.55);z-index:9999;
+    display:flex;align-items:center;justify-content:center;padding:20px;
+    font-family:Tajawal,sans-serif;
+  `;
+  modal.innerHTML = `
+    <div style="background:#F5F3EC;border-radius:10px;width:100%;max-width:600px;overflow:hidden;
+                display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(14,26,46,0.4);">
+      <div style="background:linear-gradient(135deg,#1C4B8E 0%,#0E1A2E 100%);color:white;padding:18px 24px;
+                  display:flex;justify-content:space-between;align-items:center;">
+        <div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:2px;color:#D4B266;font-weight:700;">
+            SDS · REPORTS · PERIOD
+          </div>
+          <div style="font-size:20px;font-weight:900;margin-top:4px;">📊 تقرير الطلبات</div>
+        </div>
+        <button onclick="document.getElementById('tr-reports-modal').remove()" style="background:transparent;border:none;color:white;font-size:26px;cursor:pointer;padding:4px 12px;">×</button>
+      </div>
+
+      <div style="padding:24px;">
+        <!-- Quick period buttons -->
+        <div style="margin-bottom:18px;">
+          <label style="font-size:11px;font-weight:800;color:#6B6659;display:block;margin-bottom:8px;">الفترة السريعة</label>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <button class="rep-quick-btn" data-days="0" style="padding:8px 14px;border:1.5px solid #E8E5DC;background:white;border-radius:5px;font-family:Tajawal,sans-serif;font-size:12px;font-weight:700;cursor:pointer;">اليوم</button>
+            <button class="rep-quick-btn" data-days="7" style="padding:8px 14px;border:1.5px solid #E8E5DC;background:white;border-radius:5px;font-family:Tajawal,sans-serif;font-size:12px;font-weight:700;cursor:pointer;">7 أيام</button>
+            <button class="rep-quick-btn" data-days="30" style="padding:8px 14px;border:1.5px solid #E8E5DC;background:white;border-radius:5px;font-family:Tajawal,sans-serif;font-size:12px;font-weight:700;cursor:pointer;">30 يوم</button>
+            <button class="rep-quick-btn" data-days="month" style="padding:8px 14px;border:1.5px solid #1C4B8E;background:#1C4B8E;color:white;border-radius:5px;font-family:Tajawal,sans-serif;font-size:12px;font-weight:700;cursor:pointer;">هذا الشهر</button>
+            <button class="rep-quick-btn" data-days="lastmonth" style="padding:8px 14px;border:1.5px solid #E8E5DC;background:white;border-radius:5px;font-family:Tajawal,sans-serif;font-size:12px;font-weight:700;cursor:pointer;">الشهر الماضي</button>
+            <button class="rep-quick-btn" data-days="all" style="padding:8px 14px;border:1.5px solid #E8E5DC;background:white;border-radius:5px;font-family:Tajawal,sans-serif;font-size:12px;font-weight:700;cursor:pointer;">الكل</button>
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:18px;">
+          <div>
+            <label style="font-size:11px;font-weight:800;color:#6B6659;display:block;margin-bottom:6px;">من تاريخ</label>
+            <input type="date" id="rep-from" value="${monthStart}" style="width:100%;padding:9px 12px;border:1.5px solid #E8E5DC;border-radius:5px;font-family:Tajawal,sans-serif;font-size:13px;outline:none;">
+          </div>
+          <div>
+            <label style="font-size:11px;font-weight:800;color:#6B6659;display:block;margin-bottom:6px;">إلى تاريخ</label>
+            <input type="date" id="rep-to" value="${today}" style="width:100%;padding:9px 12px;border:1.5px solid #E8E5DC;border-radius:5px;font-family:Tajawal,sans-serif;font-size:13px;outline:none;">
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:18px;">
+          <div>
+            <label style="font-size:11px;font-weight:800;color:#6B6659;display:block;margin-bottom:6px;">العميل (اختياري)</label>
+            <select id="rep-customer" style="width:100%;padding:9px 12px;border:1.5px solid #E8E5DC;border-radius:5px;font-family:Tajawal,sans-serif;font-size:13px;background:white;outline:none;">
+              <option value="">كل العملاء</option>
+              ${customers.map(c => `<option value="${c}">${c}</option>`).join('')}
+            </select>
+          </div>
+          <div>
+            <label style="font-size:11px;font-weight:800;color:#6B6659;display:block;margin-bottom:6px;">الحالة</label>
+            <select id="rep-status" style="width:100%;padding:9px 12px;border:1.5px solid #E8E5DC;border-radius:5px;font-family:Tajawal,sans-serif;font-size:13px;background:white;outline:none;">
+              <option value="">كل الحالات</option>
+              <option value="draft">مسودة</option>
+              <option value="sent">مرسلة</option>
+              <option value="converted">محوّلة</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Preview -->
+        <div id="rep-preview" style="background:white;border:1px solid #E8E5DC;border-radius:6px;padding:14px;margin-bottom:14px;">
+          <div style="font-size:12px;color:#6B6659;">اختر الفترة ثم اضغط "تحديث المعاينة"</div>
+        </div>
+      </div>
+
+      <div style="background:white;border-top:1px solid #E8E5DC;padding:14px 24px;display:flex;justify-content:space-between;gap:10px;">
+        <button onclick="_reportRefresh()" style="background:#F5F3EC;color:#0E1A2E;border:1.5px solid #E8E5DC;border-radius:5px;padding:9px 18px;font-family:Tajawal,sans-serif;font-size:13px;font-weight:700;cursor:pointer;">
+          <i class="ti ti-refresh"></i> تحديث المعاينة
+        </button>
+        <div style="display:flex;gap:10px;">
+          <button onclick="_reportPrint()" style="background:white;color:#0E1A2E;border:1.5px solid #0E1A2E;border-radius:5px;padding:9px 18px;font-family:Tajawal,sans-serif;font-size:13px;font-weight:700;cursor:pointer;">
+            <i class="ti ti-printer"></i> طباعة
+          </button>
+          <button onclick="_reportExport()" style="background:#2E8B57;color:white;border:none;border-radius:5px;padding:9px 20px;font-family:Tajawal,sans-serif;font-size:13px;font-weight:800;cursor:pointer;">
+            <i class="ti ti-file-spreadsheet"></i> تصدير Excel
+          </button>
+        </div>
+      </div>
+    </div>`;
+
+  document.body.appendChild(modal);
+
+  // Wire quick period buttons
+  modal.querySelectorAll('.rep-quick-btn').forEach(btn => {
+    btn.onclick = () => {
+      modal.querySelectorAll('.rep-quick-btn').forEach(b => {
+        b.style.background = 'white';
+        b.style.color = '#0E1A2E';
+        b.style.borderColor = '#E8E5DC';
+      });
+      btn.style.background = '#1C4B8E';
+      btn.style.color = 'white';
+      btn.style.borderColor = '#1C4B8E';
+
+      const val = btn.dataset.days;
+      const n = new Date();
+      let from, to = n.toISOString().slice(0, 10);
+      if (val === 'month') {
+        from = new Date(n.getFullYear(), n.getMonth(), 1).toISOString().slice(0, 10);
+      } else if (val === 'lastmonth') {
+        from = new Date(n.getFullYear(), n.getMonth() - 1, 1).toISOString().slice(0, 10);
+        to = new Date(n.getFullYear(), n.getMonth(), 0).toISOString().slice(0, 10);
+      } else if (val === 'all') {
+        from = '2020-01-01';
+      } else {
+        const d = new Date(n);
+        d.setDate(d.getDate() - parseInt(val));
+        from = d.toISOString().slice(0, 10);
+      }
+      document.getElementById('rep-from').value = from;
+      document.getElementById('rep-to').value = to;
+      reportRefresh();
+    };
+  });
+
+  reportRefresh();
+}
+
+function getReportFiltered() {
+  const from = document.getElementById('rep-from').value;
+  const to = document.getElementById('rep-to').value;
+  const customer = document.getElementById('rep-customer').value;
+  const status = document.getElementById('rep-status').value;
+
+  const fromDate = from ? new Date(from) : null;
+  const toDate = to ? new Date(to + 'T23:59:59') : null;
+
+  return _requests.filter(r => {
+    const d = r.created_at?.toDate ? r.created_at.toDate() : (r.created_at ? new Date(r.created_at) : null);
+    if (fromDate && (!d || d < fromDate)) return false;
+    if (toDate && (!d || d > toDate)) return false;
+    if (customer && r.customer !== customer) return false;
+    if (status && r.status !== status) return false;
+    return true;
+  });
+}
+
+function reportRefresh() {
+  const items = getReportFiltered();
+  const preview = document.getElementById('rep-preview');
+
+  if (items.length === 0) {
+    preview.innerHTML = `<div style="text-align:center;padding:14px;color:#8A8578;">
+      <div style="font-size:24px;">📭</div>
+      <div style="font-size:12px;margin-top:6px;">لا توجد طلبات في هذه الفترة</div>
+    </div>`;
+    return;
+  }
+
+  const totalQty = items.reduce((s, r) => s + (parseFloat(r.quantity) || 0), 0).toFixed(2);
+  const uniqueCustomers = new Set(items.map(r => r.customer).filter(Boolean)).size;
+  const uniqueDrivers = new Set(items.map(r => r.driver_name).filter(Boolean)).size;
+  const statuses = { draft: 0, sent: 0, converted: 0 };
+  items.forEach(r => statuses[r.status] = (statuses[r.status] || 0) + 1);
+
+  preview.innerHTML = `
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:10px;margin-bottom:10px;">
+      <div style="background:#F5F3EC;padding:10px;border-radius:5px;text-align:center;">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:#6B6659;font-weight:700;letter-spacing:1px;">TRUCKS</div>
+        <div style="font-size:22px;font-weight:900;color:#0E1A2E;">${items.length}</div>
+      </div>
+      <div style="background:#E7F5EE;padding:10px;border-radius:5px;text-align:center;">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:#2E8B57;font-weight:700;letter-spacing:1px;">TOTAL QTY (MT)</div>
+        <div style="font-size:22px;font-weight:900;color:#2E8B57;">${totalQty}</div>
+      </div>
+      <div style="background:#FEF6E7;padding:10px;border-radius:5px;text-align:center;">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:#8B6914;font-weight:700;letter-spacing:1px;">CUSTOMERS</div>
+        <div style="font-size:22px;font-weight:900;color:#8B6914;">${uniqueCustomers}</div>
+      </div>
+      <div style="background:#EEF2FF;padding:10px;border-radius:5px;text-align:center;">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:#1C4B8E;font-weight:700;letter-spacing:1px;">DRIVERS</div>
+        <div style="font-size:22px;font-weight:900;color:#1C4B8E;">${uniqueDrivers}</div>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      ${statuses.draft > 0 ? `<span class="modern-badge gray" style="font-size:10px;">DRAFT ${statuses.draft}</span>` : ''}
+      ${statuses.sent > 0 ? `<span class="modern-badge blue" style="font-size:10px;">SENT ${statuses.sent}</span>` : ''}
+      ${statuses.converted > 0 ? `<span class="modern-badge amber" style="font-size:10px;">CONVERTED ${statuses.converted}</span>` : ''}
+    </div>`;
+}
+
+async function reportExport() {
+  const items = getReportFiltered();
+  if (items.length === 0) return toast('لا توجد طلبات للتصدير', 'error');
+
+  // Reuse xlsx export via temporary selection
+  const originalSelected = new Set(_selected);
+  _selected.clear();
+  items.forEach(r => _selected.add(r.id));
+  await exportSelectedExcelXLSX();
+  _selected = originalSelected;
+}
+
+function reportPrint() {
+  const items = getReportFiltered();
+  if (items.length === 0) return toast('لا توجد طلبات للطباعة', 'error');
+
+  const originalSelected = new Set(_selected);
+  _selected.clear();
+  items.forEach(r => _selected.add(r.id));
+  printSelected();
+  _selected = originalSelected;
+}
+
+window._openReports = openReportsModal;
+window._reportRefresh = reportRefresh;
+window._reportExport = reportExport;
+window._reportPrint = reportPrint;
