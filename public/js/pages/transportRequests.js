@@ -76,6 +76,9 @@ export async function renderTransportRequests(container) {
             <button class="modern-btn" onclick="navigate('transport-settings')">
               <i class="ti ti-settings"></i> إدارة القوائم
             </button>
+            <button class="modern-btn" style="background:#F5F0E4;color:#8B6914;border-color:#D4B266;" onclick="_openBatchModal()">
+              <i class="ti ti-package"></i> دفعة جديدة
+            </button>
             <button class="modern-btn modern-btn-primary" onclick="_addRow()">
               <i class="ti ti-plus"></i> صف جديد
             </button>
@@ -197,6 +200,13 @@ export async function renderTransportRequests(container) {
   window._saveRow = saveRow;
   window._deleteRow = deleteRow;
   window._sendRow = sendRow;
+  window._openBatchModal = openBatchModal;
+  window._batchAddTruck = batchAddTruck;
+  window._batchRemoveTruck = batchRemoveTruck;
+  window._batchSelectDriver = batchSelectDriver;
+  window._batchSaveDraft = () => saveBatch(false);
+  window._batchSaveAndSend = () => saveBatch(true);
+  window._batchClose = closeBatchModal;
 
   await loadData();
 }
@@ -1139,3 +1149,515 @@ window._toggleSelect = toggleSelect;
 window._toggleSelectAll = toggleSelectAll;
 window._printSelected = printSelected;
 window._exportSelectedExcel = exportSelectedExcel;
+
+// ══════════════════════════════════════════════════════════════
+// BATCH ADD MODAL — Set customer/material/date once, add many trucks
+// ══════════════════════════════════════════════════════════════
+
+let _batchTrucks = []; // temporary list before saving
+
+function openBatchModal() {
+  _batchTrucks = [{ tempId: Date.now() }]; // start with one empty truck
+
+  const existing = document.getElementById('tr-batch-modal');
+  if (existing) existing.remove();
+
+  const modal = document.createElement('div');
+  modal.id = 'tr-batch-modal';
+  modal.style.cssText = `
+    position:fixed;inset:0;background:rgba(14,26,46,0.55);z-index:9999;
+    display:flex;align-items:center;justify-content:center;padding:20px;
+    font-family:Tajawal,sans-serif;
+  `;
+
+  modal.innerHTML = `
+    <div style="background:#F5F3EC;border-radius:10px;width:100%;max-width:1200px;max-height:92vh;
+                overflow:hidden;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(14,26,46,0.4);">
+
+      <!-- Header -->
+      <div style="background:linear-gradient(135deg,#0E1A2E 0%,#1C2B48 100%);color:white;padding:18px 24px;
+                  display:flex;justify-content:space-between;align-items:center;">
+        <div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:2px;color:#D4B266;font-weight:700;">
+            SDS · BATCH REQUEST · NEW
+          </div>
+          <div style="font-size:20px;font-weight:900;margin-top:4px;">📦 دفعة نقل جديدة</div>
+          <div style="font-size:11px;color:#B8B0A0;margin-top:2px;">
+            اضبط العميل + المادة + التاريخ مرة واحدة، ثم أضف الشاحنات
+          </div>
+        </div>
+        <button onclick="_batchClose()" style="background:transparent;border:none;color:white;font-size:26px;cursor:pointer;padding:4px 12px;">×</button>
+      </div>
+
+      <!-- Body -->
+      <div style="flex:1;overflow-y:auto;padding:24px;">
+
+        <!-- BATCH DEFAULTS -->
+        <div style="background:white;border:1px solid #E8E5DC;border-radius:8px;padding:18px;margin-bottom:20px;">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:2px;color:#8B6914;font-weight:800;margin-bottom:14px;">
+            ⚙ BATCH DEFAULTS — تُطبَّق على كل الشاحنات
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;">
+            <div>
+              <label style="font-size:11px;font-weight:800;color:#6B6659;display:block;margin-bottom:6px;">العميل *</label>
+              <input list="dl-batch-customer" id="batch-customer" type="text" placeholder="اختر أو أضف"
+                style="width:100%;padding:9px 12px;border:1.5px solid #D4B266;border-radius:5px;font-family:Tajawal,sans-serif;font-size:13px;background:#FEFCF3;outline:none;">
+              <datalist id="dl-batch-customer">
+                ${_dropdowns.customers.map(o => `<option value="${o}"></option>`).join('')}
+              </datalist>
+            </div>
+            <div>
+              <label style="font-size:11px;font-weight:800;color:#6B6659;display:block;margin-bottom:6px;">المادة *</label>
+              <input list="dl-batch-material" id="batch-material" type="text" placeholder="RRO, DRO, HG..."
+                style="width:100%;padding:9px 12px;border:1.5px solid #D4B266;border-radius:5px;font-family:Tajawal,sans-serif;font-size:13px;background:#FEFCF3;outline:none;">
+              <datalist id="dl-batch-material">
+                ${_dropdowns.materials.map(o => `<option value="${o}"></option>`).join('')}
+              </datalist>
+            </div>
+            <div>
+              <label style="font-size:11px;font-weight:800;color:#6B6659;display:block;margin-bottom:6px;">تاريخ التحميل (هجري)</label>
+              <input id="batch-date" type="text" value="${todayHijri()}" placeholder="1447-12-05"
+                style="width:100%;padding:9px 12px;border:1.5px solid #E8E5DC;border-radius:5px;font-family:'JetBrains Mono',monospace;font-size:13px;direction:ltr;text-align:right;outline:none;">
+            </div>
+            <div>
+              <label style="font-size:11px;font-weight:800;color:#6B6659;display:block;margin-bottom:6px;">الوجهة</label>
+              <select id="batch-destination" style="width:100%;padding:9px 12px;border:1.5px solid #E8E5DC;border-radius:5px;font-family:Tajawal,sans-serif;font-size:13px;cursor:pointer;outline:none;background:white;">
+                <option value="uae">🇦🇪 الإمارات</option>
+                <option value="bahrain">🇧🇭 البحرين</option>
+                <option value="oman">🇴🇲 عمان</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- TRUCKS SECTION -->
+        <div style="background:white;border:1px solid #E8E5DC;border-radius:8px;overflow:hidden;">
+          <div style="background:#FAFAF7;padding:12px 18px;border-bottom:1px solid #E8E5DC;display:flex;justify-content:space-between;align-items:center;">
+            <div style="font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:2px;color:#0E1A2E;font-weight:800;">
+              🚛 TRUCKS — اختر السائق تُملأ البيانات تلقائياً
+            </div>
+            <button onclick="_batchAddTruck()" style="background:#0E1A2E;color:white;border:none;border-radius:5px;padding:6px 14px;font-family:Tajawal,sans-serif;font-size:12px;font-weight:700;cursor:pointer;">
+              <i class="ti ti-plus"></i> شاحنة
+            </button>
+          </div>
+          <div style="overflow-x:auto;">
+            <table id="batch-trucks-table" style="width:100%;border-collapse:collapse;font-size:12px;min-width:1000px;">
+              <thead>
+                <tr style="background:#F5F3EC;">
+                  <th style="padding:9px 6px;text-align:center;font-family:'JetBrains Mono',monospace;font-size:9px;color:#6B6659;letter-spacing:1px;font-weight:800;width:36px;">#</th>
+                  <th style="padding:9px 6px;text-align:right;font-family:'JetBrains Mono',monospace;font-size:9px;color:#6B6659;letter-spacing:1px;font-weight:800;">DRIVER NAME *</th>
+                  <th style="padding:9px 6px;text-align:right;font-family:'JetBrains Mono',monospace;font-size:9px;color:#6B6659;letter-spacing:1px;font-weight:800;">IQAMA</th>
+                  <th style="padding:9px 6px;text-align:right;font-family:'JetBrains Mono',monospace;font-size:9px;color:#6B6659;letter-spacing:1px;font-weight:800;">NAT</th>
+                  <th style="padding:9px 6px;text-align:right;font-family:'JetBrains Mono',monospace;font-size:9px;color:#6B6659;letter-spacing:1px;font-weight:800;">TRUCK#</th>
+                  <th style="padding:9px 6px;text-align:right;font-family:'JetBrains Mono',monospace;font-size:9px;color:#6B6659;letter-spacing:1px;font-weight:800;">QTY(MT)</th>
+                  <th style="padding:9px 6px;text-align:right;font-family:'JetBrains Mono',monospace;font-size:9px;color:#6B6659;letter-spacing:1px;font-weight:800;">DELIVERY#</th>
+                  <th style="padding:9px 6px;text-align:right;font-family:'JetBrains Mono',monospace;font-size:9px;color:#6B6659;letter-spacing:1px;font-weight:800;">DATE (opt)</th>
+                  <th style="padding:9px 6px;text-align:center;width:40px;"></th>
+                </tr>
+              </thead>
+              <tbody id="batch-trucks-body"></tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Footer -->
+      <div style="background:white;border-top:1px solid #E8E5DC;padding:14px 24px;display:flex;justify-content:space-between;align-items:center;gap:12px;">
+        <div style="font-size:12px;color:#6B6659;">
+          <span id="batch-count">1</span> شاحنة في الدفعة
+        </div>
+        <div style="display:flex;gap:10px;">
+          <button onclick="_batchClose()" style="background:#F5F3EC;color:#6B6659;border:1px solid #E8E5DC;border-radius:5px;padding:9px 18px;font-family:Tajawal,sans-serif;font-size:13px;font-weight:700;cursor:pointer;">إلغاء</button>
+          <button onclick="_batchSaveDraft()" style="background:white;color:#0E1A2E;border:1.5px solid #0E1A2E;border-radius:5px;padding:9px 18px;font-family:Tajawal,sans-serif;font-size:13px;font-weight:700;cursor:pointer;">
+            <i class="ti ti-device-floppy"></i> حفظ كمسودّة
+          </button>
+          <button onclick="_batchSaveAndSend()" style="background:#2E8B57;color:white;border:none;border-radius:5px;padding:9px 20px;font-family:Tajawal,sans-serif;font-size:13px;font-weight:800;cursor:pointer;">
+            <i class="ti ti-send"></i> حفظ وإرسال للتخليص
+          </button>
+        </div>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+  renderBatchTrucks();
+}
+
+function closeBatchModal() {
+  const m = document.getElementById('tr-batch-modal');
+  if (m) m.remove();
+  _batchTrucks = [];
+}
+
+function renderBatchTrucks() {
+  const tbody = document.getElementById('batch-trucks-body');
+  if (!tbody) return;
+
+  tbody.innerHTML = _batchTrucks.map((t, idx) => `
+    <tr data-truck-idx="${idx}" style="border-bottom:1px solid #F0EDE4;">
+      <td style="text-align:center;font-family:'JetBrains Mono',monospace;font-weight:700;color:#8A8578;">${String(idx+1).padStart(2,'0')}</td>
+      <td>
+        <input type="text" class="batch-cell batch-driver-name" data-field="driver_name" data-idx="${idx}"
+          value="${t.driver_name||''}" placeholder="ابحث بالاسم..." autocomplete="off"
+          style="border:none;background:transparent;width:100%;padding:8px 6px;font-family:Tajawal,sans-serif;font-size:12px;direction:ltr;text-align:right;outline:none;">
+      </td>
+      <td>
+        <input type="text" class="batch-cell" data-field="driver_id_number" data-idx="${idx}"
+          value="${t.driver_id_number||''}" placeholder="2481671556"
+          style="border:none;background:transparent;width:100%;padding:8px 6px;font-family:'JetBrains Mono',monospace;font-size:12px;direction:ltr;text-align:right;outline:none;">
+      </td>
+      <td>
+        <input type="text" class="batch-cell" data-field="driver_nationality" data-idx="${idx}"
+          value="${t.driver_nationality||''}" placeholder="Indian"
+          style="border:none;background:transparent;width:100%;padding:8px 6px;font-family:Tajawal,sans-serif;font-size:12px;outline:none;">
+      </td>
+      <td>
+        <input type="text" class="batch-cell" data-field="truck_number" data-idx="${idx}"
+          value="${t.truck_number||''}" placeholder="9691"
+          style="border:none;background:transparent;width:100%;padding:8px 6px;font-family:'JetBrains Mono',monospace;font-size:12px;direction:ltr;text-align:right;outline:none;">
+      </td>
+      <td>
+        <input type="number" class="batch-cell" data-field="quantity" data-idx="${idx}"
+          value="${t.quantity||''}" placeholder="27.5" step="0.01"
+          style="border:none;background:transparent;width:100%;padding:8px 6px;font-family:'JetBrains Mono',monospace;font-size:12px;direction:ltr;text-align:right;outline:none;">
+      </td>
+      <td>
+        <input type="text" class="batch-cell" data-field="delivery_number" data-idx="${idx}"
+          value="${t.delivery_number||''}" placeholder="33946"
+          style="border:none;background:transparent;width:100%;padding:8px 6px;font-family:'JetBrains Mono',monospace;font-size:12px;direction:ltr;text-align:right;outline:none;">
+      </td>
+      <td>
+        <input type="text" class="batch-cell" data-field="dispatch_date" data-idx="${idx}"
+          value="${t.dispatch_date||''}" placeholder="(افتراضي)"
+          style="border:none;background:transparent;width:100%;padding:8px 6px;font-family:'JetBrains Mono',monospace;font-size:11px;direction:ltr;text-align:right;outline:none;color:#8A8578;">
+      </td>
+      <td style="text-align:center;">
+        ${_batchTrucks.length > 1 ? `
+          <button onclick="_batchRemoveTruck(${idx})" style="background:transparent;border:none;cursor:pointer;color:#CC2229;padding:4px;font-size:16px;">
+            <i class="ti ti-trash"></i>
+          </button>` : ''
+        }
+      </td>
+    </tr>
+  `).join('');
+
+  // Sync inputs → state
+  tbody.querySelectorAll('.batch-cell').forEach(input => {
+    input.addEventListener('input', (e) => {
+      const idx = parseInt(e.target.dataset.idx);
+      const field = e.target.dataset.field;
+      _batchTrucks[idx][field] = e.target.value;
+    });
+  });
+
+  // Driver dropdown on driver name cells
+  tbody.querySelectorAll('.batch-driver-name').forEach(input => {
+    input.addEventListener('focus', (e) => showBatchDriverDropdown(e.target));
+    input.addEventListener('input', (e) => showBatchDriverDropdown(e.target));
+    input.addEventListener('blur', () => setTimeout(() => hideDriverDropdown(), 200));
+  });
+
+  document.getElementById('batch-count').textContent = _batchTrucks.length;
+}
+
+function batchAddTruck() {
+  _batchTrucks.push({ tempId: Date.now() + Math.random() });
+  renderBatchTrucks();
+  // Focus the new row's driver name
+  setTimeout(() => {
+    const rows = document.querySelectorAll('#batch-trucks-body tr');
+    const lastRow = rows[rows.length - 1];
+    if (lastRow) {
+      lastRow.scrollIntoView({ behavior: 'smooth', block: 'end' });
+      const nameInput = lastRow.querySelector('.batch-driver-name');
+      if (nameInput) nameInput.focus();
+    }
+  }, 50);
+}
+
+function batchRemoveTruck(idx) {
+  if (_batchTrucks.length <= 1) return;
+  _batchTrucks.splice(idx, 1);
+  renderBatchTrucks();
+}
+
+// Reuse existing driver dropdown for the batch inputs
+function showBatchDriverDropdown(input) {
+  _activeInput = input;
+  const query = (input.value || '').trim().toLowerCase();
+
+  let matches = _drivers.filter(d => {
+    const anyName = d.name_en || d.name_ar || d.name || '';
+    if (!anyName) return false;
+    if (!query) return true;
+    let trucks = [d.truck_number || ''];
+    if (d.vehicles && Array.isArray(d.vehicles)) {
+      trucks = trucks.concat(d.vehicles.map(v => (v.plate || '')));
+    }
+    const inNameEn = (d.name_en || '').toLowerCase().includes(query);
+    const inNameAr = (d.name_ar || '').toLowerCase().includes(query);
+    const inLegacyName = (d.name || '').toLowerCase().includes(query);
+    const inIqama = (d.iqama || '').toLowerCase().includes(query);
+    const inTruck = trucks.some(t => t.toLowerCase().includes(query));
+    return inNameEn || inNameAr || inLegacyName || inIqama || inTruck;
+  }).slice(0, 15);
+
+  let dd = document.getElementById('tr-driver-dropdown');
+  if (!dd) {
+    dd = document.createElement('div');
+    dd.id = 'tr-driver-dropdown';
+    document.body.appendChild(dd);
+  }
+  dd.style.zIndex = '10001';
+
+  if (matches.length === 0) {
+    dd.innerHTML = `<div style="padding:14px;text-align:center;color:#8A8578;font-size:12px;">
+      ${query ? '🔍 لا يوجد سائق مطابق' : 'ابدأ بالكتابة'}
+    </div>`;
+  } else {
+    dd.innerHTML = matches.map(d => {
+      const displayEn = d.name_en || '';
+      const displayAr = d.name_ar || (!d.name_en && d.name) || '';
+      let plate = d.truck_number || '';
+      if (!plate && d.vehicles && d.vehicles.length > 0) {
+        plate = d.vehicles[d.vehicles.length - 1].plate || '';
+      }
+      return `
+        <div class="tr-dd-item" data-driver-id="${d.id}">
+          ${displayEn ? `<div style="font-weight:800;font-size:13px;color:#0E1A2E;direction:ltr;text-align:right;">${displayEn}</div>` : ''}
+          ${displayAr ? `<div style="font-size:12px;color:#1C4B8E;margin-top:2px;">${displayAr}</div>` : ''}
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px;font-family:'JetBrains Mono',monospace;font-size:10px;color:#6B6659;">
+            <div><span style="color:#8A8578;">IQAMA:</span> <b style="color:#0E1A2E;">${d.iqama || '—'}</b></div>
+            <div><span style="color:#8A8578;">NAT:</span> <b style="color:#0E1A2E;">${d.nationality || '—'}</b></div>
+            <div><span style="color:#8A8578;">TRUCK:</span> <b style="color:#0E1A2E;">${plate || '—'}</b></div>
+            <div><span style="color:#8A8578;">PHONE:</span> <b style="color:#0E1A2E;">${d.phone || '—'}</b></div>
+          </div>
+        </div>`;
+    }).join('');
+
+    dd.querySelectorAll('.tr-dd-item').forEach(item => {
+      item.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        batchSelectDriver(item.dataset.driverId);
+      });
+    });
+  }
+
+  const rect = input.getBoundingClientRect();
+  dd.style.display = 'block';
+  dd.style.top = `${rect.bottom + window.scrollY + 2}px`;
+  dd.style.left = `${rect.left + window.scrollX}px`;
+  dd.style.width = `${Math.max(rect.width, 320)}px`;
+}
+
+function batchSelectDriver(driverId) {
+  const driver = _drivers.find(d => d.id === driverId);
+  if (!driver || !_activeInput) return;
+
+  const idx = parseInt(_activeInput.dataset.idx);
+  if (isNaN(idx)) return;
+
+  let plate = driver.truck_number || '';
+  if (!plate && driver.vehicles && driver.vehicles.length > 0) {
+    plate = driver.vehicles[driver.vehicles.length - 1].plate || '';
+  }
+
+  // Fill batch truck object
+  _batchTrucks[idx].driver_name = driver.name_en || driver.name_ar || driver.name || '';
+  _batchTrucks[idx].driver_id_number = driver.iqama || '';
+  _batchTrucks[idx].driver_nationality = driver.nationality || '';
+  _batchTrucks[idx].truck_number = plate;
+
+  hideDriverDropdown();
+  renderBatchTrucks();
+  toast(`✓ ${_batchTrucks[idx].driver_name}`, 'success');
+}
+
+async function saveBatch(sendToClearance) {
+  // Read batch defaults
+  const customer = document.getElementById('batch-customer').value.trim();
+  const material = document.getElementById('batch-material').value.trim();
+  const dispatch_date = document.getElementById('batch-date').value.trim();
+  const destination = document.getElementById('batch-destination').value;
+
+  // Validate
+  if (!customer) return toast('اسم العميل مطلوب', 'error');
+  if (!material) return toast('المادة مطلوبة', 'error');
+
+  const validTrucks = _batchTrucks.filter(t => (t.driver_name || '').trim());
+  if (validTrucks.length === 0) return toast('أضف سائقاً واحداً على الأقل', 'error');
+
+  if (sendToClearance) {
+    const missing = validTrucks.filter(t => !t.truck_number);
+    if (missing.length > 0) {
+      return toast(`${missing.length} شاحنة بدون رقم لوحة — لا يمكن الإرسال`, 'error');
+    }
+  }
+
+  try {
+    const currentUser = getCurrentUser();
+    const meta = { uid: currentUser.uid, name: _profile.name, email: _profile.email };
+
+    // Learn new dropdown values
+    if (customer && !_dropdowns.customers.includes(customer)) {
+      await addDropdownValue('customers', customer);
+    }
+    if (material && !_dropdowns.materials.includes(material)) {
+      await addDropdownValue('materials', material);
+    }
+
+    const createdIds = [];
+    for (const t of validTrucks) {
+      const data = {
+        customer,
+        material,
+        destination,
+        dispatch_date: (t.dispatch_date || '').trim() || dispatch_date,
+        driver_name: (t.driver_name || '').trim(),
+        driver_id_number: (t.driver_id_number || '').trim(),
+        driver_nationality: (t.driver_nationality || '').trim(),
+        truck_number: (t.truck_number || '').trim(),
+        quantity: parseFloat(t.quantity) || 0,
+        delivery_number: (t.delivery_number || '').trim(),
+        status: 'draft',
+      };
+      const newId = await createTransportRequest(data, meta);
+      createdIds.push(newId);
+
+      // Upsert driver record
+      if (data.driver_name) {
+        await upsertTransportDriver({
+          name_en: data.driver_name,
+          iqama: data.driver_id_number,
+          nationality: data.driver_nationality,
+          truck_number: data.truck_number,
+          phone: '',
+        });
+      }
+
+      // Learn nationality
+      if (data.driver_nationality && !_dropdowns.nationalities.includes(data.driver_nationality)) {
+        await addDropdownValue('nationalities', data.driver_nationality);
+      }
+    }
+
+    // Send each to clearance if requested
+    if (sendToClearance) {
+      for (const reqId of createdIds) {
+        const reqDoc = validTrucks[createdIds.indexOf(reqId)];
+        const fullData = {
+          id: reqId,
+          customer, material, destination,
+          dispatch_date: (reqDoc.dispatch_date || '').trim() || dispatch_date,
+          driver_name: reqDoc.driver_name,
+          driver_id_number: reqDoc.driver_id_number,
+          driver_nationality: reqDoc.driver_nationality,
+          truck_number: reqDoc.truck_number,
+          quantity: parseFloat(reqDoc.quantity) || 0,
+          delivery_number: reqDoc.delivery_number || '',
+        };
+        const driver = await findDriverByEnOrIqama(reqDoc.driver_name, reqDoc.driver_id_number);
+        const shipmentId = await createShipmentFromTransportRequest(fullData, driver);
+        await linkRequestToShipment(reqId, shipmentId);
+        await updateTransportRequest(reqId, { status: 'converted', shipment_id: shipmentId });
+      }
+    }
+
+    closeBatchModal();
+    await loadData();
+    toast(`✓ ${validTrucks.length} ${sendToClearance ? 'أُرسلت للتخليص' : 'محفوظة كمسودّة'}`, 'success');
+  } catch (e) {
+    console.error(e);
+    toast('خطأ في الحفظ: ' + (e.message || e), 'error');
+  }
+}
+
+// ══════════════════════════════════════════════════════════════
+// SUNARA-STYLE EXCEL EXPORT (real .xlsx via SheetJS)
+// ══════════════════════════════════════════════════════════════
+
+async function exportSelectedExcelXLSX() {
+  const items = getSelectedRequests();
+  if (items.length === 0) return toast('حدد طلباً أولاً', 'error');
+
+  // Lazy-load SheetJS from CDN
+  if (!window.XLSX) {
+    await new Promise((resolve, reject) => {
+      const script = document.createElement('script');
+      script.src = 'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js';
+      script.onload = resolve;
+      script.onerror = reject;
+      document.head.appendChild(script);
+    });
+  }
+  const XLSX = window.XLSX;
+
+  // Group by customer (SUNARA-style: one sheet per customer, or all together)
+  // Match SUNARA columns exactly
+  const headers = [
+    'S/N', 'Location', 'Truck Number', 'ETA - Loading', 'Driver Name',
+    'Driver Number', 'Driver Nationality', 'Customer', 'Material',
+    'Qty (MT)', 'Dispatch Date', 'Delivery SLIP', 'Phone', 'Axles'
+  ];
+
+  const rows = items.map((r, i) => {
+    const destLabel = (DEST_LABELS[r.destination]?.en || r.destination || '').toUpperCase();
+    return [
+      i + 1,
+      destLabel,
+      r.truck_number || '',
+      '',
+      r.driver_name || '',
+      r.driver_id_number || '',
+      r.driver_nationality || '',
+      r.customer || '',
+      r.material || '',
+      r.quantity || '',
+      r.dispatch_date || '',
+      r.delivery_number || '',
+      r.driver_phone || '',
+      ''
+    ];
+  });
+
+  const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+
+  // Column widths (approximate SUNARA)
+  ws['!cols'] = [
+    { wch: 6 }, { wch: 10 }, { wch: 14 }, { wch: 12 }, { wch: 22 },
+    { wch: 14 }, { wch: 14 }, { wch: 18 }, { wch: 12 },
+    { wch: 10 }, { wch: 14 }, { wch: 14 }, { wch: 14 }, { wch: 8 }
+  ];
+
+  // Style header row (bold + dark bg)
+  const headerRange = XLSX.utils.decode_range(ws['!ref']);
+  for (let C = headerRange.s.c; C <= headerRange.e.c; C++) {
+    const addr = XLSX.utils.encode_cell({ r: 0, c: C });
+    if (!ws[addr]) continue;
+    ws[addr].s = {
+      font: { bold: true, color: { rgb: 'FFFFFF' } },
+      fill: { fgColor: { rgb: '0E1A2E' } },
+      alignment: { horizontal: 'center', vertical: 'center' },
+      border: {
+        top: { style: 'thin', color: { rgb: '000000' } },
+        bottom: { style: 'thin', color: { rgb: '000000' } },
+        left: { style: 'thin', color: { rgb: '000000' } },
+        right: { style: 'thin', color: { rgb: '000000' } }
+      }
+    };
+  }
+
+  const wb = XLSX.utils.book_new();
+  const customerName = (items[0].customer || 'Transport').substring(0, 25);
+  XLSX.utils.book_append_sheet(wb, ws, customerName);
+
+  const dateStr = new Date().toISOString().slice(0, 10);
+  const filename = `${customerName}_${dateStr}.xlsx`;
+  XLSX.writeFile(wb, filename);
+
+  toast(`✓ تم تصدير ${items.length} طلب`, 'success');
+}
+
+// Override the old CSV export with the new XLSX one
+window._exportSelectedExcel = exportSelectedExcelXLSX;
