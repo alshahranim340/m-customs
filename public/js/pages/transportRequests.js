@@ -30,6 +30,14 @@ const STATUS_LABELS = {
   done:      { ar: 'مكتمل',  en: 'DONE',      class: 'green' },
 };
 
+// Saudi loading locations (most common at top)
+const LOADING_LOCATIONS = [
+  'DAMMAM', 'RABIGH', 'JEDDAH', 'RIYADH', 'YANBU', 'JUBAIL',
+  'MAKKAH', 'MADINAH', 'TAIF', 'AL-AHSA', 'TABUK', 'HAIL',
+  'KHAMIS-MUSHAIT', 'ABHA', 'NAJRAN', 'JAZAN', 'ARAR', 'SAKAKA',
+  'AL-BAHA', 'AL-QUNFUDHAH', 'AL-KHOBAR', 'BURAYDAH', 'UNAYZAH'
+];
+
 export async function renderTransportRequests(container) {
   const user = getCurrentUser();
   if (!user) {
@@ -67,6 +75,9 @@ export async function renderTransportRequests(container) {
             <div class="modern-header-sub">TRANSPORT REQUESTS · EXCEL-LIKE ENTRY</div>
           </div>
           <div class="modern-header-actions">
+            <button class="modern-btn" id="btn-bulk-send" onclick="_bulkSendToClearance()" style="display:none;background:#2E8B57;color:white;border-color:#2E8B57;">
+              <i class="ti ti-send"></i> إرسال دفعة للتخليص (<span id="bulk-send-count">0</span>)
+            </button>
             <button class="modern-btn" id="btn-print-selected" onclick="_printSelected()" style="display:none;">
               <i class="ti ti-printer"></i> طباعة <span id="print-count">0</span>
             </button>
@@ -110,6 +121,7 @@ export async function renderTransportRequests(container) {
                     </th>
                     <th style="padding:10px 6px;text-align:center;font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:1.5px;font-weight:800;width:40px;">#</th>
                     <th style="padding:10px 6px;text-align:right;font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:1.5px;font-weight:800;">TRUCK</th>
+                    <th style="padding:10px 6px;text-align:right;font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:1.5px;font-weight:800;">LOCATION</th>
                     <th style="padding:10px 6px;text-align:right;font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:1.5px;font-weight:800;">DRIVER NAME</th>
                     <th style="padding:10px 6px;text-align:right;font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:1.5px;font-weight:800;">ID / IQAMA</th>
                     <th style="padding:10px 6px;text-align:right;font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:1.5px;font-weight:800;">NATIONALITY</th>
@@ -276,7 +288,7 @@ function renderTable() {
 
   if (list.length === 0) {
     tbody.innerHTML = `
-      <tr><td colspan="14" style="padding:40px;text-align:center;">
+      <tr><td colspan="15" style="padding:40px;text-align:center;">
         <div style="font-size:44px;">🚛</div>
         <div style="font-size:14px;color:#0E1A2E;font-weight:700;margin-top:8px;">لا توجد طلبات نقل</div>
         <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#6B6659;margin-top:4px;letter-spacing:1px;">CLICK "صف جديد" TO ADD</div>
@@ -499,10 +511,15 @@ function renderRow(r, num) {
   return `
     <tr class="${rowClass}" data-id="${r.id}">
       <td style="text-align:center;">
-        ${isSent ? `<input type="checkbox" class="tr-select" data-req-id="${r.id}" ${isSelected ? 'checked' : ''} onclick="_toggleSelect('${r.id}')" style="accent-color:#2E8B57;cursor:pointer;">` : ''}
+        <input type="checkbox" class="tr-select" data-req-id="${r.id}" ${isSelected ? 'checked' : ''} onclick="_toggleSelect('${r.id}')" style="accent-color:#2E8B57;cursor:pointer;">
       </td>
       <td style="text-align:center;font-family:'JetBrains Mono',monospace;font-size:11px;color:#8A8578;font-weight:700;">${String(num).padStart(2,'0')}</td>
       <td><input type="text" class="tr-cell" data-field="truck_number" value="${r.truck_number||''}" ${roCss} placeholder="9691"></td>
+      <td>
+        <input list="dl-loading-location" type="text" class="tr-cell" data-field="loading_location"
+          value="${r.loading_location||''}" ${roCss} placeholder="DAMMAM"
+          style="direction:ltr;text-align:right;font-family:'JetBrains Mono',monospace;font-size:11px;">
+      </td>
       <td>
         <input type="text" class="tr-cell tr-driver-name" data-field="driver_name" value="${r.driver_name||''}" ${roCss} placeholder="اكتب للبحث..." style="direction:ltr;text-align:right;" autocomplete="off">
       </td>
@@ -522,7 +539,8 @@ function renderRow(r, num) {
         ` : ''}
         <button class="tr-icon-btn tr-danger" onclick="_deleteRow('${r.id}')" title="حذف"><i class="ti ti-trash"></i></button>
       </td>
-    </tr>`;
+    </tr>
+    ${num === 1 ? `<datalist id="dl-loading-location">${LOADING_LOCATIONS.map(l => `<option value="${l}"></option>`).join('')}</datalist>` : ''}`;
 }
 
 function renderSelect(field, value, options, readOnly, placeholder) {
@@ -924,13 +942,11 @@ function toggleSelect(id) {
 }
 
 function toggleSelectAll(el) {
-  const sentIds = _requests
-    .filter(r => r.status === 'sent' || r.status === 'converted' || r.status === 'done')
-    .map(r => r.id);
   if (el.checked) {
-    sentIds.forEach(id => _selected.add(id));
+    // Select ALL visible rows (drafts + sent)
+    _requests.forEach(r => _selected.add(r.id));
   } else {
-    sentIds.forEach(id => _selected.delete(id));
+    _selected.clear();
   }
   document.querySelectorAll('.tr-select').forEach(cb => { cb.checked = el.checked; });
   updateBulkButtons();
@@ -939,15 +955,71 @@ function toggleSelectAll(el) {
 function updateBulkButtons() {
   const btnPrint = document.getElementById('btn-print-selected');
   const btnExcel = document.getElementById('btn-excel-selected');
+  const btnBulkSend = document.getElementById('btn-bulk-send');
   const cnt = document.getElementById('print-count');
+  const bulkCnt = document.getElementById('bulk-send-count');
   if (!btnPrint) return;
+
   if (_selected.size > 0) {
     btnPrint.style.display = '';
     btnExcel.style.display = '';
     if (cnt) cnt.textContent = _selected.size;
+
+    // Show bulk-send only if at least one selected is draft
+    const selectedDrafts = _requests.filter(r => _selected.has(r.id) && r.status === 'draft');
+    if (selectedDrafts.length > 0) {
+      btnBulkSend.style.display = '';
+      if (bulkCnt) bulkCnt.textContent = selectedDrafts.length;
+    } else {
+      btnBulkSend.style.display = 'none';
+    }
   } else {
     btnPrint.style.display = 'none';
     btnExcel.style.display = 'none';
+    btnBulkSend.style.display = 'none';
+  }
+}
+
+// Bulk send selected drafts to clearance department
+async function bulkSendToClearance() {
+  const selectedDrafts = _requests.filter(r => _selected.has(r.id) && r.status === 'draft');
+  if (selectedDrafts.length === 0) return toast('لا توجد مسودّات محدّدة', 'error');
+
+  // Validate all have required fields
+  const invalid = [];
+  selectedDrafts.forEach(r => {
+    const missing = [];
+    if (!r.truck_number) missing.push('الشاحنة');
+    if (!r.driver_name) missing.push('السائق');
+    if (!r.customer) missing.push('العميل');
+    if (missing.length > 0) invalid.push(`${r.driver_name || '(بلا اسم)'}: ${missing.join('، ')}`);
+  });
+  if (invalid.length > 0) {
+    return toast(`${invalid.length} صف ناقص:\n${invalid.slice(0,3).join('\n')}`, 'error');
+  }
+
+  if (!confirm(`إرسال ${selectedDrafts.length} طلب لقسم التخليص؟\nسيُنشأ shipment لكل شاحنة.`)) return;
+
+  try {
+    let ok = 0, fail = 0;
+    for (const r of selectedDrafts) {
+      try {
+        const driver = await findDriverByEnOrIqama(r.driver_name, r.driver_id_number);
+        const shipmentId = await createShipmentFromTransportRequest(r, driver);
+        await linkRequestToShipment(r.id, shipmentId);
+        await updateTransportRequest(r.id, { status: 'converted', shipment_id: shipmentId });
+        ok++;
+      } catch (e) {
+        console.error('Failed to send request', r.id, e);
+        fail++;
+      }
+    }
+    _selected.clear();
+    await loadData();
+    toast(`✓ أُرسلت ${ok} طلب${fail > 0 ? ` (فشل ${fail})` : ''}`, fail > 0 ? 'error' : 'success');
+  } catch (e) {
+    console.error(e);
+    toast('خطأ في الإرسال الجماعي', 'error');
   }
 }
 
@@ -1215,6 +1287,14 @@ function openBatchModal() {
               </datalist>
             </div>
             <div>
+              <label style="font-size:11px;font-weight:800;color:#6B6659;display:block;margin-bottom:6px;">منطقة التحميل *</label>
+              <input list="dl-batch-loading" id="batch-loading-location" type="text" placeholder="DAMMAM"
+                style="width:100%;padding:9px 12px;border:1.5px solid #D4B266;border-radius:5px;font-family:'JetBrains Mono',monospace;font-size:13px;background:#FEFCF3;outline:none;direction:ltr;text-align:right;">
+              <datalist id="dl-batch-loading">
+                ${LOADING_LOCATIONS.map(l => `<option value="${l}"></option>`).join('')}
+              </datalist>
+            </div>
+            <div>
               <label style="font-size:11px;font-weight:800;color:#6B6659;display:block;margin-bottom:6px;">تاريخ التحميل (هجري)</label>
               <input id="batch-date" type="text" value="${todayHijri()}" placeholder="1447-12-05"
                 style="width:100%;padding:9px 12px;border:1.5px solid #E8E5DC;border-radius:5px;font-family:'JetBrains Mono',monospace;font-size:13px;direction:ltr;text-align:right;outline:none;">
@@ -1478,12 +1558,14 @@ async function saveBatch(sendToClearance) {
   // Read batch defaults
   const customer = document.getElementById('batch-customer').value.trim();
   const material = document.getElementById('batch-material').value.trim();
+  const loading_location = document.getElementById('batch-loading-location').value.trim().toUpperCase();
   const dispatch_date = document.getElementById('batch-date').value.trim();
   const destination = document.getElementById('batch-destination').value;
 
   // Validate
   if (!customer) return toast('اسم العميل مطلوب', 'error');
   if (!material) return toast('المادة مطلوبة', 'error');
+  if (!loading_location) return toast('منطقة التحميل مطلوبة', 'error');
 
   const validTrucks = _batchTrucks.filter(t => (t.driver_name || '').trim());
   if (validTrucks.length === 0) return toast('أضف سائقاً واحداً على الأقل', 'error');
@@ -1512,6 +1594,7 @@ async function saveBatch(sendToClearance) {
       const data = {
         customer,
         material,
+        loading_location,
         destination,
         dispatch_date: (t.dispatch_date || '').trim() || dispatch_date,
         driver_name: (t.driver_name || '').trim(),
@@ -1544,11 +1627,12 @@ async function saveBatch(sendToClearance) {
 
     // Send each to clearance if requested
     if (sendToClearance) {
-      for (const reqId of createdIds) {
-        const reqDoc = validTrucks[createdIds.indexOf(reqId)];
+      for (let i = 0; i < createdIds.length; i++) {
+        const reqId = createdIds[i];
+        const reqDoc = validTrucks[i];
         const fullData = {
           id: reqId,
-          customer, material, destination,
+          customer, material, loading_location, destination,
           dispatch_date: (reqDoc.dispatch_date || '').trim() || dispatch_date,
           driver_name: reqDoc.driver_name,
           driver_id_number: reqDoc.driver_id_number,
@@ -1602,10 +1686,10 @@ async function exportSelectedExcelXLSX() {
   ];
 
   const rows = items.map((r, i) => {
-    const destLabel = (DEST_LABELS[r.destination]?.en || r.destination || '').toUpperCase();
+    const location = r.loading_location || '';
     return [
       i + 1,
-      destLabel,
+      location,
       r.truck_number || '',
       '',
       r.driver_name || '',
@@ -1661,3 +1745,4 @@ async function exportSelectedExcelXLSX() {
 
 // Override the old CSV export with the new XLSX one
 window._exportSelectedExcel = exportSelectedExcelXLSX;
+window._bulkSendToClearance = bulkSendToClearance;
