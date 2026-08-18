@@ -16,6 +16,7 @@ import { renderFrogger } from './pages/gameFrogger.js';
 import { renderExportReport } from './pages/exportReport.js';
 import { renderTransportRequests } from './pages/transportRequests.js';
 import { renderTransportSettings } from './pages/transportSettings.js';
+import { initCommandPalette, reloadCommandPaletteData } from './commandPalette.js';
 import { getShipments } from '../../src/firebase/db.js';
 import { onAuthChange, ensureAdminProfile, getUserProfile, logOut, isAdmin, getCurrentUser, signIn } from '../../src/firebase/auth.js';
 import { renderDashboard }      from './pages/dashboard.js';
@@ -1642,6 +1643,30 @@ function renderAppShell(profile) {
   window.doLogout      = doLogout;
   window.updateBadges  = updateBadges;
   window.closeModal    = closeModal;
+
+  // Initialize Command Palette (Ctrl+K)
+  initCommandPalette(navigate);
+
+  // Floating search button (bottom-left) — opens Command Palette
+  if (!document.getElementById('cp-fab')) {
+    const fab = document.createElement('button');
+    fab.id = 'cp-fab';
+    fab.title = 'بحث سريع (Ctrl+K)';
+    fab.innerHTML = '<i class="ti ti-search"></i><span style="font-family:JetBrains Mono,monospace;font-size:10px;letter-spacing:1px;">CTRL+K</span>';
+    fab.style.cssText = `
+      position:fixed; bottom:24px; left:24px; z-index:9998;
+      background:#0E1A2E; color:#D4B266;
+      border:1.5px solid #D4B266; border-radius:24px;
+      padding:10px 16px; display:flex; align-items:center; gap:8px;
+      font-family:Tajawal,sans-serif; font-size:13px; font-weight:700;
+      cursor:pointer; box-shadow:0 6px 20px rgba(14,26,46,0.25);
+      transition:transform 0.15s;
+    `;
+    fab.onmouseenter = () => { fab.style.transform = 'translateY(-2px)'; };
+    fab.onmouseleave = () => { fab.style.transform = 'translateY(0)'; };
+    fab.onclick = () => window._openCommandPalette();
+    document.body.appendChild(fab);
+  }
 
   updateBadges();
   // Transport users go straight to their requests page
