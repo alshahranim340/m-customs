@@ -2,8 +2,8 @@
 // DASHBOARD — Live morning brief with stats, alerts, news
 // ══════════════════════════════════════════════════════════════
 
-import { getShipments, getAllDrivers } from '../../src/firebase/db.js';
-import { getTransportRequests } from '../../src/firebase/transportDb.js';
+import { getShipments, getAllDrivers } from '../../../src/firebase/db.js';
+import { getTransportRequests } from '../../../src/firebase/transportDb.js';
 
 let _profile = null;
 let _newsCache = null;
