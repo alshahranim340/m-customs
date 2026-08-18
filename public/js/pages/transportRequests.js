@@ -1022,10 +1022,13 @@ async function bulkDelete() {
     msg += `\n\n⚠ تحذير: ${converted.length} طلب محوّل لشحنات في قسم التخليص.`;
     msg += `\nإذا الشحنات مو محذوفة، سيبقى الرابط مكسور.`;
   }
-  msg += `\n\nلا يمكن التراجع. تأكيد؟`;
+  msg += `\n\nتقدر تتراجع خلال 8 ثوانٍ بعد الحذف.`;
   if (!confirm(msg)) return;
 
   try {
+    // Snapshot for undo
+    const snapshots = selected.map(r => ({ ...r }));
+
     let ok = 0, fail = 0;
     for (const r of selected) {
       try {
@@ -1038,7 +1041,21 @@ async function bulkDelete() {
     }
     _selected.clear();
     await loadData();
-    toast(`✓ حُذف ${ok}${fail > 0 ? ` (فشل ${fail})` : ''}`, fail > 0 ? 'error' : 'success');
+
+    const currentUser = getCurrentUser();
+    const meta = { uid: currentUser.uid, name: _profile.name, email: _profile.email };
+
+    // Show toast with undo
+    toast(`🗑️ حُذف ${ok} طلب${fail > 0 ? ` (فشل ${fail})` : ''}`, 'success', {
+      undo: async () => {
+        // Restore all deleted records
+        for (const snap of snapshots) {
+          const { id, created_at, updated_at, ...data } = snap;
+          await createTransportRequest(data, meta);
+        }
+        await loadData();
+      }
+    });
   } catch (e) {
     console.error(e);
     toast('خطأ في الحذف الجماعي', 'error');
