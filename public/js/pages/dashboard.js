@@ -45,6 +45,7 @@ export async function renderDashboard(profile) {
     loadStats(),
     loadAlerts(),
     loadNews(),
+    loadWeather(),
   ]);
 }
 
@@ -77,19 +78,15 @@ function todaysQuote() {
 function renderGreeting() {
   const h = new Date().getHours();
   let salute = 'مرحباً';
-  let icon = '👋';
-  if (h < 5)       { salute = 'أهلاً بك';   icon = '🌙'; }
-  else if (h < 12) { salute = 'صباح الخير'; icon = '☀️'; }
-  else if (h < 17) { salute = 'مساء الخير'; icon = '🌤️'; }
-  else if (h < 21) { salute = 'مساء الخير'; icon = '🌆'; }
-  else             { salute = 'مساء الخير'; icon = '🌙'; }
+  if (h < 5)       salute = 'أهلاً بك';
+  else if (h < 12) salute = 'صباح الخير';
+  else             salute = 'مساء الخير';
 
   const days = ['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
   const months = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
   const now = new Date();
   const dateStr = `${days[now.getDay()]} · ${now.getDate()} ${months[now.getMonth()]} ${now.getFullYear()}`;
 
-  // Name resolution with clear fallback
   let name = _profile?.name || _profile?.displayName || '';
   if (!name && _profile?.email) name = _profile.email.split('@')[0];
   if (!name) name = 'أهلاً';
@@ -98,12 +95,9 @@ function renderGreeting() {
 
   return `
     <div style="background:linear-gradient(135deg,#0E1A2E 0%,#1C2B48 60%,#0E1A2E 100%);color:white;padding:32px 36px;border-radius:14px;position:relative;overflow:hidden;">
-      <!-- Decorative gold glow (top-left) -->
       <div style="position:absolute;top:-60px;left:-60px;width:280px;height:280px;background:radial-gradient(circle,rgba(212,178,102,0.18) 0%,transparent 70%);pointer-events:none;"></div>
-      <!-- Decorative subtle pattern (bottom-right) -->
       <div style="position:absolute;bottom:-20px;right:60px;opacity:0.08;pointer-events:none;">
         <svg width="180" height="120" viewBox="0 0 180 120" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <!-- Simple truck silhouette -->
           <rect x="10" y="60" width="80" height="40" rx="3" fill="#D4B266"/>
           <path d="M90 60 L120 60 L140 78 L140 100 L90 100 Z" fill="#D4B266"/>
           <rect x="98" y="68" width="28" height="16" fill="#0E1A2E"/>
@@ -114,20 +108,25 @@ function renderGreeting() {
       </div>
 
       <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:24px;position:relative;z-index:1;flex-wrap:wrap;">
-        <!-- LEFT: greeting -->
         <div style="flex:1;min-width:260px;">
           <div style="font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:2px;color:#D4B266;font-weight:700;">
             SDS · MORNING BRIEF
           </div>
           <div style="font-size:28px;font-weight:900;margin-top:10px;line-height:1.2;">
-            ${icon} ${salute}<span style="color:#D4B266;"> ${name}</span>
+            <span style="font-size:24px;letter-spacing:2px;">🚛 ✈️ 🚢</span>
+          </div>
+          <div style="font-size:28px;font-weight:900;margin-top:8px;line-height:1.2;">
+            ${salute}<span style="color:#D4B266;"> ${name}</span>
           </div>
           <div style="font-size:13px;color:#B8B0A0;margin-top:6px;font-family:'JetBrains Mono',monospace;">
             ${dateStr}
           </div>
+          <!-- Weather widget (loads async) -->
+          <div id="weather-strip" style="margin-top:12px;display:inline-flex;align-items:center;gap:8px;background:rgba(212,178,102,0.1);border:1px solid rgba(212,178,102,0.2);border-radius:20px;padding:5px 14px;font-size:12px;color:#F5F0E4;font-family:Tajawal,sans-serif;">
+            <span style="opacity:0.6;">جارٍ تحميل الطقس...</span>
+          </div>
         </div>
 
-        <!-- RIGHT: today's quote -->
         <div style="max-width:340px;background:rgba(212,178,102,0.08);border:1px solid rgba(212,178,102,0.25);border-radius:10px;padding:16px 18px;position:relative;">
           <div style="position:absolute;top:-8px;right:16px;background:#0E1A2E;padding:0 8px;font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:2px;color:#D4B266;font-weight:800;">
             💡 THOUGHT OF THE DAY
@@ -140,6 +139,60 @@ function renderGreeting() {
       </div>
     </div>
   `;
+}
+
+// ─────────────────────────────────────────────────
+// WEATHER — Jeddah live weather via Open-Meteo (free, CORS-enabled)
+// ─────────────────────────────────────────────────
+async function loadWeather() {
+  const strip = document.getElementById('weather-strip');
+  if (!strip) return;
+  try {
+    // Jeddah coordinates
+    const url = 'https://api.open-meteo.com/v1/forecast?latitude=21.5&longitude=39.2&current=temperature_2m,weather_code,wind_speed_10m&timezone=Asia/Riyadh';
+    const res = await fetch(url);
+    if (!res.ok) throw new Error('weather fetch failed');
+    const data = await res.json();
+    const c = data.current;
+    const emoji = weatherEmoji(c.weather_code);
+    const label = weatherLabel(c.weather_code);
+    const temp = Math.round(c.temperature_2m);
+    const wind = Math.round(c.wind_speed_10m);
+
+    strip.innerHTML = `
+      <span style="font-size:16px;">${emoji}</span>
+      <span style="font-weight:700;color:#D4B266;font-family:'JetBrains Mono',monospace;">${temp}°</span>
+      <span style="opacity:0.5;">·</span>
+      <span>${label}</span>
+      <span style="opacity:0.5;">·</span>
+      <span style="opacity:0.7;">جدة</span>
+      <span style="opacity:0.4;font-size:11px;">💨 ${wind} كم/س</span>
+    `;
+  } catch (e) {
+    strip.style.display = 'none';
+  }
+}
+
+function weatherEmoji(code) {
+  if (code === 0) return '☀️';
+  if (code <= 3) return '🌤️';
+  if (code <= 48) return '🌫️';
+  if (code <= 67) return '🌧️';
+  if (code <= 77) return '❄️';
+  if (code <= 82) return '🌦️';
+  if (code >= 95) return '⛈️';
+  return '🌤️';
+}
+
+function weatherLabel(code) {
+  if (code === 0) return 'صافي';
+  if (code <= 3) return 'غائم جزئياً';
+  if (code <= 48) return 'ضباب';
+  if (code <= 67) return 'ممطر';
+  if (code <= 77) return 'ثلج';
+  if (code <= 82) return 'زخات مطر';
+  if (code >= 95) return 'عاصفة';
+  return 'معتدل';
 }
 
 // ─────────────────────────────────────────────────
@@ -350,19 +403,28 @@ async function fetchGoogleNews(query) {
   const rssUrl = `https://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=ar&gl=SA&ceid=SA:ar`;
 
   const proxies = [
-    // Format: { url: (rss) => string, extract: (response) => xmlString }
+    {
+      name: 'thingproxy',
+      url: `https://thingproxy.freeboard.io/fetch/${rssUrl}`,
+      extract: async (res) => await res.text(),
+    },
     {
       name: 'corsproxy.io',
       url: `https://corsproxy.io/?${encodeURIComponent(rssUrl)}`,
       extract: async (res) => await res.text(),
     },
     {
-      name: 'allorigins.win',
+      name: 'allorigins-raw',
+      url: `https://api.allorigins.win/raw?url=${encodeURIComponent(rssUrl)}`,
+      extract: async (res) => await res.text(),
+    },
+    {
+      name: 'allorigins-json',
       url: `https://api.allorigins.win/get?url=${encodeURIComponent(rssUrl)}`,
       extract: async (res) => (await res.json()).contents,
     },
     {
-      name: 'codetabs.com',
+      name: 'codetabs',
       url: `https://api.codetabs.com/v1/proxy/?quest=${encodeURIComponent(rssUrl)}`,
       extract: async (res) => await res.text(),
     },
@@ -372,19 +434,19 @@ async function fetchGoogleNews(query) {
   for (const p of proxies) {
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 8000);
+      const timeoutId = setTimeout(() => controller.abort(), 15000);
       const res = await fetch(p.url, { signal: controller.signal });
       clearTimeout(timeoutId);
-      if (!res.ok) throw new Error(`${p.name}: ${res.status}`);
+      if (!res.ok) throw new Error(`${p.name}: HTTP ${res.status}`);
       const xml = await p.extract(res);
       const items = parseRSS(xml);
       if (items.length > 0) {
-        console.log(`News loaded via ${p.name}: ${items.length} items`);
+        console.log(`✓ News via ${p.name}: ${items.length} items`);
         return items.slice(0, 15);
       }
-      throw new Error(`${p.name}: parse returned 0 items`);
+      throw new Error(`${p.name}: 0 items`);
     } catch (e) {
-      console.warn(`Proxy ${p.name} failed:`, e.message);
+      console.warn(`✗ ${p.name}:`, e.message);
       lastErr = e;
     }
   }
