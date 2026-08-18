@@ -4,6 +4,7 @@
 
 import { getShipments, getAllDrivers } from '../../../src/firebase/db.js';
 import { getTransportRequests } from '../../../src/firebase/transportDb.js';
+import { getCurrentUser, getUserProfile } from '../../../src/firebase/auth.js';
 
 let _profile = null;
 let _newsCache = null;
@@ -12,6 +13,19 @@ const NEWS_CACHE_MS = 30 * 60 * 1000; // 30 min
 
 export async function renderDashboard(profile) {
   _profile = profile;
+
+  // Fallback: fetch profile if not passed
+  if (!_profile || !_profile.name) {
+    try {
+      const user = getCurrentUser();
+      if (user) {
+        const p = await getUserProfile(user.uid);
+        if (p) _profile = { ...(_profile || {}), ...p };
+      }
+    } catch (e) {
+      console.warn('Could not fetch profile:', e);
+    }
+  }
 
   const container = document.getElementById('page-container');
   if (!container) return;
@@ -35,6 +49,29 @@ export async function renderDashboard(profile) {
 }
 
 // ─────────────────────────────────────────────────
+// MOTIVATIONAL QUOTES (Arabic, business/logistics themed)
+// ─────────────────────────────────────────────────
+const QUOTES = [
+  { text: 'كل شحنة رحلة، وكل رحلة قصة نجاح', author: 'حكمة لوجستية' },
+  { text: 'الإتقان في التفاصيل، والريادة في السرعة', author: '' },
+  { text: 'من رابغ إلى دبي، الجودة لا تعرف حدوداً', author: '' },
+  { text: 'اليوم فرصة جديدة لتقديم الأفضل', author: '' },
+  { text: 'العمل الجيد يُبنى بالثقة، والاستمرار', author: '' },
+  { text: 'كل بيان جمركي يحمل مسؤولية عميل', author: '' },
+  { text: 'خلف كل شحنة سائق، وخلف كل سائق عائلة', author: '' },
+  { text: 'الاحترافية عادة يومية، مو موقف عابر', author: '' },
+  { text: 'ما يُقاس يمكن تحسينه', author: 'بيتر دراكر' },
+  { text: 'الرؤية بلا تنفيذ حلم، والتنفيذ بلا رؤية عبث', author: 'ابن خلدون' },
+  { text: 'تريد إنجاز شي؟ اطلبه من مشغول', author: 'حكمة إدارية' },
+  { text: 'أفضل وقت لزراعة شجرة كان قبل ٢٠ سنة. ثاني أفضل وقت: الآن', author: 'مثل صيني' },
+];
+
+function todaysQuote() {
+  const day = Math.floor(Date.now() / (1000 * 60 * 60 * 24));
+  return QUOTES[day % QUOTES.length];
+}
+
+// ─────────────────────────────────────────────────
 // GREETING
 // ─────────────────────────────────────────────────
 function renderGreeting() {
@@ -51,20 +88,54 @@ function renderGreeting() {
   const months = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
   const now = new Date();
   const dateStr = `${days[now.getDay()]} · ${now.getDate()} ${months[now.getMonth()]} ${now.getFullYear()}`;
-  const name = _profile?.name || _profile?.email?.split('@')[0] || '';
+
+  // Name resolution with clear fallback
+  let name = _profile?.name || _profile?.displayName || '';
+  if (!name && _profile?.email) name = _profile.email.split('@')[0];
+  if (!name) name = 'أهلاً';
+
+  const q = todaysQuote();
 
   return `
-    <div style="background:linear-gradient(135deg,#0E1A2E 0%,#1C2B48 100%);color:white;padding:28px 32px;border-radius:12px;position:relative;overflow:hidden;">
-      <div style="position:absolute;top:-40px;right:-40px;width:200px;height:200px;background:radial-gradient(circle,rgba(212,178,102,0.15) 0%,transparent 70%);"></div>
-      <div style="position:relative;z-index:1;">
-        <div style="font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:2px;color:#D4B266;font-weight:700;">
-          SDS · MORNING BRIEF
+    <div style="background:linear-gradient(135deg,#0E1A2E 0%,#1C2B48 60%,#0E1A2E 100%);color:white;padding:32px 36px;border-radius:14px;position:relative;overflow:hidden;">
+      <!-- Decorative gold glow (top-left) -->
+      <div style="position:absolute;top:-60px;left:-60px;width:280px;height:280px;background:radial-gradient(circle,rgba(212,178,102,0.18) 0%,transparent 70%);pointer-events:none;"></div>
+      <!-- Decorative subtle pattern (bottom-right) -->
+      <div style="position:absolute;bottom:-20px;right:60px;opacity:0.08;pointer-events:none;">
+        <svg width="180" height="120" viewBox="0 0 180 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <!-- Simple truck silhouette -->
+          <rect x="10" y="60" width="80" height="40" rx="3" fill="#D4B266"/>
+          <path d="M90 60 L120 60 L140 78 L140 100 L90 100 Z" fill="#D4B266"/>
+          <rect x="98" y="68" width="28" height="16" fill="#0E1A2E"/>
+          <circle cx="35" cy="105" r="10" fill="#0E1A2E" stroke="#D4B266" stroke-width="2"/>
+          <circle cx="70" cy="105" r="10" fill="#0E1A2E" stroke="#D4B266" stroke-width="2"/>
+          <circle cx="120" cy="105" r="10" fill="#0E1A2E" stroke="#D4B266" stroke-width="2"/>
+        </svg>
+      </div>
+
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:24px;position:relative;z-index:1;flex-wrap:wrap;">
+        <!-- LEFT: greeting -->
+        <div style="flex:1;min-width:260px;">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:2px;color:#D4B266;font-weight:700;">
+            SDS · MORNING BRIEF
+          </div>
+          <div style="font-size:28px;font-weight:900;margin-top:10px;line-height:1.2;">
+            ${icon} ${salute}<span style="color:#D4B266;"> ${name}</span>
+          </div>
+          <div style="font-size:13px;color:#B8B0A0;margin-top:6px;font-family:'JetBrains Mono',monospace;">
+            ${dateStr}
+          </div>
         </div>
-        <div style="font-size:26px;font-weight:900;margin-top:8px;">
-          ${icon} ${salute} ${name}
-        </div>
-        <div style="font-size:13px;color:#B8B0A0;margin-top:4px;font-family:'JetBrains Mono',monospace;">
-          ${dateStr}
+
+        <!-- RIGHT: today's quote -->
+        <div style="max-width:340px;background:rgba(212,178,102,0.08);border:1px solid rgba(212,178,102,0.25);border-radius:10px;padding:16px 18px;position:relative;">
+          <div style="position:absolute;top:-8px;right:16px;background:#0E1A2E;padding:0 8px;font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:2px;color:#D4B266;font-weight:800;">
+            💡 THOUGHT OF THE DAY
+          </div>
+          <div style="font-size:14px;font-weight:600;line-height:1.7;color:#F5F0E4;font-family:'Cairo',sans-serif;">
+            "${q.text}"
+          </div>
+          ${q.author ? `<div style="font-size:11px;color:#8A8578;margin-top:8px;font-style:italic;">— ${q.author}</div>` : ''}
         </div>
       </div>
     </div>
@@ -250,46 +321,81 @@ async function loadNews() {
   }
 
   try {
-    // Fetch multiple queries in parallel and merge
-    const queries = [
-      'الجمارك السعودية',
-      'الموانئ السعودية',
-      'شحن ولوجستيات السعودية',
-    ];
+    // Combined query — one broader search is more reliable than 3 parallel ones
+    const query = 'الجمارك السعودية OR الموانئ السعودية OR شحن السعودية';
+    const items = await fetchGoogleNews(query);
 
-    const feeds = await Promise.all(queries.map(fetchGoogleNews));
-    const items = mergeAndDedupe(feeds);
+    if (items.length === 0) throw new Error('No items returned');
 
     _newsCache = items;
     _newsCacheTime = Date.now();
-
     renderNews(items);
   } catch (e) {
-    console.error('News load failed', e);
+    console.error('News load failed:', e);
     container.innerHTML = `
-      <div style="background:white;border-radius:10px;border:1px solid #E8E5DC;padding:20px;text-align:center;color:#8A8578;">
-        <i class="ti ti-wifi-off" style="font-size:24px;"></i>
-        <div style="font-size:13px;margin-top:8px;">تعذّر تحميل الأخبار</div>
-        <button onclick="location.reload()" style="margin-top:10px;background:#0E1A2E;color:white;border:none;border-radius:5px;padding:6px 14px;font-family:Tajawal,sans-serif;font-size:12px;cursor:pointer;">حاول مجدداً</button>
+      <div style="background:white;border-radius:10px;border:1px solid #E8E5DC;padding:24px;text-align:center;color:#8A8578;">
+        <i class="ti ti-wifi-off" style="font-size:32px;color:#D4B266;"></i>
+        <div style="font-size:14px;font-weight:700;color:#0E1A2E;margin-top:10px;">تعذّر تحميل الأخبار</div>
+        <div style="font-size:11px;color:#8A8578;margin-top:4px;">${e.message || 'خطأ في الاتصال'}</div>
+        <button onclick="location.reload()" style="margin-top:14px;background:#0E1A2E;color:white;border:none;border-radius:5px;padding:8px 18px;font-family:Tajawal,sans-serif;font-size:12px;font-weight:700;cursor:pointer;">
+          <i class="ti ti-refresh"></i> حاول مجدداً
+        </button>
       </div>
     `;
   }
 }
 
+// Try multiple CORS proxies for reliability
 async function fetchGoogleNews(query) {
   const rssUrl = `https://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=ar&gl=SA&ceid=SA:ar`;
-  // Use allorigins as CORS proxy — returns raw XML
-  const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(rssUrl)}`;
-  const res = await fetch(proxyUrl);
-  if (!res.ok) throw new Error('proxy failed: ' + res.status);
-  const data = await res.json();
-  const xml = data.contents;
-  return parseRSS(xml).slice(0, 8);
+
+  const proxies = [
+    // Format: { url: (rss) => string, extract: (response) => xmlString }
+    {
+      name: 'corsproxy.io',
+      url: `https://corsproxy.io/?${encodeURIComponent(rssUrl)}`,
+      extract: async (res) => await res.text(),
+    },
+    {
+      name: 'allorigins.win',
+      url: `https://api.allorigins.win/get?url=${encodeURIComponent(rssUrl)}`,
+      extract: async (res) => (await res.json()).contents,
+    },
+    {
+      name: 'codetabs.com',
+      url: `https://api.codetabs.com/v1/proxy/?quest=${encodeURIComponent(rssUrl)}`,
+      extract: async (res) => await res.text(),
+    },
+  ];
+
+  let lastErr;
+  for (const p of proxies) {
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 8000);
+      const res = await fetch(p.url, { signal: controller.signal });
+      clearTimeout(timeoutId);
+      if (!res.ok) throw new Error(`${p.name}: ${res.status}`);
+      const xml = await p.extract(res);
+      const items = parseRSS(xml);
+      if (items.length > 0) {
+        console.log(`News loaded via ${p.name}: ${items.length} items`);
+        return items.slice(0, 15);
+      }
+      throw new Error(`${p.name}: parse returned 0 items`);
+    } catch (e) {
+      console.warn(`Proxy ${p.name} failed:`, e.message);
+      lastErr = e;
+    }
+  }
+  throw lastErr || new Error('All proxies failed');
 }
 
 function parseRSS(xmlString) {
   const parser = new DOMParser();
   const doc = parser.parseFromString(xmlString, 'application/xml');
+  const err = doc.querySelector('parsererror');
+  if (err) throw new Error('XML parse error');
   const items = Array.from(doc.querySelectorAll('item'));
   return items.map(item => ({
     title: item.querySelector('title')?.textContent || '',
@@ -297,22 +403,6 @@ function parseRSS(xmlString) {
     pubDate: item.querySelector('pubDate')?.textContent || '',
     description: item.querySelector('description')?.textContent || '',
   }));
-}
-
-function mergeAndDedupe(feeds) {
-  const seen = new Set();
-  const merged = [];
-  for (const feed of feeds) {
-    for (const item of feed) {
-      const key = item.title;
-      if (seen.has(key)) continue;
-      seen.add(key);
-      merged.push(item);
-    }
-  }
-  // Sort by pubDate desc
-  merged.sort((a, b) => new Date(b.pubDate) - new Date(a.pubDate));
-  return merged.slice(0, 12);
 }
 
 function timeAgo(dateStr) {
