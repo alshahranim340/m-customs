@@ -78,9 +78,12 @@ function todaysQuote() {
 function renderGreeting() {
   const h = new Date().getHours();
   let salute = 'مرحباً';
-  if (h < 5)       salute = 'أهلاً بك';
-  else if (h < 12) salute = 'صباح الخير';
-  else             salute = 'مساء الخير';
+  let icon = '👋';
+  if (h < 5)       { salute = 'أهلاً بك';   icon = '🌙'; }
+  else if (h < 12) { salute = 'صباح الخير'; icon = '☀️'; }
+  else if (h < 17) { salute = 'مساء الخير'; icon = '🌤️'; }
+  else if (h < 21) { salute = 'مساء الخير'; icon = '🌆'; }
+  else             { salute = 'مساء الخير'; icon = '🌙'; }
 
   const days = ['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
   const months = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
@@ -113,17 +116,18 @@ function renderGreeting() {
             SDS · MORNING BRIEF
           </div>
           <div style="font-size:28px;font-weight:900;margin-top:10px;line-height:1.2;">
-            <span style="font-size:24px;letter-spacing:2px;">🚛 ✈️ 🚢</span>
-          </div>
-          <div style="font-size:28px;font-weight:900;margin-top:8px;line-height:1.2;">
-            ${salute}<span style="color:#D4B266;"> ${name}</span>
+            ${icon} ${salute}<span style="color:#D4B266;"> ${name}</span>
           </div>
           <div style="font-size:13px;color:#B8B0A0;margin-top:6px;font-family:'JetBrains Mono',monospace;">
             ${dateStr}
           </div>
-          <!-- Weather widget (loads async) -->
+          <!-- Weather widget -->
           <div id="weather-strip" style="margin-top:12px;display:inline-flex;align-items:center;gap:8px;background:rgba(212,178,102,0.1);border:1px solid rgba(212,178,102,0.2);border-radius:20px;padding:5px 14px;font-size:12px;color:#F5F0E4;font-family:Tajawal,sans-serif;">
             <span style="opacity:0.6;">جارٍ تحميل الطقس...</span>
+          </div>
+          <!-- Logistics emojis (below everything) -->
+          <div style="margin-top:14px;font-size:26px;letter-spacing:8px;">
+            🚛 ✈️ 🚢
           </div>
         </div>
 
@@ -367,90 +371,115 @@ function renderNewsSkeleton() {
 async function loadNews() {
   const container = document.getElementById('dash-news');
 
-  // Cache check
   if (_newsCache && (Date.now() - _newsCacheTime) < NEWS_CACHE_MS) {
     renderNews(_newsCache);
     return;
   }
 
   try {
-    // Combined query — one broader search is more reliable than 3 parallel ones
-    const query = 'الجمارك السعودية OR الموانئ السعودية OR شحن السعودية';
-    const items = await fetchGoogleNews(query);
-
-    if (items.length === 0) throw new Error('No items returned');
-
+    const items = await fetchNewsAllStrategies();
+    if (items.length === 0) throw new Error('لا توجد نتائج');
     _newsCache = items;
     _newsCacheTime = Date.now();
     renderNews(items);
   } catch (e) {
-    console.error('News load failed:', e);
+    console.error('News failed:', e);
+    // Fallback: show manual links to open news in browser
     container.innerHTML = `
-      <div style="background:white;border-radius:10px;border:1px solid #E8E5DC;padding:24px;text-align:center;color:#8A8578;">
-        <i class="ti ti-wifi-off" style="font-size:32px;color:#D4B266;"></i>
-        <div style="font-size:14px;font-weight:700;color:#0E1A2E;margin-top:10px;">تعذّر تحميل الأخبار</div>
-        <div style="font-size:11px;color:#8A8578;margin-top:4px;">${e.message || 'خطأ في الاتصال'}</div>
-        <button onclick="location.reload()" style="margin-top:14px;background:#0E1A2E;color:white;border:none;border-radius:5px;padding:8px 18px;font-family:Tajawal,sans-serif;font-size:12px;font-weight:700;cursor:pointer;">
-          <i class="ti ti-refresh"></i> حاول مجدداً
-        </button>
+      <div style="background:white;border-radius:10px;border:1px solid #E8E5DC;overflow:hidden;">
+        <div style="background:linear-gradient(135deg,#0E1A2E 0%,#1C2B48 100%);color:white;padding:14px 20px;">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:2px;color:#D4B266;font-weight:800;">
+            📰 CUSTOMS & LOGISTICS NEWS
+          </div>
+          <div style="font-size:14px;font-weight:800;margin-top:2px;">أخبار الجمارك والموانئ</div>
+        </div>
+        <div style="padding:24px;text-align:center;">
+          <i class="ti ti-external-link" style="font-size:32px;color:#D4B266;"></i>
+          <div style="font-size:14px;font-weight:700;color:#0E1A2E;margin-top:10px;">تعذّر جلب الأخبار مباشرة</div>
+          <div style="font-size:11px;color:#8A8578;margin-top:4px;">افتحها في تبويب جديد:</div>
+          <div style="margin-top:16px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap;">
+            <a href="https://news.google.com/search?q=${encodeURIComponent('الجمارك السعودية')}&hl=ar&gl=SA" target="_blank" rel="noopener"
+               style="background:#0E1A2E;color:white;padding:8px 14px;border-radius:5px;text-decoration:none;font-size:12px;font-weight:700;font-family:Tajawal,sans-serif;">
+              🏛️ الجمارك السعودية
+            </a>
+            <a href="https://news.google.com/search?q=${encodeURIComponent('الموانئ السعودية موانئ')}&hl=ar&gl=SA" target="_blank" rel="noopener"
+               style="background:#0E1A2E;color:white;padding:8px 14px;border-radius:5px;text-decoration:none;font-size:12px;font-weight:700;font-family:Tajawal,sans-serif;">
+              🚢 الموانئ (موانئ)
+            </a>
+            <a href="https://news.google.com/search?q=${encodeURIComponent('شحن ولوجستيات السعودية')}&hl=ar&gl=SA" target="_blank" rel="noopener"
+               style="background:#0E1A2E;color:white;padding:8px 14px;border-radius:5px;text-decoration:none;font-size:12px;font-weight:700;font-family:Tajawal,sans-serif;">
+              🚛 الشحن
+            </a>
+          </div>
+          <button onclick="location.reload()" style="margin-top:14px;background:transparent;color:#8A8578;border:1px solid #E8E5DC;border-radius:5px;padding:6px 14px;font-family:Tajawal,sans-serif;font-size:11px;cursor:pointer;">
+            <i class="ti ti-refresh"></i> حاول مجدداً
+          </button>
+        </div>
       </div>
     `;
   }
 }
 
-// Try multiple CORS proxies for reliability
-async function fetchGoogleNews(query) {
+// Race between multiple strategies — first to succeed wins
+async function fetchNewsAllStrategies() {
+  const query = 'الجمارك السعودية OR الموانئ السعودية';
   const rssUrl = `https://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=ar&gl=SA&ceid=SA:ar`;
 
-  const proxies = [
-    {
-      name: 'thingproxy',
-      url: `https://thingproxy.freeboard.io/fetch/${rssUrl}`,
-      extract: async (res) => await res.text(),
+  const strategies = [
+    // Strategy 1: rss2json.com (returns parsed JSON - most reliable)
+    async () => {
+      const r = await fetchWithTimeout(`https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(rssUrl)}&count=15`, 10000);
+      const data = await r.json();
+      if (data.status !== 'ok') throw new Error('rss2json: ' + (data.message || 'bad status'));
+      return (data.items || []).map(i => ({
+        title: i.title || '',
+        link: i.link || '',
+        pubDate: i.pubDate || '',
+      }));
     },
-    {
-      name: 'corsproxy.io',
-      url: `https://corsproxy.io/?${encodeURIComponent(rssUrl)}`,
-      extract: async (res) => await res.text(),
+    // Strategy 2: corsproxy.io (raw XML)
+    async () => {
+      const r = await fetchWithTimeout(`https://corsproxy.io/?${encodeURIComponent(rssUrl)}`, 10000);
+      return parseRSS(await r.text());
     },
-    {
-      name: 'allorigins-raw',
-      url: `https://api.allorigins.win/raw?url=${encodeURIComponent(rssUrl)}`,
-      extract: async (res) => await res.text(),
+    // Strategy 3: allorigins raw
+    async () => {
+      const r = await fetchWithTimeout(`https://api.allorigins.win/raw?url=${encodeURIComponent(rssUrl)}`, 10000);
+      return parseRSS(await r.text());
     },
-    {
-      name: 'allorigins-json',
-      url: `https://api.allorigins.win/get?url=${encodeURIComponent(rssUrl)}`,
-      extract: async (res) => (await res.json()).contents,
-    },
-    {
-      name: 'codetabs',
-      url: `https://api.codetabs.com/v1/proxy/?quest=${encodeURIComponent(rssUrl)}`,
-      extract: async (res) => await res.text(),
+    // Strategy 4: BBC Arabic business (has native CORS) — different content but at least loads
+    async () => {
+      const r = await fetchWithTimeout('https://feeds.bbci.co.uk/arabic/business/rss.xml', 8000);
+      return parseRSS(await r.text());
     },
   ];
 
   let lastErr;
-  for (const p of proxies) {
+  for (let i = 0; i < strategies.length; i++) {
     try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 15000);
-      const res = await fetch(p.url, { signal: controller.signal });
-      clearTimeout(timeoutId);
-      if (!res.ok) throw new Error(`${p.name}: HTTP ${res.status}`);
-      const xml = await p.extract(res);
-      const items = parseRSS(xml);
+      const items = await strategies[i]();
       if (items.length > 0) {
-        console.log(`✓ News via ${p.name}: ${items.length} items`);
+        console.log(`✓ News loaded via strategy ${i + 1}: ${items.length} items`);
         return items.slice(0, 15);
       }
-      throw new Error(`${p.name}: 0 items`);
     } catch (e) {
-      console.warn(`✗ ${p.name}:`, e.message);
+      console.warn(`✗ Strategy ${i + 1} failed:`, e.message);
       lastErr = e;
     }
   }
-  throw lastErr || new Error('All proxies failed');
+  throw lastErr || new Error('كل المصادر فشلت');
+}
+
+async function fetchWithTimeout(url, ms) {
+  const ctrl = new AbortController();
+  const to = setTimeout(() => ctrl.abort(new Error('timeout')), ms);
+  try {
+    const res = await fetch(url, { signal: ctrl.signal, mode: 'cors' });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    return res;
+  } finally {
+    clearTimeout(to);
+  }
 }
 
 function parseRSS(xmlString) {
