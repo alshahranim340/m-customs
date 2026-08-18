@@ -35,6 +35,7 @@ export async function renderDashboard(profile) {
     <div style="padding:24px;font-family:Tajawal,sans-serif;background:#F5F3EC;min-height:100vh;">
       ${renderGreeting()}
       <div id="dash-stats" style="margin-top:20px;">${renderStatsSkeleton()}</div>
+      <div id="dash-prayer" style="margin-top:20px;"></div>
       <div id="dash-alerts" style="margin-top:20px;"></div>
       <div id="dash-news" style="margin-top:20px;">${renderNewsSkeleton()}</div>
     </div>
@@ -46,6 +47,7 @@ export async function renderDashboard(profile) {
     loadAlerts(),
     loadNews(),
     loadWeather(),
+    loadPrayerTimes(),
   ]);
 }
 
@@ -228,6 +230,7 @@ async function loadStats() {
         ${statCard('ti-calendar-stats', 'شحنات هذا الشهر', shipsThisMonth, '#2E8B57', '#E7F5EE')}
       </div>
     `;
+    animateCounters();
   } catch (e) {
     console.error('Stats load failed', e);
     document.getElementById('dash-stats').innerHTML = `<div style="color:#8A8578;font-size:12px;">تعذّر تحميل الإحصائيات</div>`;
@@ -243,10 +246,27 @@ function statCard(icon, label, value, accentColor, bgColor, clickTarget = null) 
         <i class="ti ${icon}"></i>
       </div>
       <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#8A8578;letter-spacing:1.5px;font-weight:700;">${label.toUpperCase()}</div>
-      <div style="font-size:32px;font-weight:900;color:${accentColor};margin-top:6px;font-family:'JetBrains Mono',monospace;">${String(value).padStart(2, '0')}</div>
+      <div class="stat-number" data-target="${value}" style="font-size:32px;font-weight:900;color:${accentColor};margin-top:6px;font-family:'JetBrains Mono',monospace;">00</div>
       <div style="font-size:12px;color:#6B6659;margin-top:4px;">${label}</div>
     </div>
   `;
+}
+
+function animateCounters() {
+  document.querySelectorAll('.stat-number').forEach(el => {
+    const target = parseInt(el.dataset.target) || 0;
+    const duration = 1200;
+    const startTime = performance.now();
+    const format = n => String(Math.floor(n)).padStart(2, '0');
+    function tick(now) {
+      const t = Math.min((now - startTime) / duration, 1);
+      const eased = 1 - Math.pow(1 - t, 3);
+      el.textContent = format(target * eased);
+      if (t < 1) requestAnimationFrame(tick);
+      else el.textContent = format(target);
+    }
+    requestAnimationFrame(tick);
+  });
 }
 
 // ─────────────────────────────────────────────────
@@ -383,56 +403,87 @@ function renderNewsSkeleton() {
       @keyframes cSpin { to { transform: rotate(360deg); } }
       @keyframes cPulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.5; transform: scale(1.4); } }
       @keyframes cSlideIn { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: translateX(0); } }
+      @keyframes cAccExpand { from { max-height:0; opacity:0; } to { max-height:500px; opacity:1; } }
       .dash-spinner { animation: cSpin 0.8s linear infinite; }
       .dash-pulse-dot { animation: cPulse 1.5s ease-in-out infinite; }
       .news-slide-enter { animation: cSlideIn 0.4s ease-out; }
+      .acc-content { overflow:hidden; transition: max-height 0.3s ease; }
+      .acc-content.acc-open { animation: cAccExpand 0.3s ease-out; }
+      .acc-header { cursor:pointer; transition: background 0.15s; }
+      .acc-header:hover { background:#F0EDE4 !important; }
+      .acc-chevron { transition: transform 0.25s; }
+      .acc-chevron.acc-rotated { transform: rotate(-90deg); }
     </style>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
-      <div>${renderResourcesPortal()}</div>
+    <div style="display:grid;grid-template-columns:1.2fr 1fr;gap:20px;">
       <div id="news-carousel-container">${renderCarouselSkeleton()}</div>
+      <div>${renderResourcesAccordion()}</div>
     </div>
   `;
 }
 
-function renderResourcesPortal() {
+function renderResourcesAccordion() {
   return `
-    <div style="background:white;border-radius:10px;border:1px solid #E8E5DC;overflow:hidden;height:100%;">
+    <div style="background:white;border-radius:10px;border:1px solid #E8E5DC;overflow:hidden;">
       <div style="background:linear-gradient(135deg,#0E1A2E 0%,#1C2B48 100%);color:white;padding:14px 20px;">
         <div style="font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:2px;color:#D4B266;font-weight:800;">
           🌐 RESOURCES PORTAL
         </div>
         <div style="font-size:14px;font-weight:800;margin-top:2px;">بوابة الروابط</div>
       </div>
-      <div style="padding:8px;">
-        ${RESOURCES.map(cat => `
-          <div style="margin-bottom:6px;">
-            <div style="padding:10px 12px 6px;display:flex;align-items:center;gap:10px;">
-              <div style="width:26px;height:26px;background:${cat.bg};color:${cat.color};border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:13px;">
+      <div style="padding:6px;">
+        ${RESOURCES.map((cat, idx) => `
+          <div style="margin-bottom:4px;border-radius:6px;overflow:hidden;">
+            <div class="acc-header" data-acc-idx="${idx}" style="padding:12px 14px;background:#FAFAF7;display:flex;align-items:center;gap:12px;">
+              <div style="width:32px;height:32px;background:${cat.bg};color:${cat.color};border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;">
                 <i class="ti ${cat.icon}"></i>
               </div>
-              <div style="font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:2px;color:#0E1A2E;font-weight:800;">
-                ${cat.category.toUpperCase()}
+              <div style="flex:1;">
+                <div style="font-size:13px;font-weight:800;color:#0E1A2E;">${cat.category}</div>
+                <div style="font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:1.5px;color:#8A8578;font-weight:700;margin-top:1px;">${cat.links.length} ROABIT</div>
               </div>
+              <i class="ti ti-chevron-down acc-chevron" data-chevron="${idx}" style="color:#8A8578;font-size:18px;"></i>
             </div>
-            <div style="display:grid;grid-template-columns:1fr;gap:4px;padding:0 6px;">
-              ${cat.links.map(link => `
-                <a href="${link.url}" target="_blank" rel="noopener"
-                   style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:#FAFAF7;border:1px solid transparent;border-radius:6px;text-decoration:none;color:inherit;transition:all 0.12s;"
-                   onmouseover="this.style.background='#F5F3EC';this.style.borderColor='#D4B266';"
-                   onmouseout="this.style.background='#FAFAF7';this.style.borderColor='transparent';">
-                  <div style="flex:1;min-width:0;">
-                    <div style="font-size:12px;font-weight:700;color:#0E1A2E;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${link.name}</div>
-                    <div style="font-size:10px;color:#8A8578;margin-top:1px;font-family:'JetBrains Mono',monospace;">${link.desc}</div>
-                  </div>
-                  <i class="ti ti-external-link" style="color:#D4B266;font-size:14px;"></i>
-                </a>
-              `).join('')}
+            <div class="acc-content" data-acc-content="${idx}" style="max-height:0;">
+              <div style="padding:4px 6px 8px;display:grid;gap:3px;">
+                ${cat.links.map(link => `
+                  <a href="${link.url}" target="_blank" rel="noopener"
+                     style="display:flex;align-items:center;gap:10px;padding:9px 12px;background:transparent;border-radius:5px;text-decoration:none;color:inherit;transition:all 0.12s;"
+                     onmouseover="this.style.background='#F5F3EC';"
+                     onmouseout="this.style.background='transparent';">
+                    <div style="width:5px;height:5px;background:${cat.color};border-radius:50%;flex-shrink:0;"></div>
+                    <div style="flex:1;min-width:0;">
+                      <div style="font-size:12px;font-weight:700;color:#0E1A2E;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${link.name}</div>
+                      <div style="font-size:10px;color:#8A8578;margin-top:1px;font-family:'JetBrains Mono',monospace;">${link.desc}</div>
+                    </div>
+                    <i class="ti ti-external-link" style="color:#D4B266;font-size:13px;"></i>
+                  </a>
+                `).join('')}
+              </div>
             </div>
           </div>
         `).join('')}
       </div>
     </div>
   `;
+}
+
+// Wire accordion after render
+function wireAccordion() {
+  document.querySelectorAll('.acc-header').forEach(header => {
+    header.onclick = () => {
+      const idx = header.dataset.accIdx;
+      const content = document.querySelector(`[data-acc-content="${idx}"]`);
+      const chevron = document.querySelector(`[data-chevron="${idx}"]`);
+      const isOpen = content.style.maxHeight && content.style.maxHeight !== '0px';
+      if (isOpen) {
+        content.style.maxHeight = '0';
+        chevron.classList.remove('acc-rotated');
+      } else {
+        content.style.maxHeight = content.scrollHeight + 'px';
+        chevron.classList.add('acc-rotated');
+      }
+    };
+  });
 }
 
 function renderCarouselSkeleton() {
@@ -461,6 +512,9 @@ async function loadNews() {
   const container = document.getElementById('news-carousel-container');
   if (!container) return;
 
+  // Wire accordion (portal already rendered)
+  setTimeout(wireAccordion, 100);
+
   if (_newsCache && (Date.now() - _newsCacheTime) < NEWS_CACHE_MS) {
     renderCarousel(_newsCache);
     return;
@@ -486,17 +540,17 @@ async function fetchNewsParallel() {
       .then(r => r.ok ? r.json() : Promise.reject('rss2json bad'))
       .then(d => {
         if (d.status !== 'ok') return Promise.reject('rss2json ' + d.message);
-        return (d.items || []).map(i => ({ title: i.title, link: i.link, pubDate: i.pubDate, source: extractSource(i.title) }));
+        return (d.items || []).map(i => ({ title: i.title, link: i.link, pubDate: i.pubDate, source: extractSource(i.title), image: extractImage(i.description || i.content || '') || i.thumbnail || i.enclosure?.link || '' }));
       }),
     fetch(`https://corsproxy.io/?${encodeURIComponent(rssUrl)}`)
       .then(r => r.ok ? r.text() : Promise.reject('corsproxy bad'))
-      .then(t => parseRSS(t).map(i => ({ ...i, source: extractSource(i.title) }))),
+      .then(t => parseRSS(t).map(i => ({ ...i, source: extractSource(i.title), image: extractImage(i.description) || '' }))),
     fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(rssUrl)}`)
       .then(r => r.ok ? r.text() : Promise.reject('allorigins bad'))
-      .then(t => parseRSS(t).map(i => ({ ...i, source: extractSource(i.title) }))),
+      .then(t => parseRSS(t).map(i => ({ ...i, source: extractSource(i.title), image: extractImage(i.description) || '' }))),
     fetch('https://feeds.bbci.co.uk/arabic/business/rss.xml')
       .then(r => r.ok ? r.text() : Promise.reject('bbc bad'))
-      .then(t => parseRSS(t).map(i => ({ ...i, source: 'BBC عربي' }))),
+      .then(t => parseRSS(t).map(i => ({ ...i, source: 'BBC عربي', image: extractImage(i.description) || '' }))),
   ];
 
   return new Promise((resolve, reject) => {
@@ -519,6 +573,22 @@ async function fetchNewsParallel() {
     setTimeout(() => reject(new Error('timeout')), 25000);
   });
 }
+
+// Extract first image URL from HTML description
+function extractImage(html) {
+  if (!html) return '';
+  const match = html.match(/<img[^>]+src=["']([^"']+)["']/i);
+  return match ? match[1] : '';
+}
+
+// Themed gradient covers as fallback when no image available
+const COVER_GRADIENTS = [
+  'linear-gradient(135deg, #0E1A2E 0%, #D4B266 100%)',
+  'linear-gradient(135deg, #1C4B8E 0%, #0E1A2E 100%)',
+  'linear-gradient(135deg, #2E8B57 0%, #0E1A2E 100%)',
+  'linear-gradient(135deg, #8B6914 0%, #0E1A2E 100%)',
+  'linear-gradient(135deg, #C41818 0%, #0E1A2E 100%)',
+];
 
 function renderCarousel(items) {
   const container = document.getElementById('news-carousel-container');
@@ -580,24 +650,42 @@ function showSlide(items, idx) {
   const container = document.getElementById('news-slide-container');
   if (!container) return;
   const item = items[idx];
+  const gradient = COVER_GRADIENTS[idx % COVER_GRADIENTS.length];
 
   container.style.opacity = '0';
   setTimeout(() => {
+    const heroContent = item.image ? `
+      <img src="${item.image}" alt=""
+        onerror="this.parentElement.innerHTML='<div style=\\'width:100%;height:100%;background:${gradient};display:flex;align-items:center;justify-content:center;\\'>&lt;i class=\\&quot;ti ti-news\\&quot; style=\\&quot;font-size:48px;color:#D4B266;opacity:0.7;\\&quot;&gt;&lt;/i&gt;</div>'"
+        style="width:100%;height:100%;object-fit:cover;display:block;">
+    ` : `
+      <div style="width:100%;height:100%;background:${gradient};display:flex;align-items:center;justify-content:center;">
+        <i class="ti ti-news" style="font-size:48px;color:#D4B266;opacity:0.7;"></i>
+      </div>
+    `;
+
     container.innerHTML = `
       <a href="${item.link}" target="_blank" rel="noopener" class="news-slide-enter" style="display:block;text-decoration:none;color:inherit;">
-        <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap;">
-          ${item.source ? `<span style="background:#D4B266;color:#0E1A2E;padding:3px 8px;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:900;letter-spacing:0.5px;">${item.source.toUpperCase()}</span>` : ''}
-          <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#8A8578;">${timeAgo(item.pubDate)}</span>
+        <!-- Hero image -->
+        <div style="width:100%;height:150px;overflow:hidden;border-radius:8px;position:relative;background:${gradient};">
+          ${heroContent}
+          <div style="position:absolute;inset:0;background:linear-gradient(180deg,transparent 40%,rgba(14,26,46,0.9) 100%);"></div>
+          ${item.source ? `<div style="position:absolute;top:10px;right:10px;background:#D4B266;color:#0E1A2E;padding:3px 10px;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:900;letter-spacing:0.5px;">${item.source.toUpperCase()}</div>` : ''}
+          <div style="position:absolute;bottom:8px;left:12px;font-family:'JetBrains Mono',monospace;font-size:9px;color:#D4B266;font-weight:700;">
+            ${timeAgo(item.pubDate)}
+          </div>
         </div>
-        <div style="font-size:15px;font-weight:700;color:white;line-height:1.6;font-family:'Cairo',sans-serif;">
+
+        <!-- Title -->
+        <div style="padding:14px 4px 8px;font-size:15px;font-weight:700;color:white;line-height:1.6;font-family:'Cairo',sans-serif;min-height:60px;">
           ${cleanTitle(item.title)}
         </div>
-        <div style="font-size:11px;color:#D4B266;margin-top:14px;">
+        <div style="font-size:11px;color:#D4B266;padding:0 4px;">
           <i class="ti ti-external-link"></i> اقرأ المقال كاملاً
         </div>
       </a>
     `;
-    container.style.transition = 'opacity 0.3s ease';
+    container.style.transition = 'opacity 0.35s ease';
     container.style.opacity = '1';
   }, 150);
 }
@@ -690,4 +778,90 @@ function cleanTitle(title) {
   const parts = title.split(' - ');
   if (parts.length > 1) return parts.slice(0, -1).join(' - ');
   return title;
+}
+
+// ─────────────────────────────────────────────────
+// PRAYER TIMES — Jeddah, via Aladhan API (free, CORS-enabled)
+// ─────────────────────────────────────────────────
+const PRAYER_LABELS = {
+  Fajr:    { ar: 'الفجر',   icon: '🌌' },
+  Sunrise: { ar: 'الشروق',  icon: '🌅' },
+  Dhuhr:   { ar: 'الظهر',   icon: '☀️' },
+  Asr:     { ar: 'العصر',   icon: '🌤️' },
+  Maghrib: { ar: 'المغرب',  icon: '🌆' },
+  Isha:    { ar: 'العشاء',  icon: '🌙' },
+};
+const PRAYER_ORDER = ['Fajr', 'Sunrise', 'Dhuhr', 'Asr', 'Maghrib', 'Isha'];
+
+async function loadPrayerTimes() {
+  const container = document.getElementById('dash-prayer');
+  if (!container) return;
+
+  try {
+    const today = new Date();
+    const dateStr = `${today.getDate()}-${today.getMonth()+1}-${today.getFullYear()}`;
+    const url = `https://api.aladhan.com/v1/timingsByCity/${dateStr}?city=Jeddah&country=SA&method=4`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error('prayer fetch failed');
+    const data = await res.json();
+    const timings = data.data.timings;
+
+    // Find next prayer
+    const now = new Date();
+    const nowMinutes = now.getHours() * 60 + now.getMinutes();
+    let nextPrayer = null;
+    let nextMinutes = Infinity;
+    PRAYER_ORDER.forEach(name => {
+      const t = timings[name];
+      if (!t) return;
+      const [h, m] = t.split(':').map(Number);
+      const totalMin = h * 60 + m;
+      if (totalMin > nowMinutes && totalMin < nextMinutes) {
+        nextMinutes = totalMin;
+        nextPrayer = name;
+      }
+    });
+
+    const minutesUntil = nextMinutes === Infinity ? null : nextMinutes - nowMinutes;
+    const hoursUntil = minutesUntil ? Math.floor(minutesUntil / 60) : 0;
+    const minsUntil = minutesUntil ? minutesUntil % 60 : 0;
+    const untilStr = minutesUntil ? (hoursUntil > 0 ? `${hoursUntil} س ${minsUntil} د` : `${minsUntil} دقيقة`) : '';
+
+    container.innerHTML = `
+      <div style="background:white;border-radius:10px;border:1px solid #E8E5DC;overflow:hidden;">
+        <div style="background:linear-gradient(90deg,#0E1A2E 0%,#1C2B48 100%);color:white;padding:10px 20px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+          <div>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:2px;color:#D4B266;font-weight:800;">
+              🕌 PRAYER TIMES · JEDDAH
+            </div>
+            <div style="font-size:12px;font-weight:700;margin-top:2px;">أوقات الصلاة</div>
+          </div>
+          ${nextPrayer ? `
+            <div style="background:rgba(212,178,102,0.15);border:1px solid rgba(212,178,102,0.35);border-radius:6px;padding:6px 12px;font-size:11px;">
+              <span style="color:#8A8578;">التالية:</span>
+              <span style="font-weight:800;color:#D4B266;margin:0 4px;">${PRAYER_LABELS[nextPrayer].ar}</span>
+              <span style="opacity:0.7;">بعد ${untilStr}</span>
+            </div>
+          ` : ''}
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:1px;background:#E8E5DC;">
+          ${PRAYER_ORDER.map(name => {
+            const isNext = name === nextPrayer;
+            return `
+              <div style="background:${isNext ? '#FEF6E7' : 'white'};padding:10px 6px;text-align:center;${isNext ? 'border-bottom:2px solid #D4B266;' : ''}">
+                <div style="font-size:16px;">${PRAYER_LABELS[name].icon}</div>
+                <div style="font-size:10px;color:#6B6659;font-weight:700;margin-top:3px;">${PRAYER_LABELS[name].ar}</div>
+                <div style="font-family:'JetBrains Mono',monospace;font-size:13px;color:${isNext ? '#8B6914' : '#0E1A2E'};font-weight:${isNext ? '900' : '700'};margin-top:2px;direction:ltr;">
+                  ${(timings[name] || '--:--').substring(0, 5)}
+                </div>
+              </div>
+            `;
+          }).join('')}
+        </div>
+      </div>
+    `;
+  } catch (e) {
+    console.warn('Prayer times unavailable:', e);
+    container.style.display = 'none';
+  }
 }
