@@ -278,11 +278,25 @@ async function loadNews() {
 
 async function fetchGoogleNews(query) {
   const rssUrl = `https://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=ar&gl=SA&ceid=SA:ar`;
-  const apiUrl = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(rssUrl)}&count=8`;
-  const res = await fetch(apiUrl);
-  if (!res.ok) throw new Error('rss2json failed: ' + res.status);
+  // Use allorigins as CORS proxy — returns raw XML
+  const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(rssUrl)}`;
+  const res = await fetch(proxyUrl);
+  if (!res.ok) throw new Error('proxy failed: ' + res.status);
   const data = await res.json();
-  return data.items || [];
+  const xml = data.contents;
+  return parseRSS(xml).slice(0, 8);
+}
+
+function parseRSS(xmlString) {
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(xmlString, 'application/xml');
+  const items = Array.from(doc.querySelectorAll('item'));
+  return items.map(item => ({
+    title: item.querySelector('title')?.textContent || '',
+    link: item.querySelector('link')?.textContent || '',
+    pubDate: item.querySelector('pubDate')?.textContent || '',
+    description: item.querySelector('description')?.textContent || '',
+  }));
 }
 
 function mergeAndDedupe(feeds) {
