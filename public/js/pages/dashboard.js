@@ -336,7 +336,7 @@ async function loadAlerts() {
 // Source: Google News RSS via rss2json service
 // ─────────────────────────────────────────────────
 // ─────────────────────────────────────────────────
-// RESOURCES PORTAL — Reliable curated links (no CORS issues)
+// NEWS + RESOURCES — Side-by-side layout
 // ─────────────────────────────────────────────────
 const RESOURCES = [
   {
@@ -378,43 +378,46 @@ const RESOURCES = [
 ];
 
 function renderNewsSkeleton() {
-  return renderResourcesPortal();
+  return `
+    <style>
+      @keyframes cSpin { to { transform: rotate(360deg); } }
+      @keyframes cPulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.5; transform: scale(1.4); } }
+      @keyframes cSlideIn { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: translateX(0); } }
+      .dash-spinner { animation: cSpin 0.8s linear infinite; }
+      .dash-pulse-dot { animation: cPulse 1.5s ease-in-out infinite; }
+      .news-slide-enter { animation: cSlideIn 0.4s ease-out; }
+    </style>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+      <div>${renderResourcesPortal()}</div>
+      <div id="news-carousel-container">${renderCarouselSkeleton()}</div>
+    </div>
+  `;
 }
 
 function renderResourcesPortal() {
   return `
-    <div style="background:white;border-radius:10px;border:1px solid #E8E5DC;overflow:hidden;">
-      <div style="background:linear-gradient(135deg,#0E1A2E 0%,#1C2B48 100%);color:white;padding:14px 20px;display:flex;justify-content:space-between;align-items:center;">
-        <div>
-          <div style="font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:2px;color:#D4B266;font-weight:800;">
-            🌐 RESOURCES & NEWS PORTAL
-          </div>
-          <div style="font-size:14px;font-weight:800;margin-top:2px;">بوابة الروابط والأخبار</div>
+    <div style="background:white;border-radius:10px;border:1px solid #E8E5DC;overflow:hidden;height:100%;">
+      <div style="background:linear-gradient(135deg,#0E1A2E 0%,#1C2B48 100%);color:white;padding:14px 20px;">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:2px;color:#D4B266;font-weight:800;">
+          🌐 RESOURCES PORTAL
         </div>
-        <div style="font-size:10px;color:#8A8578;font-family:'JetBrains Mono',monospace;">
-          ${RESOURCES.reduce((s, c) => s + c.links.length, 0)} ROABIT
-        </div>
+        <div style="font-size:14px;font-weight:800;margin-top:2px;">بوابة الروابط</div>
       </div>
-
-      <!-- Live news area (loads if possible) -->
-      <div id="dash-live-news" style="border-bottom:1px solid #F5F3EC;"></div>
-
-      <!-- Categorized resources -->
       <div style="padding:8px;">
         ${RESOURCES.map(cat => `
           <div style="margin-bottom:6px;">
             <div style="padding:10px 12px 6px;display:flex;align-items:center;gap:10px;">
-              <div style="width:28px;height:28px;background:${cat.bg};color:${cat.color};border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:14px;">
+              <div style="width:26px;height:26px;background:${cat.bg};color:${cat.color};border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:13px;">
                 <i class="ti ${cat.icon}"></i>
               </div>
-              <div style="font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:2px;color:#0E1A2E;font-weight:800;">
-                ${cat.category.toUpperCase()} · ${cat.links.length}
+              <div style="font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:2px;color:#0E1A2E;font-weight:800;">
+                ${cat.category.toUpperCase()}
               </div>
             </div>
-            <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:6px;padding:0 6px;">
+            <div style="display:grid;grid-template-columns:1fr;gap:4px;padding:0 6px;">
               ${cat.links.map(link => `
                 <a href="${link.url}" target="_blank" rel="noopener"
-                   style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:#FAFAF7;border:1px solid transparent;border-radius:6px;text-decoration:none;color:inherit;transition:all 0.12s;"
+                   style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:#FAFAF7;border:1px solid transparent;border-radius:6px;text-decoration:none;color:inherit;transition:all 0.12s;"
                    onmouseover="this.style.background='#F5F3EC';this.style.borderColor='#D4B266';"
                    onmouseout="this.style.background='#FAFAF7';this.style.borderColor='transparent';">
                   <div style="flex:1;min-width:0;">
@@ -432,63 +435,305 @@ function renderResourcesPortal() {
   `;
 }
 
-// Try to load live news into the top strip (optional, silent fail)
+function renderCarouselSkeleton() {
+  return `
+    <div style="background:linear-gradient(135deg,#0E1A2E 0%,#1C2B48 100%);color:white;border-radius:10px;overflow:hidden;height:100%;display:flex;flex-direction:column;">
+      <div style="padding:14px 20px;border-bottom:1px solid rgba(255,255,255,0.08);">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:2px;color:#D4B266;font-weight:800;">
+          📰 LIVE NEWS
+        </div>
+        <div style="font-size:14px;font-weight:800;margin-top:2px;">أخبار مباشرة</div>
+      </div>
+      <div style="flex:1;display:flex;align-items:center;justify-content:center;padding:40px 20px;">
+        <div style="text-align:center;">
+          <div class="dash-spinner" style="width:32px;height:32px;border:3px solid rgba(212,178,102,0.2);border-top-color:#D4B266;border-radius:50%;margin:0 auto;"></div>
+          <div style="font-size:12px;color:#8A8578;margin-top:14px;">جارٍ جلب الأخبار...</div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+let _carouselInterval = null;
+let _currentSlide = 0;
+
 async function loadNews() {
-  const container = document.getElementById('dash-live-news');
+  const container = document.getElementById('news-carousel-container');
   if (!container) return;
 
-  try {
-    const items = await tryFetchNews();
-    if (items.length === 0) return;
+  if (_newsCache && (Date.now() - _newsCacheTime) < NEWS_CACHE_MS) {
+    renderCarousel(_newsCache);
+    return;
+  }
 
-    // Render top 3 live headlines
-    container.innerHTML = `
-      <div style="padding:12px 16px;background:linear-gradient(90deg,#FEF6E7 0%,white 100%);">
-        <div style="font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:2px;color:#8B6914;font-weight:800;margin-bottom:8px;">
-          🔴 LIVE · آخر الأخبار
-        </div>
-        ${items.slice(0, 3).map(item => `
-          <a href="${item.link}" target="_blank" rel="noopener"
-             style="display:flex;gap:10px;padding:8px 0;text-decoration:none;color:inherit;align-items:center;">
-            <span style="color:#D4B266;font-size:8px;">●</span>
-            <div style="flex:1;font-size:12px;color:#0E1A2E;font-weight:600;line-height:1.4;">${cleanTitle(item.title)}</div>
-            <span style="font-size:10px;color:#8A8578;font-family:'JetBrains Mono',monospace;white-space:nowrap;">${timeAgo(item.pubDate)}</span>
-          </a>
-        `).join('')}
-      </div>
-    `;
+  try {
+    const items = await fetchNewsParallel();
+    if (items.length === 0) throw new Error('لا نتائج');
+    _newsCache = items;
+    _newsCacheTime = Date.now();
+    renderCarousel(items);
   } catch (e) {
-    // Silent fail - resources portal already shown
-    console.warn('Live news unavailable:', e.message);
+    console.error('News failed:', e);
+    renderNewsFallback();
   }
 }
 
-async function tryFetchNews() {
-  const rssUrl = `https://news.google.com/rss/search?q=${encodeURIComponent('الجمارك السعودية OR الموانئ السعودية')}&hl=ar&gl=SA&ceid=SA:ar`;
+async function fetchNewsParallel() {
+  const rssUrl = `https://news.google.com/rss/search?q=${encodeURIComponent('الجمارك السعودية OR موانئ')}&hl=ar&gl=SA&ceid=SA:ar`;
 
-  // Try rss2json first (proven reliable)
-  try {
-    const ctrl = new AbortController();
-    setTimeout(() => ctrl.abort(), 6000);
-    const r = await fetch(`https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(rssUrl)}&count=5`, { signal: ctrl.signal });
-    if (r.ok) {
-      const data = await r.json();
-      if (data.status === 'ok' && data.items?.length) {
-        return data.items.map(i => ({ title: i.title, link: i.link, pubDate: i.pubDate }));
-      }
-    }
-  } catch(e) {}
+  const strategies = [
+    fetch(`https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(rssUrl)}&count=10`)
+      .then(r => r.ok ? r.json() : Promise.reject('rss2json bad'))
+      .then(d => {
+        if (d.status !== 'ok') return Promise.reject('rss2json ' + d.message);
+        return (d.items || []).map(i => ({ title: i.title, link: i.link, pubDate: i.pubDate, source: extractSource(i.title) }));
+      }),
+    fetch(`https://corsproxy.io/?${encodeURIComponent(rssUrl)}`)
+      .then(r => r.ok ? r.text() : Promise.reject('corsproxy bad'))
+      .then(t => parseRSS(t).map(i => ({ ...i, source: extractSource(i.title) }))),
+    fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(rssUrl)}`)
+      .then(r => r.ok ? r.text() : Promise.reject('allorigins bad'))
+      .then(t => parseRSS(t).map(i => ({ ...i, source: extractSource(i.title) }))),
+    fetch('https://feeds.bbci.co.uk/arabic/business/rss.xml')
+      .then(r => r.ok ? r.text() : Promise.reject('bbc bad'))
+      .then(t => parseRSS(t).map(i => ({ ...i, source: 'BBC عربي' }))),
+  ];
 
-  // Try corsproxy.io
-  try {
-    const ctrl = new AbortController();
-    setTimeout(() => ctrl.abort(), 6000);
-    const r = await fetch(`https://corsproxy.io/?${encodeURIComponent(rssUrl)}`, { signal: ctrl.signal });
-    if (r.ok) return parseRSS(await r.text()).slice(0, 5);
-  } catch(e) {}
+  return new Promise((resolve, reject) => {
+    let pending = strategies.length;
+    let firstError = null;
 
-  return [];
+    strategies.forEach((p, idx) => {
+      p.then(items => {
+        if (items && items.length > 0) {
+          console.log(`✓ News strategy ${idx + 1}: ${items.length} items`);
+          resolve(items.slice(0, 10));
+        } else if (--pending === 0) reject(firstError || new Error('empty'));
+      }).catch(err => {
+        console.warn(`✗ Strategy ${idx + 1}:`, err.message || err);
+        if (!firstError) firstError = err;
+        if (--pending === 0) reject(firstError);
+      });
+    });
+
+    setTimeout(() => reject(new Error('timeout')), 25000);
+  });
 }
+
+function renderCarousel(items) {
+  const container = document.getElementById('news-carousel-container');
+  if (!container) return;
+
+  container.innerHTML = `
+    <div style="background:linear-gradient(135deg,#0E1A2E 0%,#1C2B48 100%);color:white;border-radius:10px;overflow:hidden;display:flex;flex-direction:column;height:100%;min-height:340px;">
+      <div style="padding:14px 20px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid rgba(255,255,255,0.08);">
+        <div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:2px;color:#D4B266;font-weight:800;display:flex;align-items:center;gap:8px;">
+            <span class="dash-pulse-dot" style="width:8px;height:8px;background:#D4B266;border-radius:50%;display:inline-block;"></span>
+            LIVE NEWS · ${items.length}
+          </div>
+          <div style="font-size:14px;font-weight:800;margin-top:2px;">أخبار مباشرة</div>
+        </div>
+        <div style="display:flex;gap:6px;">
+          <button id="news-prev" title="السابق" style="background:rgba(212,178,102,0.1);color:#D4B266;border:1px solid rgba(212,178,102,0.3);border-radius:5px;width:28px;height:28px;font-size:12px;cursor:pointer;">
+            <i class="ti ti-chevron-right"></i>
+          </button>
+          <button id="news-pause" title="إيقاف/تشغيل" style="background:rgba(212,178,102,0.1);color:#D4B266;border:1px solid rgba(212,178,102,0.3);border-radius:5px;width:28px;height:28px;font-size:12px;cursor:pointer;">
+            <i class="ti ti-player-pause" id="pause-icon"></i>
+          </button>
+          <button id="news-next" title="التالي" style="background:rgba(212,178,102,0.1);color:#D4B266;border:1px solid rgba(212,178,102,0.3);border-radius:5px;width:28px;height:28px;font-size:12px;cursor:pointer;">
+            <i class="ti ti-chevron-left"></i>
+          </button>
+        </div>
+      </div>
+
+      <div id="news-slide-container" style="flex:1;padding:20px 22px;min-height:200px;"></div>
+
+      <div id="news-dots" style="padding:8px 20px;display:flex;gap:5px;justify-content:center;align-items:center;flex-wrap:wrap;"></div>
+
+      <div style="height:3px;background:rgba(212,178,102,0.15);position:relative;">
+        <div id="news-progress" style="height:100%;background:#D4B266;width:0%;transition:width 0.1s linear;"></div>
+      </div>
+    </div>
+  `;
+
+  _currentSlide = 0;
+  showSlide(items, 0);
+  renderDots(items);
+
+  document.getElementById('news-prev').onclick = () => { stopCarousel(); _currentSlide = (_currentSlide - 1 + items.length) % items.length; showSlide(items, _currentSlide); renderDots(items); };
+  document.getElementById('news-next').onclick = () => { stopCarousel(); _currentSlide = (_currentSlide + 1) % items.length; showSlide(items, _currentSlide); renderDots(items); };
+  document.getElementById('news-pause').onclick = () => {
+    if (_carouselInterval) {
+      stopCarousel();
+      document.getElementById('pause-icon').className = 'ti ti-player-play';
+    } else {
+      startCarousel(items);
+      document.getElementById('pause-icon').className = 'ti ti-player-pause';
+    }
+  };
+
+  startCarousel(items);
+}
+
+function showSlide(items, idx) {
+  const container = document.getElementById('news-slide-container');
+  if (!container) return;
+  const item = items[idx];
+
+  container.style.opacity = '0';
+  setTimeout(() => {
+    container.innerHTML = `
+      <a href="${item.link}" target="_blank" rel="noopener" class="news-slide-enter" style="display:block;text-decoration:none;color:inherit;">
+        <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap;">
+          ${item.source ? `<span style="background:#D4B266;color:#0E1A2E;padding:3px 8px;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:900;letter-spacing:0.5px;">${item.source.toUpperCase()}</span>` : ''}
+          <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#8A8578;">${timeAgo(item.pubDate)}</span>
+        </div>
+        <div style="font-size:15px;font-weight:700;color:white;line-height:1.6;font-family:'Cairo',sans-serif;">
+          ${cleanTitle(item.title)}
+        </div>
+        <div style="font-size:11px;color:#D4B266;margin-top:14px;">
+          <i class="ti ti-external-link"></i> اقرأ المقال كاملاً
+        </div>
+      </a>
+    `;
+    container.style.transition = 'opacity 0.3s ease';
+    container.style.opacity = '1';
+  }, 150);
+}
+
+function renderDots(items) {
+  const dots = document.getElementById('news-dots');
+  if (!dots) return;
+  dots.innerHTML = items.map((_, i) => `
+    <span data-idx="${i}" style="width:${i === _currentSlide ? '18px' : '5px'};height:5px;background:${i === _currentSlide ? '#D4B266' : 'rgba(212,178,102,0.3)'};border-radius:3px;cursor:pointer;transition:all 0.25s;"></span>
+  `).join('');
+  dots.querySelectorAll('span').forEach(span => {
+    span.onclick = () => { stopCarousel(); _currentSlide = parseInt(span.dataset.idx); showSlide(items, _currentSlide); renderDots(items); };
+  });
+}
+
+function startCarousel(items) {
+  stopCarousel();
+  const SLIDE_MS = 6000;
+  const progress = document.getElementById('news-progress');
+  let elapsed = 0;
+  _carouselInterval = setInterval(() => {
+    elapsed += 100;
+    if (progress) progress.style.width = `${(elapsed / SLIDE_MS) * 100}%`;
+    if (elapsed >= SLIDE_MS) {
+      elapsed = 0;
+      _currentSlide = (_currentSlide + 1) % items.length;
+      showSlide(items, _currentSlide);
+      renderDots(items);
+      if (progress) progress.style.width = '0%';
+    }
+  }, 100);
+}
+
+function stopCarousel() {
+  if (_carouselInterval) { clearInterval(_carouselInterval); _carouselInterval = null; }
+  const progress = document.getElementById('news-progress');
+  if (progress) progress.style.width = '0%';
+}
+
+function renderNewsFallback() {
+  const container = document.getElementById('news-carousel-container');
+  if (!container) return;
+  container.innerHTML = `
+    <div style="background:linear-gradient(135deg,#0E1A2E 0%,#1C2B48 100%);color:white;border-radius:10px;padding:30px 22px;text-align:center;height:100%;display:flex;flex-direction:column;justify-content:center;min-height:340px;">
+      <i class="ti ti-wifi-off" style="font-size:32px;color:#D4B266;"></i>
+      <div style="font-size:14px;font-weight:700;color:white;margin-top:10px;">تعذّر تحميل الأخبار</div>
+      <div style="font-size:11px;color:#8A8578;margin-top:4px;">استخدم روابط Google News في البوابة</div>
+      <button onclick="location.reload()" style="margin-top:14px;background:#D4B266;color:#0E1A2E;border:none;border-radius:5px;padding:7px 16px;font-family:Tajawal,sans-serif;font-size:12px;font-weight:800;cursor:pointer;align-self:center;">
+        <i class="ti ti-refresh"></i> حاول مجدداً
+      </button>
+    </div>
+  `;
+}
+
+
+async function loadNews() {
+  const container = document.getElementById('dash-news');
+  if (!container) return;
+
+  if (_newsCache && (Date.now() - _newsCacheTime) < NEWS_CACHE_MS) {
+    renderCarousel(_newsCache);
+    return;
+  }
+
+  try {
+    // Fire ALL strategies in parallel — first to succeed wins
+    const items = await fetchNewsParallel();
+    if (items.length === 0) throw new Error('لا نتائج');
+    _newsCache = items;
+    _newsCacheTime = Date.now();
+    renderCarousel(items);
+  } catch (e) {
+    console.error('News failed:', e);
+    renderFallback();
+  }
+}
+
+async function fetchNewsParallel() {
+  const rssUrl = `https://news.google.com/rss/search?q=${encodeURIComponent('الجمارك السعودية OR موانئ')}&hl=ar&gl=SA&ceid=SA:ar`;
+
+  // Fire all strategies simultaneously — take first success
+  const strategies = [
+    // rss2json (proven, JSON directly)
+    fetch(`https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(rssUrl)}&count=10`)
+      .then(r => r.ok ? r.json() : Promise.reject('rss2json bad status'))
+      .then(d => {
+        if (d.status !== 'ok') return Promise.reject('rss2json ' + d.message);
+        return (d.items || []).map(i => ({ title: i.title, link: i.link, pubDate: i.pubDate, source: extractSource(i.title) }));
+      }),
+
+    // corsproxy.io raw
+    fetch(`https://corsproxy.io/?${encodeURIComponent(rssUrl)}`)
+      .then(r => r.ok ? r.text() : Promise.reject('corsproxy bad'))
+      .then(t => parseRSS(t).map(i => ({ ...i, source: extractSource(i.title) }))),
+
+    // allorigins raw
+    fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(rssUrl)}`)
+      .then(r => r.ok ? r.text() : Promise.reject('allorigins bad'))
+      .then(t => parseRSS(t).map(i => ({ ...i, source: extractSource(i.title) }))),
+
+    // BBC Arabic (has native CORS, general business news)
+    fetch('https://feeds.bbci.co.uk/arabic/business/rss.xml')
+      .then(r => r.ok ? r.text() : Promise.reject('bbc bad'))
+      .then(t => parseRSS(t).map(i => ({ ...i, source: 'BBC Arabic' }))),
+
+    // Aljazeera business
+    fetch('https://www.aljazeera.net/aljazeerarss/9c53c6a8-4022-434f-84bc-77e88c72d94c/e9b7be48-a614-4bb4-8e4e-b7cf8f0e8b83')
+      .then(r => r.ok ? r.text() : Promise.reject('aljazeera bad'))
+      .then(t => parseRSS(t).map(i => ({ ...i, source: 'الجزيرة' }))),
+  ];
+
+  // First non-empty result wins
+  return new Promise((resolve, reject) => {
+    let pending = strategies.length;
+    let firstError = null;
+
+    strategies.forEach((p, idx) => {
+      p.then(items => {
+        if (items && items.length > 0) {
+          console.log(`✓ News via strategy ${idx + 1}: ${items.length} items`);
+          resolve(items.slice(0, 10));
+        } else {
+          if (--pending === 0) reject(firstError || new Error('كل المصادر فارغة'));
+        }
+      }).catch(err => {
+        console.warn(`✗ Strategy ${idx + 1}:`, err.message || err);
+        if (!firstError) firstError = err;
+        if (--pending === 0) reject(firstError);
+      });
+    });
+
+    // Global timeout: 25 seconds
+    setTimeout(() => reject(new Error('انتهت المهلة (25 ثانية)')), 25000);
+  });
+}
+
 
 function parseRSS(xmlString) {
   const parser = new DOMParser();
