@@ -122,15 +122,82 @@ export function switchSection(section) {
 // ─────────────────────────────────────────────
 // TOAST
 // ─────────────────────────────────────────────
-export function toast(msg, type = 'success') {
+export function toast(msg, type = 'success', opts = {}) {
   const tc = document.getElementById('toast-container');
   if (!tc) return;
+
   const el = document.createElement('div');
   el.className = `toast toast-${type}`;
-  el.textContent = msg;
-  tc.appendChild(el);
-  setTimeout(() => el.remove(), 3500);
+  const duration = opts.duration || (opts.undo ? 8000 : 3500);
+  const id = 'toast-' + Date.now() + Math.random().toString(36).substring(2, 6);
+  el.id = id;
+
+  // Enhanced styling for undo toasts
+  if (opts.undo) {
+    el.style.cssText = `
+      display:flex; align-items:center; gap:12px; padding:12px 16px;
+      background:#0E1A2E; color:white; border-radius:8px;
+      box-shadow:0 8px 32px rgba(14,26,46,0.35);
+      font-family:Tajawal,sans-serif; font-size:13px;
+      max-width:420px; margin-bottom:8px; border-left:4px solid #D4B266;
+      animation:toastSlideIn 0.2s ease-out;
+    `;
+    el.innerHTML = `
+      <div style="flex:1;">${msg}</div>
+      <button id="undo-${id}" style="
+        background:#D4B266; color:#0E1A2E; border:none; border-radius:5px;
+        padding:6px 14px; font-family:Tajawal,sans-serif; font-size:12px;
+        font-weight:800; cursor:pointer; white-space:nowrap;
+      "><i class="ti ti-arrow-back-up"></i> تراجع</button>
+      <div id="progress-${id}" style="
+        position:absolute; bottom:0; left:0; height:3px; background:#D4B266;
+        border-bottom-left-radius:8px; width:100%;
+        transition:width ${duration}ms linear;
+      "></div>
+    `;
+    el.style.position = 'relative';
+    tc.appendChild(el);
+
+    // Trigger progress bar
+    requestAnimationFrame(() => {
+      const p = document.getElementById(`progress-${id}`);
+      if (p) p.style.width = '0%';
+    });
+
+    let undone = false;
+    const timeout = setTimeout(() => {
+      if (!undone) el.remove();
+    }, duration);
+
+    document.getElementById(`undo-${id}`).onclick = async () => {
+      undone = true;
+      clearTimeout(timeout);
+      el.style.opacity = '0.5';
+      el.querySelector('button').disabled = true;
+      el.querySelector('button').innerHTML = '<i class="ti ti-loader"></i> جاري...';
+      try {
+        await opts.undo();
+        toast('✓ تم التراجع', 'success');
+      } catch (e) {
+        toast('فشل التراجع: ' + (e.message || e), 'error');
+      }
+      el.remove();
+    };
+  } else {
+    el.textContent = msg;
+    tc.appendChild(el);
+    setTimeout(() => el.remove(), duration);
+  }
 }
+
+// Add animation keyframe once
+if (!document.getElementById('toast-anim-style')) {
+  const s = document.createElement('style');
+  s.id = 'toast-anim-style';
+  s.textContent = '@keyframes toastSlideIn { from { transform:translateY(-8px); opacity:0; } to { transform:translateY(0); opacity:1; } }';
+  document.head.appendChild(s);
+}
+window.toast = toast;
 
 // ─────────────────────────────────────────────
 // MODAL
