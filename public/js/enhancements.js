@@ -86,31 +86,32 @@ function injectDarkModeStyles() {
     /* Hover states */
     body.dark-mode [style*="background:#FAFAF7"]:hover { background: #1F2E4E !important; }
 
-    /* Dark mode toggle button */
+    /* Dark mode toggle button — top-left of content area */
     #dark-mode-toggle {
       position: fixed;
-      bottom: 24px;
-      right: 24px;
+      top: 20px;
+      left: 20px;
       z-index: 9997;
-      width: 44px;
-      height: 44px;
+      width: 40px;
+      height: 40px;
       border-radius: 50%;
       border: 1.5px solid #D4B266;
       background: #0E1A2E;
       color: #D4B266;
       cursor: pointer;
-      font-size: 18px;
+      font-size: 16px;
       box-shadow: 0 4px 16px rgba(14,26,46,0.25);
-      transition: transform 0.15s, box-shadow 0.15s;
+      transition: transform 0.15s, box-shadow 0.15s, background 0.2s, color 0.2s;
     }
     #dark-mode-toggle:hover {
-      transform: scale(1.08);
-      box-shadow: 0 6px 24px rgba(14,26,46,0.35);
+      transform: scale(1.08) rotate(15deg);
+      box-shadow: 0 6px 24px rgba(212,178,102,0.4);
     }
     body.dark-mode #dark-mode-toggle {
       background: #F0C878;
       color: #0A0F1C;
       border-color: #F0C878;
+      box-shadow: 0 4px 20px rgba(240,200,120,0.4);
     }
   `;
   document.head.appendChild(style);
@@ -223,13 +224,22 @@ const QUOTES = [
   'العمل الجيد يُبنى بالثقة، والاستمرار',
 ];
 
-export function showSplashScreen(logoDataUri) {
-  const today = new Date().toISOString().slice(0, 10);
-  const last = localStorage.getItem('splash_last_shown');
-  if (last === today) return; // already shown today
-  localStorage.setItem('splash_last_shown', today);
-
+export async function showSplashScreen(logoDataUri, statsFetcher) {
+  // Always show on login/refresh — no localStorage check
   const quote = QUOTES[Math.floor(Math.random() * QUOTES.length)];
+
+  // Try to fetch shipment stats if fetcher provided
+  let stats = null;
+  if (statsFetcher) {
+    try {
+      stats = await Promise.race([
+        statsFetcher(),
+        new Promise((_, r) => setTimeout(() => r(new Error('stats timeout')), 3000)),
+      ]);
+    } catch (e) {
+      console.warn('splash stats failed', e);
+    }
+  }
 
   const splash = document.createElement('div');
   splash.id = 'sds-splash';
@@ -241,6 +251,8 @@ export function showSplashScreen(logoDataUri) {
     font-family: Tajawal, sans-serif;
   `;
 
+  const monthName = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'][new Date().getMonth()];
+
   splash.innerHTML = `
     <style>
       @keyframes splashFadeIn { from { opacity: 0; } to { opacity: 1; } }
@@ -248,14 +260,17 @@ export function showSplashScreen(logoDataUri) {
       @keyframes splashLogoIn { from { transform: scale(0.7) translateY(20px); opacity: 0; } to { transform: scale(1) translateY(0); opacity: 1; } }
       @keyframes splashTextIn { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
       @keyframes goldGlow { 0%, 100% { box-shadow: 0 0 60px rgba(212,178,102,0.3); } 50% { box-shadow: 0 0 120px rgba(212,178,102,0.6); } }
-      #sds-splash .logo-wrap {
-        animation: splashLogoIn 0.6s ease-out, goldGlow 2s ease-in-out infinite;
-      }
+      @keyframes numberCount { from { transform: scale(0.5); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+      @keyframes progressBar { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+      #sds-splash .logo-wrap { animation: splashLogoIn 0.6s ease-out, goldGlow 2s ease-in-out infinite; }
       #sds-splash .text-a { animation: splashTextIn 0.6s ease-out 0.2s both; }
-      #sds-splash .text-b { animation: splashTextIn 0.6s ease-out 0.4s both; }
-      #sds-splash .text-c { animation: splashTextIn 0.6s ease-out 0.6s both; }
+      #sds-splash .text-b { animation: splashTextIn 0.6s ease-out 0.35s both; }
+      #sds-splash .text-c { animation: splashTextIn 0.6s ease-out 0.5s both; }
+      #sds-splash .stats-grid { animation: splashTextIn 0.6s ease-out 0.7s both; }
+      #sds-splash .stat-number { animation: numberCount 0.6s ease-out 0.9s both; display:inline-block; }
+      #sds-splash .progress-bar { animation: progressBar 4.5s linear 0.3s forwards; transform-origin: right; }
     </style>
-    <div style="text-align:center;">
+    <div style="text-align:center; padding: 20px; max-width: 620px;">
       <div class="logo-wrap" style="width:130px; height:130px; margin:0 auto; background:#F5F3EC; border-radius:20px; display:flex; align-items:center; justify-content:center; padding:12px; box-sizing:border-box;">
         ${logoDataUri ? `<img src="${logoDataUri}" alt="SDS" style="width:100%; height:100%; object-fit:contain;">` : `<div style="font-size:64px; color:#D4B266; font-weight:900;">S</div>`}
       </div>
@@ -265,8 +280,36 @@ export function showSplashScreen(logoDataUri) {
       <div class="text-b" style="font-size:32px; font-weight:900; color:white; margin-top:8px;">
         السديس اللوجستية
       </div>
-      <div class="text-c" style="max-width:400px; margin:32px auto 0; padding:16px 24px; border-top:1px solid rgba(212,178,102,0.3); border-bottom:1px solid rgba(212,178,102,0.3); color:#F5F0E4; font-size:15px; line-height:1.7; font-family:'Cairo',sans-serif;">
+
+      ${stats ? `
+        <div class="stats-grid" style="display:grid; grid-template-columns: repeat(3, 1fr); gap:16px; margin-top:32px; padding:16px 20px; background:rgba(212,178,102,0.08); border:1px solid rgba(212,178,102,0.25); border-radius:12px;">
+          <div style="text-align:center;">
+            <div style="font-family:'JetBrains Mono',monospace; font-size:9px; letter-spacing:1.5px; color:#D4B266; font-weight:800;">${monthName.toUpperCase()}</div>
+            <div class="stat-number" style="font-size:32px; font-weight:900; color:white; font-family:'JetBrains Mono',monospace; margin-top:4px;">${String(stats.thisMonth || 0).padStart(2,'0')}</div>
+            <div style="font-size:11px; color:#B8B0A0; margin-top:2px;">شحنة هذا الشهر</div>
+          </div>
+          <div style="text-align:center; border-inline:1px solid rgba(212,178,102,0.15); padding-inline:12px;">
+            <div style="font-family:'JetBrains Mono',monospace; font-size:9px; letter-spacing:1.5px; color:#D4B266; font-weight:800;">IN PROGRESS</div>
+            <div class="stat-number" style="font-size:32px; font-weight:900; color:#7BA9E6; font-family:'JetBrains Mono',monospace; margin-top:4px;">${String(stats.inProgress || 0).padStart(2,'0')}</div>
+            <div style="font-size:11px; color:#B8B0A0; margin-top:2px;">قيد المعالجة</div>
+          </div>
+          <div style="text-align:center;">
+            <div style="font-family:'JetBrains Mono',monospace; font-size:9px; letter-spacing:1.5px; color:#D4B266; font-weight:800;">TOTAL</div>
+            <div class="stat-number" style="font-size:32px; font-weight:900; color:#4ADC8A; font-family:'JetBrains Mono',monospace; margin-top:4px;">${String(stats.total || 0).padStart(2,'0')}</div>
+            <div style="font-size:11px; color:#B8B0A0; margin-top:2px;">إجمالي الشحنات</div>
+          </div>
+        </div>
+      ` : ''}
+
+      <div class="text-c" style="max-width:500px; margin:${stats ? '24px' : '32px'} auto 0; padding:16px 24px; border-top:1px solid rgba(212,178,102,0.3); border-bottom:1px solid rgba(212,178,102,0.3); color:#F5F0E4; font-size:15px; line-height:1.7; font-family:'Cairo',sans-serif;">
         "${quote}"
+      </div>
+
+      <div style="width:200px; height:2px; background:rgba(212,178,102,0.15); margin:32px auto 0; border-radius:2px; overflow:hidden;">
+        <div class="progress-bar" style="height:100%; background:#D4B266; width:100%;"></div>
+      </div>
+      <div style="font-family:'JetBrains Mono',monospace; font-size:9px; letter-spacing:2px; color:#8A8578; margin-top:8px;">
+        LOADING · جاهز خلال لحظات
       </div>
     </div>
   `;
@@ -274,9 +317,9 @@ export function showSplashScreen(logoDataUri) {
   document.body.appendChild(splash);
 
   setTimeout(() => {
-    splash.style.animation = 'splashFadeOut 0.4s ease-in';
-    setTimeout(() => splash.remove(), 400);
-  }, 2200);
+    splash.style.animation = 'splashFadeOut 0.5s ease-in';
+    setTimeout(() => splash.remove(), 500);
+  }, 5000);
 }
 
 // ═════════════════════════════════════════════
