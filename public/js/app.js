@@ -1782,12 +1782,25 @@ export async function initApp() {
 
     renderAppShell(_currentProfile);
 
-    // Splash screen (first login per day)
+    // Splash screen — always show, with live stats
     try {
-      // Find embedded logo from login page
       const logoMatch = document.body.innerHTML.match(/src="(data:image\/[^"]+)"[^>]*(?:alt="[^"]*SDS|class="logo)/);
       const logoDataUri = logoMatch ? logoMatch[1] : null;
-      showSplashScreen(logoDataUri);
+
+      // Fetcher runs async — splash awaits it (with 3s timeout)
+      const statsFetcher = async () => {
+        const { getShipments } = await import('../../src/firebase/db.js');
+        const shipments = await getShipments(500).catch(() => []);
+        const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+        const thisMonth = shipments.filter(s => {
+          const d = s.created_at?.toDate ? s.created_at.toDate() : (s.created_at ? new Date(s.created_at) : null);
+          return d && d >= monthStart;
+        }).length;
+        const inProgress = shipments.filter(s => s.status === 'draft' || s.status === 'sent_broker' || !s.status).length;
+        return { total: shipments.length, thisMonth, inProgress };
+      };
+
+      showSplashScreen(logoDataUri, statsFetcher);
     } catch(e) { console.warn('splash failed', e); }
 
     // Auto alert on login
