@@ -17,6 +17,7 @@ import { renderExportReport } from './pages/exportReport.js';
 import { renderTransportRequests } from './pages/transportRequests.js';
 import { renderTransportSettings } from './pages/transportSettings.js';
 import { initCommandPalette, reloadCommandPaletteData } from './commandPalette.js';
+import { initDarkMode, showSplashScreen, playSound, celebrate, checkMilestone, renderAvatar } from './enhancements.js';
 import { getShipments } from '../../src/firebase/db.js';
 import { onAuthChange, ensureAdminProfile, getUserProfile, logOut, isAdmin, getCurrentUser, signIn } from '../../src/firebase/auth.js';
 import { renderDashboard }      from './pages/dashboard.js';
@@ -125,6 +126,12 @@ export function switchSection(section) {
 export function toast(msg, type = 'success', opts = {}) {
   const tc = document.getElementById('toast-container');
   if (!tc) return;
+
+  // Sound feedback
+  try {
+    if (type === 'success') playSound('success');
+    else if (type === 'error') playSound('error');
+  } catch(e) {}
 
   const el = document.createElement('div');
   el.className = `toast toast-${type}`;
@@ -1685,7 +1692,7 @@ function renderAppShell(profile) {
 
         <div class="sidebar-footer">
           <div class="user-chip">
-            <div class="user-avatar">${profile?.name?.charAt(0)||'م'}</div>
+            ${renderAvatar(profile?.name || 'م', 40)}
             <div class="user-info">
               <div class="user-name">${profile?.name||'موظف'}</div>
               <div class="user-role">${profile?.role==='admin'?'مدير النظام':profile?.role==='transport'?'موظف نقل':profile?.role==='supervisor'?'مشرف':'موظف تخليص'}</div>
@@ -1713,6 +1720,15 @@ function renderAppShell(profile) {
 
   // Initialize Command Palette (Ctrl+K)
   initCommandPalette(navigate);
+
+  // Initialize dark mode (auto after Maghrib)
+  initDarkMode();
+
+  // Expose sound + celebrate for milestones and other pages
+  window._playSound = playSound;
+  window._celebrate = celebrate;
+  window._checkMilestone = checkMilestone;
+  window._renderAvatar = renderAvatar;
 
   // Floating search button (bottom-left) — opens Command Palette
   if (!document.getElementById('cp-fab')) {
@@ -1765,6 +1781,15 @@ export async function initApp() {
     if (_currentProfile?.active === false) { await logOut(); return; }
 
     renderAppShell(_currentProfile);
+
+    // Splash screen (first login per day)
+    try {
+      // Find embedded logo from login page
+      const logoMatch = document.body.innerHTML.match(/src="(data:image\/[^"]+)"[^>]*(?:alt="[^"]*SDS|class="logo)/);
+      const logoDataUri = logoMatch ? logoMatch[1] : null;
+      showSplashScreen(logoDataUri);
+    } catch(e) { console.warn('splash failed', e); }
+
     // Auto alert on login
     _triggerAutoAlert();
     // Start idle timer
