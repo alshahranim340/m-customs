@@ -227,6 +227,10 @@ const QUOTES = [
 ];
 
 export async function showSplashScreen(logoDataUri, statsFetcher) {
+  // Guard: prevent multiple splash instances stacking
+  const existing = document.getElementById('sds-splash');
+  if (existing) existing.remove();
+
   // Fallback to embedded logo
   if (!logoDataUri) logoDataUri = SDS_LOGO;
   // Always show on login/refresh — no localStorage check
@@ -240,6 +244,7 @@ export async function showSplashScreen(logoDataUri, statsFetcher) {
         statsFetcher(),
         new Promise((_, r) => setTimeout(() => r(new Error('stats timeout')), 9000)),
       ]);
+      console.log('splash received stats:', stats);
     } catch (e) {
       console.warn('splash stats failed', e);
     }

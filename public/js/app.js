@@ -1771,9 +1771,10 @@ async function doLogout() {
 // INIT
 // ─────────────────────────────────────────────
 export async function initApp() {
+  let _splashShown = false;
   onAuthChange(async (user) => {
     _currentUser = user;
-    if (!user) { showLoginPage(); return; }
+    if (!user) { showLoginPage(); _splashShown = false; return; }
 
     await ensureAdminProfile(user);
     _currentProfile = await getUserProfile(user.uid);
@@ -1782,7 +1783,9 @@ export async function initApp() {
 
     renderAppShell(_currentProfile);
 
-    // Splash screen — always show, with live stats
+    // Splash screen — only once per auth session
+    if (!_splashShown) {
+      _splashShown = true;
     try {
       const logoMatch = document.body.innerHTML.match(/src="(data:image\/[^"]+)"[^>]*(?:alt="[^"]*SDS|class="logo)/);
       const logoDataUri = logoMatch ? logoMatch[1] : null;
@@ -1810,11 +1813,14 @@ export async function initApp() {
           return d && d >= monthStart;
         }).length;
         const inProgress = shipments.filter(s => s.status === 'draft' || s.status === 'sent_broker' || !s.status).length;
-        return { total: shipments.length, thisMonth, inProgress };
+        const result = { total: shipments.length, thisMonth, inProgress };
+        console.log('splash fetcher returning:', result);
+        return result;
       };
 
       showSplashScreen(logoDataUri, statsFetcher);
     } catch(e) { console.warn('splash failed', e); }
+    } // end if !_splashShown
 
     // Auto alert on login
     _triggerAutoAlert();
