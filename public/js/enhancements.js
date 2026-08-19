@@ -282,7 +282,7 @@ export async function showSplashScreen(logoDataUri, statsFetcher) {
       #sds-splash .text-b { animation: splashTextIn 0.6s ease-out 0.35s both; }
       #sds-splash .text-c { animation: splashTextIn 0.6s ease-out 0.5s both; }
       #sds-splash .stats-grid { animation: splashTextIn 0.6s ease-out 0.7s both; }
-      #sds-splash .stat-number { animation: numberCount 0.6s ease-out 0.9s both; display:inline-block; }
+      #sds-splash .splash-stat-number { animation: numberCount 0.6s ease-out 0.9s both; display:inline-block; }
       #sds-splash .progress-bar { animation: progressBar 4.5s linear 0.3s forwards; transform-origin: right; }
     </style>
     <div style="text-align:center; padding: 20px; max-width: 620px;">
@@ -300,17 +300,17 @@ export async function showSplashScreen(logoDataUri, statsFetcher) {
         <div class="stats-grid" style="display:grid; grid-template-columns: repeat(3, 1fr); gap:16px; margin-top:32px; padding:16px 20px; background:rgba(212,178,102,0.08); border:1px solid rgba(212,178,102,0.25); border-radius:12px;">
           <div style="text-align:center;">
             <div style="font-family:'JetBrains Mono',monospace; font-size:9px; letter-spacing:1.5px; color:#D4B266; font-weight:800;">${monthName.toUpperCase()}</div>
-            <div class="stat-number" style="font-size:32px; font-weight:900; color:white; font-family:'JetBrains Mono',monospace; margin-top:4px;">${String(statMonth).padStart(2,'0')}</div>
+            <div class="splash-stat-number" style="font-size:32px; font-weight:900; color:white; font-family:'JetBrains Mono',monospace; margin-top:4px;">${String(statMonth).padStart(2,'0')}</div>
             <div style="font-size:11px; color:#B8B0A0; margin-top:2px;">شحنة هذا الشهر</div>
           </div>
           <div style="text-align:center; border-inline:1px solid rgba(212,178,102,0.15); padding-inline:12px;">
             <div style="font-family:'JetBrains Mono',monospace; font-size:9px; letter-spacing:1.5px; color:#D4B266; font-weight:800;">IN PROGRESS</div>
-            <div class="stat-number" style="font-size:32px; font-weight:900; color:#7BA9E6; font-family:'JetBrains Mono',monospace; margin-top:4px;">${String(statProg).padStart(2,'0')}</div>
+            <div class="splash-stat-number" style="font-size:32px; font-weight:900; color:#7BA9E6; font-family:'JetBrains Mono',monospace; margin-top:4px;">${String(statProg).padStart(2,'0')}</div>
             <div style="font-size:11px; color:#B8B0A0; margin-top:2px;">قيد المعالجة</div>
           </div>
           <div style="text-align:center;">
             <div style="font-family:'JetBrains Mono',monospace; font-size:9px; letter-spacing:1.5px; color:#D4B266; font-weight:800;">TOTAL</div>
-            <div class="stat-number" style="font-size:32px; font-weight:900; color:#4ADC8A; font-family:'JetBrains Mono',monospace; margin-top:4px;">${String(statTotal).padStart(2,'0')}</div>
+            <div class="splash-stat-number" style="font-size:32px; font-weight:900; color:#4ADC8A; font-family:'JetBrains Mono',monospace; margin-top:4px;">${String(statTotal).padStart(2,'0')}</div>
             <div style="font-size:11px; color:#B8B0A0; margin-top:2px;">إجمالي الشحنات</div>
           </div>
         </div>
