@@ -238,7 +238,7 @@ export async function showSplashScreen(logoDataUri, statsFetcher) {
     try {
       stats = await Promise.race([
         statsFetcher(),
-        new Promise((_, r) => setTimeout(() => r(new Error('stats timeout')), 6000)),
+        new Promise((_, r) => setTimeout(() => r(new Error('stats timeout')), 9000)),
       ]);
     } catch (e) {
       console.warn('splash stats failed', e);

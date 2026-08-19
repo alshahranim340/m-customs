@@ -1787,10 +1787,23 @@ export async function initApp() {
       const logoMatch = document.body.innerHTML.match(/src="(data:image\/[^"]+)"[^>]*(?:alt="[^"]*SDS|class="logo)/);
       const logoDataUri = logoMatch ? logoMatch[1] : null;
 
-      // Fetcher runs async — splash awaits it (with 3s timeout)
+      // Fetcher with retry — handles Firestore cold start on refresh
       const statsFetcher = async () => {
         const { getShipments } = await import('../../src/firebase/db.js');
-        const shipments = await getShipments(500).catch(() => []);
+
+        // Wait for Firestore to warm up, then try up to 3 times
+        let shipments = [];
+        for (let attempt = 0; attempt < 3; attempt++) {
+          await new Promise(r => setTimeout(r, attempt === 0 ? 400 : 1200));
+          try {
+            shipments = await getShipments(500);
+            console.log(`splash stats attempt ${attempt+1}: got ${shipments.length} shipments`);
+            if (shipments.length > 0) break;
+          } catch (e) {
+            console.warn(`splash stats attempt ${attempt+1} failed`, e);
+          }
+        }
+
         const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
         const thisMonth = shipments.filter(s => {
           const d = s.created_at?.toDate ? s.created_at.toDate() : (s.created_at ? new Date(s.created_at) : null);
