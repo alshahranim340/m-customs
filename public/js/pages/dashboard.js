@@ -231,6 +231,12 @@ async function loadStats() {
       </div>
     `;
     animateCounters();
+
+    // Check for milestone celebrations
+    if (window._checkMilestone) {
+      window._checkMilestone('total_shipments', totalShipments, 'شحنة');
+      window._checkMilestone('month_shipments', shipsThisMonth, 'شحنة هذا الشهر');
+    }
   } catch (e) {
     console.error('Stats load failed', e);
     document.getElementById('dash-stats').innerHTML = `<div style="color:#8A8578;font-size:12px;">تعذّر تحميل الإحصائيات</div>`;
