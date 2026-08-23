@@ -232,6 +232,7 @@ export async function renderTransportRequests(container) {
   window._batchSelectDriver = batchSelectDriver;
   window._batchSaveDraft = () => saveBatch(false);
   window._batchSaveAndSend = () => saveBatch(true);
+  window._batchPreviewAndSend = showBatchPreview;
   window._batchClose = closeBatchModal;
 
   await loadData();
@@ -1408,11 +1409,13 @@ function openBatchModal() {
                 <tr style="background:#F5F3EC;">
                   <th style="padding:9px 6px;text-align:center;font-family:'JetBrains Mono',monospace;font-size:9px;color:#6B6659;letter-spacing:1px;font-weight:800;width:36px;">#</th>
                   <th style="padding:9px 6px;text-align:right;font-family:'JetBrains Mono',monospace;font-size:9px;color:#6B6659;letter-spacing:1px;font-weight:800;">DRIVER NAME *</th>
+                  <th style="padding:9px 6px;text-align:right;font-family:'JetBrains Mono',monospace;font-size:9px;color:#6B6659;letter-spacing:1px;font-weight:800;">PHONE</th>
                   <th style="padding:9px 6px;text-align:right;font-family:'JetBrains Mono',monospace;font-size:9px;color:#6B6659;letter-spacing:1px;font-weight:800;">IQAMA</th>
                   <th style="padding:9px 6px;text-align:right;font-family:'JetBrains Mono',monospace;font-size:9px;color:#6B6659;letter-spacing:1px;font-weight:800;">NAT</th>
                   <th style="padding:9px 6px;text-align:right;font-family:'JetBrains Mono',monospace;font-size:9px;color:#6B6659;letter-spacing:1px;font-weight:800;">TRUCK#</th>
                   <th style="padding:9px 6px;text-align:right;font-family:'JetBrains Mono',monospace;font-size:9px;color:#6B6659;letter-spacing:1px;font-weight:800;">QTY(MT)</th>
                   <th style="padding:9px 6px;text-align:right;font-family:'JetBrains Mono',monospace;font-size:9px;color:#6B6659;letter-spacing:1px;font-weight:800;">DELIVERY#</th>
+                  <th style="padding:9px 6px;text-align:right;font-family:'JetBrains Mono',monospace;font-size:9px;color:#6B6659;letter-spacing:1px;font-weight:800;">LOCATION (opt)</th>
                   <th style="padding:9px 6px;text-align:right;font-family:'JetBrains Mono',monospace;font-size:9px;color:#6B6659;letter-spacing:1px;font-weight:800;">DATE (opt)</th>
                   <th style="padding:9px 6px;text-align:center;width:40px;"></th>
                 </tr>
@@ -1434,8 +1437,8 @@ function openBatchModal() {
           <button onclick="_batchSaveDraft()" style="background:white;color:#0E1A2E;border:1.5px solid #0E1A2E;border-radius:5px;padding:9px 18px;font-family:Tajawal,sans-serif;font-size:13px;font-weight:700;cursor:pointer;">
             <i class="ti ti-device-floppy"></i> حفظ كمسودّة
           </button>
-          <button onclick="_batchSaveAndSend()" style="background:#2E8B57;color:white;border:none;border-radius:5px;padding:9px 20px;font-family:Tajawal,sans-serif;font-size:13px;font-weight:800;cursor:pointer;">
-            <i class="ti ti-send"></i> حفظ وإرسال للتخليص
+          <button onclick="_batchPreviewAndSend()" style="background:#2E8B57;color:white;border:none;border-radius:5px;padding:9px 20px;font-family:Tajawal,sans-serif;font-size:13px;font-weight:800;cursor:pointer;">
+            <i class="ti ti-eye"></i> معاينة وإرسال
           </button>
         </div>
       </div>
@@ -1452,6 +1455,138 @@ function closeBatchModal() {
   _batchTrucks = [];
 }
 
+function showBatchPreview() {
+  // Read current defaults
+  const customer = document.getElementById('batch-customer').value.trim();
+  const material = document.getElementById('batch-material').value.trim();
+  const loading_location = document.getElementById('batch-loading-location').value.trim().toUpperCase();
+  const dispatch_date = document.getElementById('batch-date').value.trim();
+  const destination = document.getElementById('batch-destination').value;
+  const destLabel = DEST_LABELS[destination]?.ar || destination;
+
+  // Read latest row inputs into _batchTrucks
+  document.querySelectorAll('#batch-trucks-body .batch-cell').forEach(input => {
+    const idx = parseInt(input.dataset.idx);
+    const field = input.dataset.field;
+    if (!isNaN(idx) && field) _batchTrucks[idx][field] = input.value;
+  });
+
+  const validTrucks = _batchTrucks.filter(t => (t.driver_name || '').trim());
+  const totalQty = validTrucks.reduce((s, t) => s + (parseFloat(t.quantity) || 0), 0);
+
+  // Location distribution
+  const locMap = {};
+  validTrucks.forEach(t => {
+    const loc = (t.loading_location || '').trim().toUpperCase() || loading_location || '—';
+    locMap[loc] = (locMap[loc] || 0) + 1;
+  });
+
+  // Warnings
+  const warnings = [];
+  validTrucks.forEach((t, i) => {
+    const missing = [];
+    if (!t.truck_number) missing.push('TRUCK#');
+    if (!t.driver_id_number) missing.push('IQAMA');
+    if (missing.length > 0) warnings.push(`${t.driver_name || `#${i+1}`}: ${missing.join(', ')}`);
+  });
+
+  const existing = document.getElementById('tr-batch-preview-modal');
+  if (existing) existing.remove();
+
+  const modal = document.createElement('div');
+  modal.id = 'tr-batch-preview-modal';
+  modal.style.cssText = `
+    position:fixed;inset:0;background:rgba(14,26,46,0.65);z-index:10000;
+    display:flex;align-items:center;justify-content:center;padding:20px;
+    font-family:Tajawal,sans-serif;
+  `;
+
+  modal.innerHTML = `
+    <div style="background:#F5F3EC;border-radius:10px;width:100%;max-width:640px;max-height:88vh;
+                overflow:hidden;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(14,26,46,0.4);">
+
+      <!-- Header -->
+      <div style="background:linear-gradient(135deg,#0E1A2E 0%,#1C2B48 100%);color:white;padding:16px 22px;
+                  display:flex;justify-content:space-between;align-items:center;">
+        <div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:2px;color:#D4B266;font-weight:700;">SDS · BATCH · PREVIEW</div>
+          <div style="font-size:18px;font-weight:900;margin-top:3px;">👁 معاينة قبل الإرسال</div>
+        </div>
+        <button onclick="document.getElementById('tr-batch-preview-modal').remove()"
+          style="background:transparent;border:none;color:white;font-size:26px;cursor:pointer;padding:4px 10px;">×</button>
+      </div>
+
+      <!-- Body -->
+      <div style="flex:1;overflow-y:auto;padding:20px;">
+
+        <!-- Stats -->
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:18px;">
+          <div style="background:white;border:1px solid #E8E5DC;border-radius:7px;padding:14px;text-align:center;">
+            <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:#6B6659;font-weight:700;letter-spacing:1px;">DRIVERS</div>
+            <div style="font-size:28px;font-weight:900;color:#0E1A2E;margin-top:4px;">${validTrucks.length}</div>
+          </div>
+          <div style="background:#E7F5EE;border:1px solid #B7DFD0;border-radius:7px;padding:14px;text-align:center;">
+            <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:#2E8B57;font-weight:700;letter-spacing:1px;">TOTAL QTY (MT)</div>
+            <div style="font-size:28px;font-weight:900;color:#2E8B57;margin-top:4px;">${totalQty.toFixed(2)}</div>
+          </div>
+          <div style="background:#EEF2FF;border:1px solid #C7D4F5;border-radius:7px;padding:14px;text-align:center;">
+            <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:#1C4B8E;font-weight:700;letter-spacing:1px;">DEST</div>
+            <div style="font-size:20px;font-weight:900;color:#1C4B8E;margin-top:4px;">${destLabel}</div>
+          </div>
+        </div>
+
+        <!-- Batch defaults summary -->
+        <div style="background:white;border:1px solid #E8E5DC;border-radius:7px;padding:14px;margin-bottom:14px;">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:#8B6914;font-weight:800;letter-spacing:1.5px;margin-bottom:10px;">⚙ BATCH DEFAULTS</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:12px;">
+            <div><span style="color:#8A8578;font-size:11px;">العميل:</span> <b>${customer || '—'}</b></div>
+            <div><span style="color:#8A8578;font-size:11px;">المادة:</span> <b>${material || '—'}</b></div>
+            <div><span style="color:#8A8578;font-size:11px;">التاريخ:</span> <b style="font-family:'JetBrains Mono',monospace;">${dispatch_date || '—'}</b></div>
+            <div><span style="color:#8A8578;font-size:11px;">منطقة التحميل:</span> <b style="font-family:'JetBrains Mono',monospace;">${loading_location || '—'}</b></div>
+          </div>
+        </div>
+
+        <!-- Location distribution -->
+        <div style="background:white;border:1px solid #E8E5DC;border-radius:7px;padding:14px;margin-bottom:14px;">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:#0E1A2E;font-weight:800;letter-spacing:1.5px;margin-bottom:10px;">📍 توزيع مناطق التحميل</div>
+          ${Object.entries(locMap).map(([loc, cnt]) => `
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid #F0EDE4;">
+              <span style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;">${loc}</span>
+              <span style="background:#0E1A2E;color:white;border-radius:12px;padding:2px 10px;font-size:11px;font-weight:800;">${cnt} شاحنة</span>
+            </div>`).join('')}
+        </div>
+
+        <!-- Warnings -->
+        ${warnings.length > 0 ? `
+          <div style="background:#FEF9E7;border:1px solid #F0C040;border-radius:7px;padding:14px;">
+            <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:#C2410C;font-weight:800;letter-spacing:1.5px;margin-bottom:8px;">
+              ⚠ تحذيرات (${warnings.length}) — يمكن الإرسال مع التحذيرات
+            </div>
+            ${warnings.map(w => `<div style="font-size:12px;color:#C2410C;padding:3px 0;direction:ltr;text-align:right;">• ${w}</div>`).join('')}
+          </div>` : `
+          <div style="background:#E7F5EE;border:1px solid #B7DFD0;border-radius:7px;padding:12px;text-align:center;">
+            <span style="color:#2E8B57;font-weight:800;font-size:13px;">✓ جميع السائقين مكتملون</span>
+          </div>`}
+
+      </div>
+
+      <!-- Footer -->
+      <div style="background:white;border-top:1px solid #E8E5DC;padding:14px 22px;display:flex;justify-content:flex-end;gap:10px;">
+        <button onclick="document.getElementById('tr-batch-preview-modal').remove()"
+          style="background:#F5F3EC;color:#6B6659;border:1px solid #E8E5DC;border-radius:5px;padding:9px 18px;font-family:Tajawal,sans-serif;font-size:13px;font-weight:700;cursor:pointer;">
+          رجوع للتعديل
+        </button>
+        <button onclick="document.getElementById('tr-batch-preview-modal').remove(); _batchSaveAndSend();"
+          style="background:#2E8B57;color:white;border:none;border-radius:5px;padding:9px 22px;font-family:Tajawal,sans-serif;font-size:13px;font-weight:800;cursor:pointer;">
+          <i class="ti ti-send"></i> تأكيد وإرسال للتخليص
+        </button>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+}
+
 function renderBatchTrucks() {
   const tbody = document.getElementById('batch-trucks-body');
   if (!tbody) return;
@@ -1463,6 +1598,11 @@ function renderBatchTrucks() {
         <input type="text" class="batch-cell batch-driver-name" data-field="driver_name" data-idx="${idx}"
           value="${t.driver_name||''}" placeholder="ابحث بالاسم..." autocomplete="off"
           style="border:none;background:transparent;width:100%;padding:8px 6px;font-family:Tajawal,sans-serif;font-size:12px;direction:ltr;text-align:right;outline:none;">
+      </td>
+      <td>
+        <input type="text" class="batch-cell" data-field="phone" data-idx="${idx}"
+          value="${t.phone||''}" readonly placeholder="—"
+          style="border:none;background:transparent;width:100%;padding:8px 6px;font-family:'JetBrains Mono',monospace;font-size:11px;direction:ltr;text-align:right;outline:none;color:#2E8B57;min-width:110px;">
       </td>
       <td>
         <input type="text" class="batch-cell" data-field="driver_id_number" data-idx="${idx}"
@@ -1490,9 +1630,15 @@ function renderBatchTrucks() {
           style="border:none;background:transparent;width:100%;padding:8px 6px;font-family:'JetBrains Mono',monospace;font-size:12px;direction:ltr;text-align:right;outline:none;">
       </td>
       <td>
+        <input list="dl-batch-location-row" type="text" class="batch-cell" data-field="loading_location" data-idx="${idx}"
+          value="${t.loading_location||''}" placeholder="(افتراضي)"
+          style="border:none;background:transparent;width:100%;padding:8px 6px;font-family:'JetBrains Mono',monospace;font-size:11px;direction:ltr;text-align:right;outline:none;color:#1C4B8E;min-width:100px;">
+        ${idx === 0 ? `<datalist id="dl-batch-location-row">${LOADING_LOCATIONS.map(l => `<option value="${l}"></option>`).join('')}</datalist>` : ''}
+      </td>
+      <td>
         <input type="text" class="batch-cell" data-field="dispatch_date" data-idx="${idx}"
-          value="${t.dispatch_date||''}" placeholder="(افتراضي)"
-          style="border:none;background:transparent;width:100%;padding:8px 6px;font-family:'JetBrains Mono',monospace;font-size:11px;direction:ltr;text-align:right;outline:none;color:#8A8578;">
+          value="${t.dispatch_date || todayHijri()}" placeholder="${todayHijri()}"
+          style="border:none;background:transparent;width:100%;padding:8px 6px;font-family:'JetBrains Mono',monospace;font-size:11px;direction:ltr;text-align:right;outline:none;color:#0E1A2E;">
       </td>
       <td style="text-align:center;">
         ${_batchTrucks.length > 1 ? `
@@ -1630,6 +1776,7 @@ function batchSelectDriver(driverId) {
   _batchTrucks[idx].driver_id_number = driver.iqama || '';
   _batchTrucks[idx].driver_nationality = driver.nationality || '';
   _batchTrucks[idx].truck_number = plate;
+  _batchTrucks[idx].phone = driver.phone || '';
 
   hideDriverDropdown();
   renderBatchTrucks();
@@ -1680,7 +1827,7 @@ async function saveBatch(sendToClearance) {
       const data = {
         customer,
         material,
-        loading_location,
+        loading_location: (t.loading_location || '').trim().toUpperCase() || loading_location,
         destination,
         dispatch_date: (t.dispatch_date || '').trim() || dispatch_date,
         driver_name: (t.driver_name || '').trim(),
