@@ -46,6 +46,35 @@ export async function renderNewShipment(container) {
     <div class="page-body">
       <div style="max-width:720px;">
 
+        <!-- ═══ FASAH SYSTEM LINK ═══ -->
+        <a href="https://fasah.zatca.gov.sa/ar/login/1.0/" target="_blank" rel="noopener"
+           style="display:flex; align-items:center; gap:14px; padding:14px 20px; margin-bottom:16px;
+                  background:linear-gradient(135deg,#0E1A2E 0%,#1C2B48 100%);
+                  border:1.5px solid #D4B266; border-radius:10px; text-decoration:none;
+                  box-shadow:0 4px 16px rgba(14,26,46,0.15); transition:all 0.2s;"
+           onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 8px 24px rgba(212,178,102,0.35)';"
+           onmouseout="this.style.transform='translateY(0)';this.style.boxShadow='0 4px 16px rgba(14,26,46,0.15)';">
+          <div style="width:44px; height:44px; background:rgba(212,178,102,0.15); border-radius:8px;
+                      display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+            <i class="ti ti-external-link" style="font-size:22px; color:#D4B266;"></i>
+          </div>
+          <div style="flex:1; color:white;">
+            <div style="font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:2px;
+                        color:#D4B266; font-weight:800;">
+              FASAH · نظام فسح
+            </div>
+            <div style="font-size:15px; font-weight:800; margin-top:3px;">
+              افتح نظام فسح لإنشاء البيان الجمركي
+            </div>
+            <div style="font-size:11px; color:#B8B0A0; margin-top:2px;">
+              يفتح في تبويب جديد — لن تفقد بياناتك في هذه الصفحة
+            </div>
+          </div>
+          <div style="color:#D4B266; font-size:20px; flex-shrink:0;">
+            <i class="ti ti-arrow-left"></i>
+          </div>
+        </a>
+
         <!-- DESTINATION -->
         <div class="card" style="margin-bottom:16px;">
           <div class="card-body">
