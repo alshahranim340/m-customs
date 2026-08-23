@@ -1606,27 +1606,27 @@ function renderBatchTrucks() {
       </td>
       <td>
         <input type="text" class="batch-cell" data-field="driver_id_number" data-idx="${idx}"
-          value="${t.driver_id_number||''}" placeholder="2481671556"
+          value="${t.driver_id_number||''}" placeholder="إقامة"
           style="border:none;background:transparent;width:100%;padding:8px 6px;font-family:'JetBrains Mono',monospace;font-size:12px;direction:ltr;text-align:right;outline:none;">
       </td>
       <td>
         <input type="text" class="batch-cell" data-field="driver_nationality" data-idx="${idx}"
-          value="${t.driver_nationality||''}" placeholder="Indian"
+          value="${t.driver_nationality||''}" placeholder="الجنسية"
           style="border:none;background:transparent;width:100%;padding:8px 6px;font-family:Tajawal,sans-serif;font-size:12px;outline:none;">
       </td>
       <td>
         <input type="text" class="batch-cell" data-field="truck_number" data-idx="${idx}"
-          value="${t.truck_number||''}" placeholder="9691"
+          value="${t.truck_number||''}" placeholder="رقم اللوحة"
           style="border:none;background:transparent;width:100%;padding:8px 6px;font-family:'JetBrains Mono',monospace;font-size:12px;direction:ltr;text-align:right;outline:none;">
       </td>
       <td>
         <input type="number" class="batch-cell" data-field="quantity" data-idx="${idx}"
-          value="${t.quantity||''}" placeholder="27.5" step="0.01"
+          value="${t.quantity||''}" placeholder="الكمية" step="0.01"
           style="border:none;background:transparent;width:100%;padding:8px 6px;font-family:'JetBrains Mono',monospace;font-size:12px;direction:ltr;text-align:right;outline:none;">
       </td>
       <td>
         <input type="text" class="batch-cell" data-field="delivery_number" data-idx="${idx}"
-          value="${t.delivery_number||''}" placeholder="33946"
+          value="${t.delivery_number||''}" placeholder="رقم الإذن"
           style="border:none;background:transparent;width:100%;padding:8px 6px;font-family:'JetBrains Mono',monospace;font-size:12px;direction:ltr;text-align:right;outline:none;">
       </td>
       <td>
