@@ -372,6 +372,14 @@ function renderManifestRow(s, isUnassigned) {
       <span class="modern-badge ${badgeClass}">${stKey}</span>
       <span class="modern-row-date">${s.date || '—'}</span>
       <div class="modern-row-actions">
+        <a href="https://fasah.zatca.gov.sa/ar/login/1.0/" target="_blank" rel="noopener"
+           title="افتح نظام فسح لهذا البيان"
+           onclick="event.stopPropagation()"
+           style="display:inline-flex;align-items:center;gap:5px;padding:5px 10px;background:linear-gradient(135deg,#D4B266 0%,#B89552 100%);color:#0E1A2E;border-radius:5px;text-decoration:none;font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:900;letter-spacing:1px;border:1px solid #B89552;transition:all 0.15s;"
+           onmouseover="this.style.transform='translateY(-1px)';this.style.boxShadow='0 3px 10px rgba(212,178,102,0.5)';"
+           onmouseout="this.style.transform='translateY(0)';this.style.boxShadow='none';">
+          <i class="ti ti-external-link" style="font-size:12px;"></i> فسح
+        </a>
         <button class="modern-icon-btn" title="نقل" onclick="moveToFolder('${s.id}')"><i class="ti ti-folder-plus"></i></button>
         <button class="modern-icon-btn" title="عرض" onclick="navigate('shipment-view',{id:'${s.id}'})"><i class="ti ti-eye"></i></button>
         <button class="modern-icon-btn" title="تعديل" onclick="openEditModal('${s.id}')"><i class="ti ti-edit"></i></button>
