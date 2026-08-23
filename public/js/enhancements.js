@@ -76,17 +76,120 @@ function injectDarkModeStyles() {
     /* Blue */
     body.dark-mode [style*="color:#1C4B8E"],
     body.dark-mode [style*="color: #1C4B8E"] { color: #7BA9E6 !important; }
-    /* Inputs */
-    body.dark-mode input, body.dark-mode select, body.dark-mode textarea {
+    /* ═══ INPUTS — properly handle date, time, checkboxes, etc ═══ */
+
+    /* Base text/number/date/etc inputs — exclude interactive types */
+    body.dark-mode input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="color"]):not([type="range"]):not([type="submit"]):not([type="button"]),
+    body.dark-mode select,
+    body.dark-mode textarea {
       background: #1a2438 !important;
       color: #E8E5DC !important;
       border-color: #2A3B5C !important;
     }
-    body.dark-mode input::placeholder { color: #6A7590 !important; }
+
+    /* Focus */
+    body.dark-mode input:focus,
+    body.dark-mode select:focus,
+    body.dark-mode textarea:focus {
+      border-color: #D4B266 !important;
+      outline: none !important;
+    }
+
+    /* Placeholders */
+    body.dark-mode input::placeholder,
+    body.dark-mode textarea::placeholder { color: #6A7590 !important; }
+
+    /* Date / time picker icons — make them visible */
+    body.dark-mode input[type="date"]::-webkit-calendar-picker-indicator,
+    body.dark-mode input[type="time"]::-webkit-calendar-picker-indicator,
+    body.dark-mode input[type="datetime-local"]::-webkit-calendar-picker-indicator,
+    body.dark-mode input[type="month"]::-webkit-calendar-picker-indicator,
+    body.dark-mode input[type="week"]::-webkit-calendar-picker-indicator {
+      filter: invert(0.85) sepia(1) saturate(3) hue-rotate(15deg);
+      cursor: pointer;
+      opacity: 0.9;
+    }
+    body.dark-mode input[type="date"]::-webkit-calendar-picker-indicator:hover,
+    body.dark-mode input[type="time"]::-webkit-calendar-picker-indicator:hover {
+      opacity: 1;
+    }
+
+    /* Native browser controls (calendar popup, scrollbars) — dark theme */
+    body.dark-mode { color-scheme: dark; }
+
+    /* Chrome autofill fix */
+    body.dark-mode input:-webkit-autofill,
+    body.dark-mode input:-webkit-autofill:hover,
+    body.dark-mode input:-webkit-autofill:focus,
+    body.dark-mode select:-webkit-autofill {
+      -webkit-text-fill-color: #E8E5DC !important;
+      -webkit-box-shadow: 0 0 0 1000px #1a2438 inset !important;
+      transition: background-color 5000s ease-in-out 0s !important;
+    }
+
+    /* Disabled/readonly */
+    body.dark-mode input:disabled,
+    body.dark-mode input[readonly],
+    body.dark-mode select:disabled,
+    body.dark-mode textarea:disabled,
+    body.dark-mode textarea[readonly] {
+      background: #0d1424 !important;
+      color: #8A96AE !important;
+    }
+
+    /* Checkboxes and radios */
+    body.dark-mode input[type="checkbox"],
+    body.dark-mode input[type="radio"] {
+      accent-color: #D4B266;
+    }
+
+    /* File input button */
+    body.dark-mode input[type="file"]::file-selector-button {
+      background: #D4B266 !important;
+      color: #0E1A2E !important;
+      border: none !important;
+    }
+
+    /* Buttons — keep them colorful */
+    body.dark-mode button:not([style*="background:transparent"]):not([style*="background: transparent"]) {
+      filter: brightness(1.05);
+    }
+
+    /* Tables */
+    body.dark-mode table,
+    body.dark-mode th,
+    body.dark-mode td {
+      border-color: #2A3B5C !important;
+    }
+    body.dark-mode th {
+      background: #14203A !important;
+      color: #F5F0E4 !important;
+    }
+    body.dark-mode tr:nth-child(even) {
+      background: rgba(212,178,102,0.03);
+    }
+
+    /* Modals and dropdowns */
+    body.dark-mode [style*="background:rgba(0,0,0"],
+    body.dark-mode [style*="background: rgba(0,0,0"] {
+      background: rgba(0,0,0,0.75) !important;
+    }
+
     /* Sidebar */
     body.dark-mode nav, body.dark-mode aside { background: #0A0F1C !important; }
+
     /* Hover states */
     body.dark-mode [style*="background:#FAFAF7"]:hover { background: #1F2E4E !important; }
+
+    /* Links */
+    body.dark-mode a { color: #F0C878; }
+    body.dark-mode a:hover { color: #FFD98A; }
+
+    /* Scrollbar */
+    body.dark-mode ::-webkit-scrollbar { width: 10px; height: 10px; }
+    body.dark-mode ::-webkit-scrollbar-track { background: #0A0F1C; }
+    body.dark-mode ::-webkit-scrollbar-thumb { background: #2A3B5C; border-radius: 5px; }
+    body.dark-mode ::-webkit-scrollbar-thumb:hover { background: #3A4B6C; }
 
     /* Dark mode toggle button — top-left of content area */
     #dark-mode-toggle {
