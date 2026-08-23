@@ -25,6 +25,11 @@ export async function renderDrivers(container) {
             <div class="modern-header-title">👤 السائقون</div>
             <div class="modern-header-sub">DRIVER DATABASE · ARABIC NAME MANAGEMENT</div>
           </div>
+          <div class="modern-header-actions">
+            <button class="modern-btn" onclick="_exportDriversCSV()" style="background:#2E8B57;color:white;border-color:#2E8B57;">
+              <i class="ti ti-file-spreadsheet"></i> تصدير CSV
+            </button>
+          </div>
         </div>
 
         <div class="modern-stats modern-stats-3" id="drv-stats"></div>
@@ -749,3 +754,50 @@ async function confirmDeleteDriver(id) {
 window._deleteDriver = deleteDriver;
 window._closeDeleteModal = closeDeleteModal;
 window._confirmDeleteDriver = confirmDeleteDriver;
+
+// ══════════════════════════════════════════════════════════════
+// EXPORT DRIVERS TO CSV
+// ══════════════════════════════════════════════════════════════
+function exportDriversCSV() {
+  if (!_drivers || _drivers.length === 0) {
+    toast('لا يوجد سائقون للتصدير', 'error');
+    return;
+  }
+
+  const BOM = '\uFEFF';
+  let csv = BOM;
+
+  // Header row
+  csv += 'ID,Name (EN),Name (AR),Iqama,Phone,Nationality,Truck Number\n';
+
+  _drivers.forEach(d => {
+    // Support legacy: get plate from vehicles array if truck_number empty
+    let plate = d.truck_number || '';
+    if (!plate && d.vehicles && d.vehicles.length > 0) {
+      plate = d.vehicles[d.vehicles.length - 1].plate || '';
+    }
+    const nameEn = (d.name_en || d.name || '').replace(/,/g, ' ').replace(/"/g, '""');
+    const nameAr = (d.name_ar || '').replace(/,/g, '،').replace(/"/g, '""');
+    const iqama = (d.iqama || '').toString().replace(/,/g, '');
+    const phone = (d.phone || '').toString().replace(/,/g, '');
+    const nat = (d.nationality || '').replace(/,/g, '،').replace(/"/g, '""');
+    const truck = plate.toString().replace(/,/g, ' ').replace(/"/g, '""');
+
+    csv += `${d.id || ''},"${nameEn}","${nameAr}",${iqama},${phone},"${nat}","${truck}"\n`;
+  });
+
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  const now = new Date().toISOString().slice(0, 10);
+  link.download = `drivers_${now}.csv`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+
+  toast(`✓ تم تصدير ${_drivers.length} سائق`, 'success');
+}
+
+window._exportDriversCSV = exportDriversCSV;
