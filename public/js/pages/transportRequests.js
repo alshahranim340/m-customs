@@ -49,7 +49,7 @@ export async function renderTransportRequests(container) {
   _profile = await getUserProfile(user.uid);
 
   // Access control
-  if (_profile.role !== 'transport' && _profile.role !== 'admin') {
+  if (_profile.role !== 'transport' && _profile.role !== 'admin' && _profile.role !== 'manager') {
     container.innerHTML = `
       <div class="page-body" style="padding:40px;text-align:center;">
         <div style="font-size:56px;">🔒</div>
