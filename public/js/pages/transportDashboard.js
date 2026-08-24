@@ -56,10 +56,11 @@ export async function renderTransportDashboard(profile) {
         <div id="td-destinations"></div>
       </div>
       <div id="td-loading-locations" style="margin-top:20px;"></div>
+      <div id="td-news" style="margin-top:20px;">${renderNewsSkeleton()}</div>
     </div>
   `;
 
-  await Promise.all([loadWeather(), loadStats()]);
+  await Promise.all([loadWeather(), loadStats(), loadNews()]);
 }
 
 // ─────────────────────────────────────────────────
@@ -487,4 +488,415 @@ function renderLoadingLocations(requests) {
       </div>
     </div>
   `;
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// NEWS + RESOURCES (same as clearance dashboard)
+// ═══════════════════════════════════════════════════════════════════
+
+let _newsCache = null;
+let _newsCacheTime = 0;
+const NEWS_CACHE_MS = 30 * 60 * 1000;
+let _carouselInterval = null;
+let _currentSlide = 0;
+
+const RESOURCES = [
+  {
+    category: 'الجهات الحكومية',
+    icon: 'ti-building-bank',
+    color: '#0E1A2E',
+    bg: '#F5F3EC',
+    links: [
+      { name: 'هيئة الزكاة والضريبة والجمارك', url: 'https://zatca.gov.sa/', desc: 'ZATCA · بيانات جمركية' },
+      { name: 'موانئ (الهيئة العامة للموانئ)', url: 'https://mawani.gov.sa/', desc: 'MAWANI · الموانئ السعودية' },
+      { name: 'نظام فسح', url: 'https://fasah.sa/', desc: 'Fasah · التجارة الخارجية' },
+      { name: 'الهيئة العامة للنقل', url: 'https://tga.gov.sa/', desc: 'TGA · تصاريح النقل' },
+    ],
+  },
+  {
+    category: 'الأخبار والتحديثات',
+    icon: 'ti-news',
+    color: '#1C4B8E',
+    bg: '#EEF2FF',
+    links: [
+      { name: 'أخبار الجمارك السعودية', url: 'https://news.google.com/search?q=%D8%A7%D9%84%D8%AC%D9%85%D8%A7%D8%B1%D9%83%20%D8%A7%D9%84%D8%B3%D8%B9%D9%88%D8%AF%D9%8A%D8%A9&hl=ar&gl=SA', desc: 'Google News · مباشر' },
+      { name: 'أخبار الموانئ', url: 'https://news.google.com/search?q=%D9%85%D9%88%D8%A7%D9%86%D8%A6%20%D8%B3%D8%B9%D9%88%D8%AF%D9%8A%D8%A9&hl=ar&gl=SA', desc: 'Google News · موانئ' },
+      { name: 'الاقتصادية', url: 'https://www.aleqt.com/', desc: 'Aleqt · اقتصاد ولوجستيات' },
+      { name: 'أرقام', url: 'https://www.argaam.com/', desc: 'Argaam · أعمال' },
+    ],
+  },
+  {
+    category: 'أدوات مفيدة',
+    icon: 'ti-tools',
+    color: '#2E8B57',
+    bg: '#E7F5EE',
+    links: [
+      { name: 'تحويل التاريخ الهجري/الميلادي', url: 'https://www.al-islam.com/hijri', desc: 'محوّل تواريخ' },
+      { name: 'أسعار العملات', url: 'https://www.google.com/finance/', desc: 'Google Finance' },
+      { name: 'خرائط الموانئ العالمية', url: 'https://www.marinetraffic.com/', desc: 'MarineTraffic · تتبّع السفن' },
+      { name: 'أسعار الشحن', url: 'https://www.freightos.com/freight-index/', desc: 'Freightos Index' },
+    ],
+  },
+];
+
+const COVER_GRADIENTS = [
+  'linear-gradient(135deg, #0E1A2E 0%, #D4B266 100%)',
+  'linear-gradient(135deg, #1C4B8E 0%, #0E1A2E 100%)',
+  'linear-gradient(135deg, #2E8B57 0%, #0E1A2E 100%)',
+  'linear-gradient(135deg, #8B6914 0%, #0E1A2E 100%)',
+  'linear-gradient(135deg, #C41818 0%, #0E1A2E 100%)',
+];
+
+function renderNewsSkeleton() {
+  return `
+    <style>
+      @keyframes tdSpin { to { transform: rotate(360deg); } }
+      @keyframes tdPulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.5; transform: scale(1.4); } }
+      @keyframes tdSlideIn { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: translateX(0); } }
+      .td-spinner { animation: tdSpin 0.8s linear infinite; }
+      .td-pulse-dot { animation: tdPulse 1.5s ease-in-out infinite; }
+      .td-news-enter { animation: tdSlideIn 0.4s ease-out; }
+      .td-acc-content { overflow:hidden; transition: max-height 0.3s ease; }
+      .td-acc-header { cursor:pointer; transition: background 0.15s; }
+      .td-acc-header:hover { background:#F0EDE4 !important; }
+      .td-acc-chevron { transition: transform 0.25s; }
+      .td-acc-chevron.td-rotated { transform: rotate(-90deg); }
+    </style>
+    <div style="display:grid;grid-template-columns:1.2fr 1fr;gap:20px;">
+      <div id="td-news-carousel">${renderCarouselSkeleton()}</div>
+      <div>${renderResourcesAccordion()}</div>
+    </div>
+  `;
+}
+
+function renderCarouselSkeleton() {
+  return `
+    <div style="background:linear-gradient(135deg,#0E1A2E 0%,#1C2B48 100%);color:white;border-radius:10px;overflow:hidden;height:100%;display:flex;flex-direction:column;">
+      <div style="padding:14px 20px;border-bottom:1px solid rgba(255,255,255,0.08);">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:2px;color:#D4B266;font-weight:800;">
+          📰 LIVE NEWS
+        </div>
+        <div style="font-size:14px;font-weight:800;margin-top:2px;">أخبار مباشرة</div>
+      </div>
+      <div style="flex:1;display:flex;align-items:center;justify-content:center;padding:40px 20px;">
+        <div style="text-align:center;">
+          <div class="td-spinner" style="width:32px;height:32px;border:3px solid rgba(212,178,102,0.2);border-top-color:#D4B266;border-radius:50%;margin:0 auto;"></div>
+          <div style="font-size:12px;color:#8A8578;margin-top:14px;">جارٍ جلب الأخبار...</div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function renderResourcesAccordion() {
+  return `
+    <div style="background:white;border-radius:10px;border:1px solid #E8E5DC;overflow:hidden;">
+      <div style="background:linear-gradient(135deg,#0E1A2E 0%,#1C2B48 100%);color:white;padding:14px 20px;">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:2px;color:#D4B266;font-weight:800;">
+          🌐 RESOURCES PORTAL
+        </div>
+        <div style="font-size:14px;font-weight:800;margin-top:2px;">بوابة الروابط</div>
+      </div>
+      <div style="padding:6px;">
+        ${RESOURCES.map((cat, idx) => `
+          <div style="margin-bottom:4px;border-radius:6px;overflow:hidden;">
+            <div class="td-acc-header" data-td-acc-idx="${idx}" style="padding:12px 14px;background:#FAFAF7;display:flex;align-items:center;gap:12px;">
+              <div style="width:32px;height:32px;background:${cat.bg};color:${cat.color};border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;">
+                <i class="ti ${cat.icon}"></i>
+              </div>
+              <div style="flex:1;">
+                <div style="font-size:13px;font-weight:800;color:#0E1A2E;">${cat.category}</div>
+                <div style="font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:1.5px;color:#8A8578;font-weight:700;margin-top:1px;">${cat.links.length} ROABIT</div>
+              </div>
+              <i class="ti ti-chevron-down td-acc-chevron" data-td-chevron="${idx}" style="color:#8A8578;font-size:18px;"></i>
+            </div>
+            <div class="td-acc-content" data-td-acc-content="${idx}" style="max-height:0;">
+              <div style="padding:4px 6px 8px;display:grid;gap:3px;">
+                ${cat.links.map(link => `
+                  <a href="${link.url}" target="_blank" rel="noopener"
+                     style="display:flex;align-items:center;gap:10px;padding:9px 12px;background:transparent;border-radius:5px;text-decoration:none;color:inherit;transition:all 0.12s;"
+                     onmouseover="this.style.background='#F5F3EC';"
+                     onmouseout="this.style.background='transparent';">
+                    <div style="width:5px;height:5px;background:${cat.color};border-radius:50%;flex-shrink:0;"></div>
+                    <div style="flex:1;min-width:0;">
+                      <div style="font-size:12px;font-weight:700;color:#0E1A2E;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${link.name}</div>
+                      <div style="font-size:10px;color:#8A8578;margin-top:1px;font-family:'JetBrains Mono',monospace;">${link.desc}</div>
+                    </div>
+                    <i class="ti ti-external-link" style="color:#D4B266;font-size:13px;"></i>
+                  </a>
+                `).join('')}
+              </div>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `;
+}
+
+function wireAccordion() {
+  document.querySelectorAll('.td-acc-header').forEach(header => {
+    header.onclick = () => {
+      const idx = header.dataset.tdAccIdx;
+      const content = document.querySelector(`[data-td-acc-content="${idx}"]`);
+      const chevron = document.querySelector(`[data-td-chevron="${idx}"]`);
+      const isOpen = content.style.maxHeight && content.style.maxHeight !== '0px';
+      if (isOpen) {
+        content.style.maxHeight = '0';
+        chevron.classList.remove('td-rotated');
+      } else {
+        content.style.maxHeight = content.scrollHeight + 'px';
+        chevron.classList.add('td-rotated');
+      }
+    };
+  });
+}
+
+async function loadNews() {
+  const container = document.getElementById('td-news-carousel');
+  if (!container) return;
+  setTimeout(wireAccordion, 100);
+
+  if (_newsCache && (Date.now() - _newsCacheTime) < NEWS_CACHE_MS) {
+    renderCarousel(_newsCache);
+    return;
+  }
+
+  try {
+    const items = await fetchNewsParallel();
+    if (items.length === 0) throw new Error('لا نتائج');
+    _newsCache = items;
+    _newsCacheTime = Date.now();
+    renderCarousel(items);
+  } catch (e) {
+    console.error('News failed:', e);
+    renderNewsFallback();
+  }
+}
+
+async function fetchNewsParallel() {
+  const rssUrl = `https://news.google.com/rss/search?q=${encodeURIComponent('الجمارك السعودية OR موانئ')}&hl=ar&gl=SA&ceid=SA:ar`;
+
+  const strategies = [
+    fetch(`https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(rssUrl)}&count=10`)
+      .then(r => r.ok ? r.json() : Promise.reject('rss2json bad'))
+      .then(d => {
+        if (d.status !== 'ok') return Promise.reject('rss2json ' + d.message);
+        return (d.items || []).map(i => ({ title: i.title, link: i.link, pubDate: i.pubDate, source: extractSource(i.title), image: extractImage(i.description || i.content || '') || i.thumbnail || i.enclosure?.link || '' }));
+      }),
+    fetch(`https://corsproxy.io/?${encodeURIComponent(rssUrl)}`)
+      .then(r => r.ok ? r.text() : Promise.reject('corsproxy bad'))
+      .then(t => parseRSS(t).map(i => ({ ...i, source: extractSource(i.title), image: extractImage(i.description) || '' }))),
+    fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(rssUrl)}`)
+      .then(r => r.ok ? r.text() : Promise.reject('allorigins bad'))
+      .then(t => parseRSS(t).map(i => ({ ...i, source: extractSource(i.title), image: extractImage(i.description) || '' }))),
+    fetch('https://feeds.bbci.co.uk/arabic/business/rss.xml')
+      .then(r => r.ok ? r.text() : Promise.reject('bbc bad'))
+      .then(t => parseRSS(t).map(i => ({ ...i, source: 'BBC عربي', image: extractImage(i.description) || '' }))),
+  ];
+
+  return new Promise((resolve, reject) => {
+    let pending = strategies.length;
+    let firstError = null;
+    strategies.forEach((p, idx) => {
+      p.then(items => {
+        if (items && items.length > 0) resolve(items.slice(0, 10));
+        else if (--pending === 0) reject(firstError || new Error('empty'));
+      }).catch(err => {
+        if (!firstError) firstError = err;
+        if (--pending === 0) reject(firstError);
+      });
+    });
+    setTimeout(() => reject(new Error('timeout')), 25000);
+  });
+}
+
+function extractImage(html) {
+  if (!html) return '';
+  const match = html.match(/<img[^>]+src=["']([^"']+)["']/i);
+  return match ? match[1] : '';
+}
+
+function renderCarousel(items) {
+  const container = document.getElementById('td-news-carousel');
+  if (!container) return;
+
+  container.innerHTML = `
+    <div style="background:linear-gradient(135deg,#0E1A2E 0%,#1C2B48 100%);color:white;border-radius:10px;overflow:hidden;display:flex;flex-direction:column;height:100%;min-height:340px;">
+      <div style="padding:14px 20px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid rgba(255,255,255,0.08);">
+        <div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:2px;color:#D4B266;font-weight:800;display:flex;align-items:center;gap:8px;">
+            <span class="td-pulse-dot" style="width:8px;height:8px;background:#D4B266;border-radius:50%;display:inline-block;"></span>
+            LIVE NEWS · ${items.length}
+          </div>
+          <div style="font-size:14px;font-weight:800;margin-top:2px;">أخبار مباشرة</div>
+        </div>
+        <div style="display:flex;gap:6px;">
+          <button id="td-news-prev" title="السابق" style="background:rgba(212,178,102,0.1);color:#D4B266;border:1px solid rgba(212,178,102,0.3);border-radius:5px;width:28px;height:28px;font-size:12px;cursor:pointer;">
+            <i class="ti ti-chevron-right"></i>
+          </button>
+          <button id="td-news-pause" title="إيقاف/تشغيل" style="background:rgba(212,178,102,0.1);color:#D4B266;border:1px solid rgba(212,178,102,0.3);border-radius:5px;width:28px;height:28px;font-size:12px;cursor:pointer;">
+            <i class="ti ti-player-pause" id="td-pause-icon"></i>
+          </button>
+          <button id="td-news-next" title="التالي" style="background:rgba(212,178,102,0.1);color:#D4B266;border:1px solid rgba(212,178,102,0.3);border-radius:5px;width:28px;height:28px;font-size:12px;cursor:pointer;">
+            <i class="ti ti-chevron-left"></i>
+          </button>
+        </div>
+      </div>
+      <div id="td-news-slide" style="flex:1;padding:20px 22px;min-height:200px;"></div>
+      <div id="td-news-dots" style="padding:8px 20px;display:flex;gap:5px;justify-content:center;align-items:center;flex-wrap:wrap;"></div>
+      <div style="height:3px;background:rgba(212,178,102,0.15);position:relative;">
+        <div id="td-news-progress" style="height:100%;background:#D4B266;width:0%;transition:width 0.1s linear;"></div>
+      </div>
+    </div>
+  `;
+
+  _currentSlide = 0;
+  showSlide(items, 0);
+  renderDots(items);
+
+  document.getElementById('td-news-prev').onclick = () => { stopCarousel(); _currentSlide = (_currentSlide - 1 + items.length) % items.length; showSlide(items, _currentSlide); renderDots(items); };
+  document.getElementById('td-news-next').onclick = () => { stopCarousel(); _currentSlide = (_currentSlide + 1) % items.length; showSlide(items, _currentSlide); renderDots(items); };
+  document.getElementById('td-news-pause').onclick = () => {
+    if (_carouselInterval) {
+      stopCarousel();
+      document.getElementById('td-pause-icon').className = 'ti ti-player-play';
+    } else {
+      startCarousel(items);
+      document.getElementById('td-pause-icon').className = 'ti ti-player-pause';
+    }
+  };
+
+  startCarousel(items);
+}
+
+function showSlide(items, idx) {
+  const container = document.getElementById('td-news-slide');
+  if (!container) return;
+  const item = items[idx];
+  const gradient = COVER_GRADIENTS[idx % COVER_GRADIENTS.length];
+
+  container.style.opacity = '0';
+  setTimeout(() => {
+    const heroContent = item.image ? `
+      <img src="${item.image}" alt=""
+        onerror="this.parentElement.innerHTML='<div style=\\'width:100%;height:100%;background:${gradient};display:flex;align-items:center;justify-content:center;\\'>&lt;i class=\\&quot;ti ti-news\\&quot; style=\\&quot;font-size:48px;color:#D4B266;opacity:0.7;\\&quot;&gt;&lt;/i&gt;</div>'"
+        style="width:100%;height:100%;object-fit:cover;display:block;">
+    ` : `
+      <div style="width:100%;height:100%;background:${gradient};display:flex;align-items:center;justify-content:center;">
+        <i class="ti ti-news" style="font-size:48px;color:#D4B266;opacity:0.7;"></i>
+      </div>
+    `;
+
+    container.innerHTML = `
+      <a href="${item.link}" target="_blank" rel="noopener" class="td-news-enter" style="display:block;text-decoration:none;color:inherit;">
+        <div style="width:100%;height:150px;overflow:hidden;border-radius:8px;position:relative;background:${gradient};">
+          ${heroContent}
+          <div style="position:absolute;inset:0;background:linear-gradient(180deg,transparent 40%,rgba(14,26,46,0.9) 100%);"></div>
+          ${item.source ? `<div style="position:absolute;top:10px;right:10px;background:#D4B266;color:#0E1A2E;padding:3px 10px;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:900;letter-spacing:0.5px;">${item.source.toUpperCase()}</div>` : ''}
+          <div style="position:absolute;bottom:8px;left:12px;font-family:'JetBrains Mono',monospace;font-size:9px;color:#D4B266;font-weight:700;">
+            ${timeAgo(item.pubDate)}
+          </div>
+        </div>
+        <div style="padding:14px 4px 8px;font-size:15px;font-weight:700;color:white;line-height:1.6;font-family:'Cairo',sans-serif;min-height:60px;">
+          ${cleanTitle(item.title)}
+        </div>
+        <div style="font-size:11px;color:#D4B266;padding:0 4px;">
+          <i class="ti ti-external-link"></i> اقرأ المقال كاملاً
+        </div>
+      </a>
+    `;
+    container.style.transition = 'opacity 0.35s ease';
+    container.style.opacity = '1';
+  }, 150);
+}
+
+function renderDots(items) {
+  const dots = document.getElementById('td-news-dots');
+  if (!dots) return;
+  dots.innerHTML = items.map((_, i) => `
+    <span data-td-idx="${i}" style="width:${i === _currentSlide ? '18px' : '5px'};height:5px;background:${i === _currentSlide ? '#D4B266' : 'rgba(212,178,102,0.3)'};border-radius:3px;cursor:pointer;transition:all 0.25s;"></span>
+  `).join('');
+  dots.querySelectorAll('span').forEach(span => {
+    span.onclick = () => { stopCarousel(); _currentSlide = parseInt(span.dataset.tdIdx); showSlide(items, _currentSlide); renderDots(items); };
+  });
+}
+
+function startCarousel(items) {
+  stopCarousel();
+  const SLIDE_MS = 6000;
+  const progress = document.getElementById('td-news-progress');
+  let elapsed = 0;
+  _carouselInterval = setInterval(() => {
+    elapsed += 100;
+    if (progress) progress.style.width = `${(elapsed / SLIDE_MS) * 100}%`;
+    if (elapsed >= SLIDE_MS) {
+      elapsed = 0;
+      _currentSlide = (_currentSlide + 1) % items.length;
+      showSlide(items, _currentSlide);
+      renderDots(items);
+      if (progress) progress.style.width = '0%';
+    }
+  }, 100);
+}
+
+function stopCarousel() {
+  if (_carouselInterval) { clearInterval(_carouselInterval); _carouselInterval = null; }
+  const progress = document.getElementById('td-news-progress');
+  if (progress) progress.style.width = '0%';
+}
+
+function renderNewsFallback() {
+  const container = document.getElementById('td-news-carousel');
+  if (!container) return;
+  container.innerHTML = `
+    <div style="background:linear-gradient(135deg,#0E1A2E 0%,#1C2B48 100%);color:white;border-radius:10px;padding:30px 22px;text-align:center;height:100%;display:flex;flex-direction:column;justify-content:center;min-height:340px;">
+      <i class="ti ti-wifi-off" style="font-size:32px;color:#D4B266;"></i>
+      <div style="font-size:14px;font-weight:700;color:white;margin-top:10px;">تعذّر تحميل الأخبار</div>
+      <div style="font-size:11px;color:#8A8578;margin-top:4px;">استخدم روابط Google News في البوابة</div>
+      <button onclick="location.reload()" style="margin-top:14px;background:#D4B266;color:#0E1A2E;border:none;border-radius:5px;padding:7px 16px;font-family:Tajawal,sans-serif;font-size:12px;font-weight:800;cursor:pointer;align-self:center;">
+        <i class="ti ti-refresh"></i> حاول مجدداً
+      </button>
+    </div>
+  `;
+}
+
+function parseRSS(xmlString) {
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(xmlString, 'application/xml');
+  const err = doc.querySelector('parsererror');
+  if (err) throw new Error('XML parse error');
+  const items = Array.from(doc.querySelectorAll('item'));
+  return items.map(item => ({
+    title: item.querySelector('title')?.textContent || '',
+    link: item.querySelector('link')?.textContent || '',
+    pubDate: item.querySelector('pubDate')?.textContent || '',
+    description: item.querySelector('description')?.textContent || '',
+  }));
+}
+
+function timeAgo(dateStr) {
+  const now = new Date();
+  const then = new Date(dateStr);
+  const diffMs = now - then;
+  const mins = Math.floor(diffMs / 60000);
+  if (mins < 1) return 'الآن';
+  if (mins < 60) return `قبل ${mins} د`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `قبل ${hrs} ساعة`;
+  const days = Math.floor(hrs / 24);
+  if (days < 7) return `قبل ${days} يوم`;
+  return then.toLocaleDateString('ar-SA', { calendar: 'gregory' });
+}
+
+function extractSource(title) {
+  const parts = title.split(' - ');
+  if (parts.length > 1) return parts[parts.length - 1];
+  return '';
+}
+
+function cleanTitle(title) {
+  const parts = title.split(' - ');
+  if (parts.length > 1) return parts.slice(0, -1).join(' - ');
+  return title;
 }
