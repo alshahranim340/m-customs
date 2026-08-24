@@ -1,11 +1,15 @@
-import { getAllDrivers, updateDriverArabicName, getDriversMissingArabic } from '../../../src/firebase/db.js';
-import { doc, updateDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
+import { getAllDrivers, updateDriverArabicName, getDriversMissingArabic, softDeleteDriver, restoreDeletedDriver, getDeletedDrivers } from '../../../src/firebase/db.js';
+import { getCurrentUser } from '../../../src/firebase/auth.js';
+import { doc, updateDoc, getDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../../../src/firebase/config.js';
 import { toast } from '../app.js';
 
-let _drivers = [];
+let _drivers = [];          // active drivers only (not soft-deleted)
+let _deletedDrivers = [];   // soft-deleted drivers (for admin recovery)
+let _profile = null;        // current user profile (for role check + deleted_by tracking)
 let _search = '';
 let _filter = 'all'; // all | missing_ar | complete
+let _undoTimer = null;
 
 export async function renderDrivers(container) {
   container.innerHTML = `
@@ -123,9 +127,27 @@ export async function renderDrivers(container) {
 
 async function loadData() {
   try {
-    _drivers = await getAllDrivers();
+    // Load current user profile once (for role check + deleted_by name)
+    if (!_profile) {
+      const user = getCurrentUser();
+      if (user) {
+        try {
+          const snap = await getDoc(doc(db, 'users', user.uid));
+          if (snap.exists()) _profile = { uid: user.uid, ...snap.data() };
+        } catch (e) { console.warn('profile load failed:', e); }
+      }
+    }
+
+    // Fetch active + deleted in parallel (getAllDrivers now excludes soft-deleted)
+    const [active, deleted] = await Promise.all([
+      getAllDrivers(),
+      getDeletedDrivers(),
+    ]);
+    _drivers = active;
+    _deletedDrivers = deleted;
     renderStats();
     renderList();
+    updateDeletedDrawer();
   } catch (e) {
     console.error(e);
     toast('خطأ في التحميل', 'error');
@@ -647,12 +669,12 @@ async function deleteDriver(id) {
         <div style="background:#FEF2F2;border:1px solid #FCA5A5;border-radius:6px;padding:14px 16px;">
           <div style="display:flex;align-items:center;gap:8px;color:#CC2229;font-weight:800;font-size:14px;">
             <i class="ti ti-alert-triangle"></i>
-            <span>هذا الإجراء لا يمكن التراجع عنه</span>
+            <span>تأكيد حذف السائق</span>
           </div>
           <div style="font-size:13px;color:#0E1A2E;margin-top:8px;line-height:1.6;">
             سيتم حذف السائق: <span style="font-weight:800;">${displayName}</span>
             <br>
-            الشحنات والطلبات المرتبطة به لن تُحذف، لكن ستفقد الربط.
+            <span style="color:#2E8B57;font-size:12px;">✓ يمكن استرجاع السائق خلال 5 ثوانٍ من زر التراجع، أو لاحقاً من سجل المحذوفات (للأدمن).</span>
           </div>
         </div>
 
@@ -732,6 +754,9 @@ function closeDeleteModal(force) {
 }
 
 async function confirmDeleteDriver(id) {
+  const driver = _drivers.find(d => d.id === id);
+  const displayName = driver?._displayNameAr || driver?._displayNameEn || driver?.name || 'السائق';
+
   const modal = document.getElementById('drv-delete-modal');
   if (modal) {
     modal.querySelectorAll('button').forEach(b => b.disabled = true);
@@ -740,15 +765,162 @@ async function confirmDeleteDriver(id) {
   }
 
   try {
-    await deleteDoc(doc(db, 'drivers', id));
+    const deletedBy = _profile?.name || _profile?.email || 'مستخدم';
+    await softDeleteDriver(id, deletedBy);
     closeDeleteModal(true);
     await loadData();
-    toast('✓ تم حذف السائق', 'success');
+    showDriverUndoToast(`حُذف السائق: ${displayName}`, id);
   } catch (e) {
     console.error(e);
     toast('خطأ في الحذف', 'error');
     if (modal) modal.querySelectorAll('button').forEach(b => b.disabled = false);
   }
+}
+
+// Undo toast — sticky for 5 seconds with restore button
+function showDriverUndoToast(message, driverId) {
+  const existing = document.getElementById('drv-undo-toast');
+  if (existing) existing.remove();
+  if (_undoTimer) clearTimeout(_undoTimer);
+
+  const t = document.createElement('div');
+  t.id = 'drv-undo-toast';
+  t.style.cssText = `
+    position:fixed;bottom:24px;left:50%;transform:translateX(-50%);
+    background:#0E1A2E;color:white;padding:12px 18px;border-radius:8px;
+    box-shadow:0 8px 24px rgba(14,26,46,0.35);z-index:100000;
+    display:flex;align-items:center;gap:14px;font-family:'Tajawal',sans-serif;
+    font-size:13px;font-weight:700;min-width:280px;
+  `;
+  t.innerHTML = `
+    <span><i class="ti ti-trash" style="color:#F0C040;"></i> ${message}</span>
+    <button id="drv-undo-btn" style="background:#D4B266;color:#0E1A2E;border:none;border-radius:5px;padding:6px 14px;font-family:'Tajawal',sans-serif;font-size:12px;font-weight:800;cursor:pointer;">
+      <i class="ti ti-arrow-back-up"></i> تراجع
+    </button>
+    <button id="drv-undo-close" style="background:transparent;border:none;color:#B8B0A0;cursor:pointer;font-size:18px;padding:0 4px;">×</button>
+  `;
+  document.body.appendChild(t);
+
+  document.getElementById('drv-undo-btn').onclick = async () => {
+    clearTimeout(_undoTimer);
+    t.remove();
+    try {
+      await restoreDeletedDriver(driverId);
+      await loadData();
+      toast('✓ استُعيد السائق', 'success');
+    } catch (e) {
+      console.error(e);
+      toast('فشل الاستعادة', 'error');
+    }
+  };
+  document.getElementById('drv-undo-close').onclick = () => {
+    clearTimeout(_undoTimer);
+    t.remove();
+  };
+
+  _undoTimer = setTimeout(() => t.remove(), 5000);
+}
+
+// Update the deleted-drivers drawer at the bottom of the page (admin only)
+function updateDeletedDrawer() {
+  document.getElementById('drv-deleted-drawer')?.remove();
+
+  // Only admin sees the deleted drawer
+  if (_profile?.role !== 'admin') return;
+  if (!_deletedDrivers || _deletedDrivers.length === 0) return;
+
+  const drawer = document.createElement('div');
+  drawer.id = 'drv-deleted-drawer';
+  drawer.style.cssText = `
+    margin:16px 24px 24px;background:white;border:1px solid #E8E5DC;
+    border-radius:10px;overflow:hidden;font-family:'Tajawal',sans-serif;
+  `;
+
+  drawer.innerHTML = `
+    <div id="drv-drawer-header" style="background:#FAFAF7;padding:12px 18px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;user-select:none;border-bottom:1px solid #F0EDE4;">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <i class="ti ti-trash" style="color:#8A8578;"></i>
+        <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#8A8578;letter-spacing:1.5px;font-weight:800;">DELETED DRIVERS</span>
+        <span style="background:#CC2229;color:white;font-family:'JetBrains Mono',monospace;font-size:10px;padding:2px 8px;border-radius:10px;font-weight:800;">${_deletedDrivers.length}</span>
+        <span style="color:#6B6659;font-size:12px;">سجل السائقين المحذوفين — يمكن استرجاعهم</span>
+      </div>
+      <i class="ti ti-chevron-down" id="drv-drawer-icon" style="color:#8A8578;transition:transform 0.2s;"></i>
+    </div>
+    <div id="drv-drawer-body" style="max-height:0;overflow:hidden;transition:max-height 0.3s ease;">
+      <div style="padding:14px 18px;">
+        ${_deletedDrivers.map(d => {
+          const nameEn = d.name_en || '';
+          const nameAr = d.name_ar || d.name || '';
+          const iqama = d.iqama || '—';
+          const truck = d.truck_number || '—';
+          const delDate = d.deleted_at ? new Date(d.deleted_at).toLocaleString('en-GB') : '—';
+          const delBy = d.deleted_by || 'غير معروف';
+          return `
+            <div style="border:1px solid #F0EDE4;border-radius:6px;padding:12px 14px;margin-bottom:8px;background:#FAFAF7;">
+              <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;">
+                <div style="min-width:0;flex:1;">
+                  <div style="font-size:14px;font-weight:800;color:#0E1A2E;">
+                    ${nameAr || nameEn || 'بلا اسم'}
+                    ${nameEn && nameAr ? `<span style="color:#8A8578;font-weight:600;font-family:'JetBrains Mono',monospace;font-size:11px;direction:ltr;"> · ${nameEn}</span>` : ''}
+                  </div>
+                  <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#6B6659;margin-top:4px;letter-spacing:0.5px;">
+                    IQAMA: ${iqama} · TRUCK: ${truck}
+                  </div>
+                  <div style="font-size:11px;color:#8A8578;margin-top:4px;">
+                    <i class="ti ti-user-x" style="font-size:12px;color:#CC2229;"></i>
+                    حُذف بواسطة <b style="color:#0E1A2E;">${delBy}</b> في ${delDate}
+                  </div>
+                </div>
+                <button data-restore-id="${d.id}" class="drv-restore-btn" style="background:#2E8B57;color:white;border:none;border-radius:5px;padding:7px 14px;font-family:'Tajawal',sans-serif;font-size:12px;font-weight:800;cursor:pointer;white-space:nowrap;">
+                  <i class="ti ti-arrow-back-up"></i> استرجاع
+                </button>
+              </div>
+            </div>
+          `;
+        }).join('')}
+      </div>
+    </div>
+  `;
+
+  // Append after main content
+  const pageBody = document.querySelector('.page-body');
+  if (pageBody) pageBody.appendChild(drawer);
+  else document.body.appendChild(drawer);
+
+  // Wire up header toggle
+  document.getElementById('drv-drawer-header').onclick = () => {
+    const body = document.getElementById('drv-drawer-body');
+    const icon = document.getElementById('drv-drawer-icon');
+    if (!body) return;
+    if (body.style.maxHeight === '0px' || !body.style.maxHeight) {
+      body.style.maxHeight = '600px';
+      body.style.overflowY = 'auto';
+      icon.style.transform = 'rotate(180deg)';
+    } else {
+      body.style.maxHeight = '0px';
+      icon.style.transform = 'rotate(0deg)';
+    }
+  };
+
+  // Wire up restore buttons
+  document.querySelectorAll('.drv-restore-btn').forEach(btn => {
+    btn.onclick = async () => {
+      const id = btn.dataset.restoreId;
+      if (!id) return;
+      btn.disabled = true;
+      btn.innerHTML = '<i class="ti ti-loader"></i> جاري...';
+      try {
+        await restoreDeletedDriver(id);
+        await loadData();
+        toast('✓ استُعيد السائق', 'success');
+      } catch (e) {
+        console.error(e);
+        toast('فشل الاستعادة', 'error');
+        btn.disabled = false;
+        btn.innerHTML = '<i class="ti ti-arrow-back-up"></i> استرجاع';
+      }
+    };
+  });
 }
 
 window._deleteDriver = deleteDriver;
