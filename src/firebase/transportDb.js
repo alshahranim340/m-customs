@@ -153,3 +153,79 @@ export async function addDropdownValue(field, value) {
     [field]: [...list, trimmed].sort(),
   });
 }
+// Create an incoming_batch record — visible to clearance department
+// Groups multiple truck requests + their created shipment IDs into a single
+// batch record so clearance can see and download the Excel per batch.
+export async function createIncomingBatch(requests, shipmentIds, sender) {
+  if (!requests || requests.length === 0) return null;
+  const first = requests[0];
+
+  // Compute totals
+  const totalQty = requests.reduce((s, r) => s + (parseFloat(r.quantity) || 0), 0);
+
+  // Snapshot each truck's data (used later to build the Excel)
+  const trucks = requests.map(r => ({
+    driver_name:        r.driver_name || '',
+    driver_id_number:   r.driver_id_number || '',
+    driver_nationality: r.driver_nationality || '',
+    truck_number:       r.truck_number || '',
+    quantity:           parseFloat(r.quantity) || 0,
+    delivery_number:    r.delivery_number || '',
+    loading_location:   r.loading_location || '',
+    dispatch_date:      r.dispatch_date || '',
+    phone:              r._phone || '',
+    request_id:         r.id || '',
+  }));
+
+  const payload = {
+    batch_id:         first.batch_id || `single-${first.id || Date.now()}`,
+    batch_label:      first.batch_label || '',
+    customer:         first.customer || '',
+    material:         first.material || '',
+    destination:      first.destination || 'uae',
+    loading_location: first.loading_location || '',
+    dispatch_date:    first.dispatch_date || '',
+    trucks_count:     trucks.length,
+    total_qty:        totalQty,
+    trucks:           trucks,
+    shipment_ids:     shipmentIds || [],
+    sent_by_name:     sender?.name || '',
+    sent_by_email:    sender?.email || '',
+    sent_by_uid:      sender?.uid || '',
+    sent_at:          serverTimestamp(),
+    status:           'new',       // 'new' → 'viewed' when clearance opens it
+    viewed_by:        null,
+    viewed_at:        null,
+  };
+
+  const ref = await addDoc(collection(db, 'incoming_batches'), payload);
+  return ref.id;
+}
+
+// Get incoming batches (most recent first), optionally filter by status
+export async function getIncomingBatches(limitCount = 200, statusFilter = null) {
+  let q = query(
+    collection(db, 'incoming_batches'),
+    orderBy('sent_at', 'desc'),
+    limit(limitCount)
+  );
+  const snap = await getDocs(q);
+  const batches = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  if (statusFilter) return batches.filter(b => b.status === statusFilter);
+  return batches;
+}
+
+// Mark a batch as viewed by clearance (removes the "new" badge)
+export async function markBatchViewed(batchDocId, viewerName) {
+  await updateDoc(doc(db, 'incoming_batches', batchDocId), {
+    status:    'viewed',
+    viewed_by: viewerName || 'مستخدم',
+    viewed_at: new Date().toISOString(),
+  });
+}
+
+// Count of unviewed batches — for sidebar badge
+export async function getUnviewedBatchCount() {
+  const snap = await getDocs(collection(db, 'incoming_batches'));
+  return snap.docs.filter(d => (d.data() || {}).status === 'new').length;
+}
