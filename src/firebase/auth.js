@@ -16,11 +16,19 @@ const ADMIN_EMAIL = 'alshahranim340@gmail.com';
 
 // الرتب المتاحة
 export const ROLES = {
-  admin:      { ar: 'مدير',           color: '#c8943a' },
+  admin:      { ar: 'مدير النظام',    color: '#c8943a' },
+  manager:    { ar: 'مدير قسم',       color: '#8B5CF6' },
   supervisor: { ar: 'مشرف',           color: '#2563a8' },
   employee:   { ar: 'موظف تخليص',     color: '#1a7a50' },
   transport:  { ar: 'موظف نقل',       color: '#3B82F6' },
 };
+
+// Elevated access = admin OR manager (used for transport, drivers, deleted-drawer views).
+// Note: isAdmin() still checks strictly for ADMIN_EMAIL — used to guard the users page.
+export function hasElevatedAccess(profileOrRole) {
+  const role = typeof profileOrRole === 'string' ? profileOrRole : profileOrRole?.role;
+  return role === 'admin' || role === 'manager';
+}
 
 // ─────────────────────────────────────────────
 // AUTH STATE
@@ -79,9 +87,9 @@ export async function getAllUsers() {
   const snap = await getDocs(collection(db, 'users'));
   return snap.docs.map(d => ({ id: d.id, ...d.data() }))
     .sort((a, b) => {
-      // المدير أولاً ثم المشرف ثم الموظفين
-      const order = { admin: 0, supervisor: 1, employee: 2, transport: 3 };
-      return (order[a.role]||2) - (order[b.role]||2);
+      // ترتيب: مدير النظام ثم مدير القسم ثم المشرف ثم الموظفين
+      const order = { admin: 0, manager: 1, supervisor: 2, employee: 3, transport: 4 };
+      return (order[a.role]||3) - (order[b.role]||3);
     });
 }
 
