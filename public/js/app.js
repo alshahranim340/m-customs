@@ -16,6 +16,7 @@ import { renderFrogger } from './pages/gameFrogger.js';
 import { renderExportReport } from './pages/exportReport.js';
 import { renderTransportRequests } from './pages/transportRequests.js';
 import { renderTransportSettings } from './pages/transportSettings.js';
+import { renderTransportDashboard } from './pages/transportDashboard.js';
 import { initCommandPalette, reloadCommandPaletteData } from './commandPalette.js';
 import { initDarkMode, showSplashScreen, playSound, celebrate, checkMilestone, renderAvatar } from './enhancements.js';
 import { getShipments } from '../../src/firebase/db.js';
@@ -76,6 +77,7 @@ const PAGES = {
   'export-report':    renderExportReport,
   'transport-requests': renderTransportRequests,
   'transport-settings': renderTransportSettings,
+  'transport-dashboard': renderTransportDashboard,
 };
 
 // ─────────────────────────────────────────────
@@ -1614,7 +1616,10 @@ function renderAppShell(profile) {
         <!-- Transport-only Nav -->
         <nav class="sidebar-nav" id="nav-transport">
           <div class="nav-group-label">قسم النقل</div>
-          <a class="nav-item active" data-page="transport-requests" onclick="navigate('transport-requests')">
+          <a class="nav-item active" data-page="transport-dashboard" onclick="navigate('transport-dashboard')">
+            <i class="ti ti-layout-dashboard"></i> لوحة التحكم
+          </a>
+          <a class="nav-item" data-page="transport-requests" onclick="navigate('transport-requests')">
             <i class="ti ti-truck-delivery"></i> طلبات النقل
           </a>
           <a class="nav-item" data-page="drivers" onclick="navigate('drivers')">
@@ -1755,9 +1760,9 @@ function renderAppShell(profile) {
   }
 
   updateBadges();
-  // Transport users go straight to their requests page
+  // Transport users go straight to their dashboard
   if (profile?.role === 'transport') {
-    navigate('transport-requests');
+    navigate('transport-dashboard');
   } else {
     navigate('dashboard');
   }
