@@ -17,6 +17,7 @@ import { renderExportReport } from './pages/exportReport.js';
 import { renderTransportRequests } from './pages/transportRequests.js';
 import { renderTransportSettings } from './pages/transportSettings.js';
 import { renderTransportDashboard } from './pages/transportDashboard.js';
+import { renderUserAvatar, openAvatarPicker } from './avatars.js';
 import { initCommandPalette, reloadCommandPaletteData } from './commandPalette.js';
 import { initDarkMode, showSplashScreen, playSound, celebrate, checkMilestone, renderAvatar } from './enhancements.js';
 import { getShipments } from '../../src/firebase/db.js';
@@ -1589,7 +1590,9 @@ body{
 function renderAppShell(profile) {
   const adminOnly = isAdmin(_currentUser);
   const isTransport = profile?.role === 'transport';
-  const isCustoms = profile?.role === 'employee' || profile?.role === 'supervisor' || adminOnly;
+  const isManager = profile?.role === 'manager';
+  const isElevated = adminOnly || isManager; // admin or manager: sees transport + can access everything
+  const isCustoms = profile?.role === 'employee' || profile?.role === 'supervisor' || adminOnly || isManager;
 
   document.getElementById('root').innerHTML = `
     <div class="app-layout" id="app">
@@ -1652,15 +1655,16 @@ function renderAppShell(profile) {
           <a class="nav-item" data-page="drivers" onclick="navigate('drivers')">
             <i class="ti ti-user"></i> السائقون
           </a>
-          ${adminOnly ? `
+          ${isElevated ? `
           <div class="nav-group-label">قسم النقل</div>
           <a class="nav-item" data-page="transport-requests" onclick="navigate('transport-requests')">
             <i class="ti ti-truck-delivery"></i> طلبات النقل
           </a>
+          ${adminOnly ? `
           <div class="nav-group-label">الإدارة</div>
           <a class="nav-item" data-page="users" onclick="navigate('users')">
             <i class="ti ti-users"></i> الموظفون
-          </a>` : ''}
+          </a>` : ''}` : ''}
           <div class="nav-group-label">الترفيه</div>
           <a class="nav-item" data-page="activities" onclick="navigate('activities')">
             <i class="ti ti-device-gamepad-2"></i> الفعاليات
@@ -1700,10 +1704,15 @@ function renderAppShell(profile) {
 
         <div class="sidebar-footer">
           <div class="user-chip">
-            ${renderAvatar(profile?.name || 'م', 40)}
+            <div id="user-avatar-wrap" style="position:relative;cursor:pointer;" onclick="_openAvatarPicker()" title="تعديل الصورة الشخصية">
+              ${renderUserAvatar(profile?.avatar, profile?.name || 'م', 40)}
+              <div id="user-avatar-edit-overlay" style="position:absolute;inset:0;border-radius:50%;background:rgba(14,26,46,0.65);display:none;align-items:center;justify-content:center;color:#D4B266;">
+                <i class="ti ti-pencil" style="font-size:16px;"></i>
+              </div>
+            </div>
             <div class="user-info">
               <div class="user-name">${profile?.name||'موظف'}</div>
-              <div class="user-role">${profile?.role==='admin'?'مدير النظام':profile?.role==='transport'?'موظف نقل':profile?.role==='supervisor'?'مشرف':'موظف تخليص'}</div>
+              <div class="user-role">${profile?.role==='admin'?'مدير النظام':profile?.role==='manager'?'مدير قسم':profile?.role==='transport'?'موظف نقل':profile?.role==='supervisor'?'مشرف':'موظف تخليص'}</div>
             </div>
           </div>
           <button onclick="doLogout()"
@@ -1725,6 +1734,35 @@ function renderAppShell(profile) {
   window.doLogout      = doLogout;
   window.updateBadges  = updateBadges;
   window.closeModal    = closeModal;
+
+  // Avatar picker — opens modal for user to change their profile picture
+  window._openAvatarPicker = () => {
+    openAvatarPicker(profile?.avatar, async (newAvatar) => {
+      // Update local profile so UI reflects immediately
+      if (profile) profile.avatar = newAvatar;
+      // Re-render sidebar avatar without full reload
+      const wrap = document.getElementById('user-avatar-wrap');
+      if (wrap) {
+        wrap.innerHTML = `
+          ${renderUserAvatar(newAvatar, profile?.name || 'م', 40)}
+          <div id="user-avatar-edit-overlay" style="position:absolute;inset:0;border-radius:50%;background:rgba(14,26,46,0.65);display:none;align-items:center;justify-content:center;color:#D4B266;">
+            <i class="ti ti-pencil" style="font-size:16px;"></i>
+          </div>
+        `;
+        wireAvatarHover();
+      }
+    });
+  };
+
+  // Wire hover-to-show-pencil on avatar
+  function wireAvatarHover() {
+    const wrap = document.getElementById('user-avatar-wrap');
+    const overlay = document.getElementById('user-avatar-edit-overlay');
+    if (!wrap || !overlay) return;
+    wrap.onmouseenter = () => { overlay.style.display = 'flex'; };
+    wrap.onmouseleave = () => { overlay.style.display = 'none'; };
+  }
+  wireAvatarHover();
 
   // Initialize Command Palette (Ctrl+K)
   initCommandPalette(navigate);
