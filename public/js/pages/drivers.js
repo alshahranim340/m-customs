@@ -770,14 +770,26 @@ function exportDriversCSV() {
   // Header row
   csv += 'ID,Name (EN),Name (AR),Iqama,Phone,Nationality,Truck Number\n';
 
+  const isArabic = (s) => /[\u0600-\u06FF]/.test(s || '');
+
   _drivers.forEach(d => {
     // Support legacy: get plate from vehicles array if truck_number empty
     let plate = d.truck_number || '';
     if (!plate && d.vehicles && d.vehicles.length > 0) {
       plate = d.vehicles[d.vehicles.length - 1].plate || '';
     }
-    const nameEn = (d.name_en || d.name || '').replace(/,/g, ' ').replace(/"/g, '""');
-    const nameAr = (d.name_ar || '').replace(/,/g, '،').replace(/"/g, '""');
+
+    // Smart name detection: legacy `name` field could contain either language
+    // Priority: name_en (dedicated) → name (if not arabic) — for English column
+    // Priority: name_ar (dedicated) → name (if arabic) — for Arabic column
+    const legacyName = (d.name || '').trim();
+    const legacyIsArabic = isArabic(legacyName);
+
+    const nameEnRaw = d.name_en || (legacyName && !legacyIsArabic ? legacyName : '');
+    const nameArRaw = d.name_ar || (legacyName && legacyIsArabic ? legacyName : '');
+
+    const nameEn = nameEnRaw.replace(/,/g, ' ').replace(/"/g, '""');
+    const nameAr = nameArRaw.replace(/,/g, '،').replace(/"/g, '""');
     const iqama = (d.iqama || '').toString().replace(/,/g, '');
     const phone = (d.phone || '').toString().replace(/,/g, '');
     const nat = (d.nationality || '').replace(/,/g, '،').replace(/"/g, '""');

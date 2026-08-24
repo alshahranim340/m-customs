@@ -253,6 +253,55 @@ async function loadData() {
   }
 }
 
+// Detect if a string is Arabic (contains Arabic characters)
+function isArabicName(str) {
+  if (!str) return false;
+  return /[\u0600-\u06FF]/.test(str);
+}
+
+// Smart driver upsert: detects arabic vs english name, keeps existing fields
+// Also fetches full driver data (phone) if driver exists in _drivers
+async function smartUpsertDriver(payload) {
+  const name = (payload.driver_name || '').trim();
+  if (!name) return null;
+
+  // Try to find existing driver in cache to inherit missing fields (like phone)
+  const iqama = (payload.iqama || '').trim();
+  let existing = null;
+  if (iqama) {
+    existing = _drivers.find(d => (d.iqama || '').trim() === iqama);
+  }
+  if (!existing) {
+    existing = _drivers.find(d =>
+      (d.name_ar && d.name_ar.trim() === name) ||
+      (d.name && d.name.trim() === name) ||
+      (d.name_en && d.name_en.trim().toLowerCase() === name.toLowerCase())
+    );
+  }
+
+  const upsertData = {
+    iqama: iqama || (existing?.iqama || ''),
+    nationality: (payload.nationality || '').trim() || (existing?.nationality || ''),
+    truck_number: (payload.truck_number || '').trim() || (existing?.truck_number || ''),
+    phone: (payload.phone || '').trim() || (existing?.phone || ''),
+  };
+
+  // Route name to correct field based on script
+  if (isArabicName(name)) {
+    upsertData.name_ar = name;
+    // preserve existing english name
+    if (existing?.name_en) upsertData.name_en = existing.name_en;
+  } else {
+    upsertData.name_en = name;
+    // preserve existing arabic name
+    if (existing?.name_ar) upsertData.name_ar = existing.name_ar;
+    else if (existing?.name) upsertData.name_ar = existing.name;
+  }
+
+  return await upsertTransportDriver(upsertData);
+}
+
+
 function renderStats() {
   const total = _requests.length;
   const draft = _requests.filter(r => r.status === 'draft').length;
@@ -483,8 +532,8 @@ function selectDriverFromDropdown(driverId) {
   const row = _activeInput.closest('tr');
   if (!row) return;
 
-  // Fill driver name: prefer english; fallback to arabic (legacy)
-  _activeInput.value = driver.name_en || driver.name_ar || driver.name || '';
+  // Fill driver name: prefer arabic (Saudi customs docs); fallback to english
+  _activeInput.value = driver.name_ar || driver.name || driver.name_en || '';
 
   // Get plate from vehicles array if truck_number is empty (legacy)
   let plate = driver.truck_number || '';
@@ -502,7 +551,7 @@ function selectDriverFromDropdown(driverId) {
   setCell('truck_number', plate);
 
   hideDriverDropdown();
-  const displayName = driver.name_en || driver.name_ar || driver.name || 'السائق';
+  const displayName = driver.name_ar || driver.name || driver.name_en || 'السائق';
   toast(`✓ ${displayName} — البيانات تم تعبئتها`, 'success');
 }
 
@@ -636,8 +685,8 @@ async function saveRow(id) {
 
     // Upsert driver record if we have a name
     if (updates.driver_name && updates.driver_name.trim()) {
-      await upsertTransportDriver({
-        name_en:      updates.driver_name.trim(),
+      await smartUpsertDriver({
+        driver_name:  updates.driver_name.trim(),
         iqama:        updates.driver_id_number || '',
         nationality:  updates.driver_nationality || '',
         truck_number: updates.truck_number || '',
@@ -896,8 +945,8 @@ async function confirmSend(id) {
     // 2. Upsert driver
     let driver = null;
     if (updates.driver_name && updates.driver_name.trim()) {
-      driver = await upsertTransportDriver({
-        name_en:      updates.driver_name.trim(),
+      driver = await smartUpsertDriver({
+        driver_name:  updates.driver_name.trim(),
         iqama:        updates.driver_id_number || '',
         nationality:  updates.driver_nationality || '',
         truck_number: updates.truck_number || '',
@@ -1772,7 +1821,7 @@ function batchSelectDriver(driverId) {
   }
 
   // Fill batch truck object
-  _batchTrucks[idx].driver_name = driver.name_en || driver.name_ar || driver.name || '';
+  _batchTrucks[idx].driver_name = driver.name_ar || driver.name || driver.name_en || '';
   _batchTrucks[idx].driver_id_number = driver.iqama || '';
   _batchTrucks[idx].driver_nationality = driver.nationality || '';
   _batchTrucks[idx].truck_number = plate;
@@ -1845,12 +1894,12 @@ async function saveBatch(sendToClearance) {
 
       // Upsert driver record
       if (data.driver_name) {
-        await upsertTransportDriver({
-          name_en: data.driver_name,
-          iqama: data.driver_id_number,
-          nationality: data.driver_nationality,
+        await smartUpsertDriver({
+          driver_name:  data.driver_name,
+          iqama:        data.driver_id_number,
+          nationality:  data.driver_nationality,
           truck_number: data.truck_number,
-          phone: '',
+          phone:        (t.phone || '').trim(),
         });
       }
 
