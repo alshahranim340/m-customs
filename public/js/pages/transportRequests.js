@@ -532,8 +532,8 @@ function selectDriverFromDropdown(driverId) {
   const row = _activeInput.closest('tr');
   if (!row) return;
 
-  // Fill driver name: prefer arabic (Saudi customs docs); fallback to english
-  _activeInput.value = driver.name_ar || driver.name || driver.name_en || '';
+  // Transport section uses English by default; fallback to Arabic if no English
+  _activeInput.value = driver.name_en || driver.name_ar || driver.name || '';
 
   // Get plate from vehicles array if truck_number is empty (legacy)
   let plate = driver.truck_number || '';
@@ -551,7 +551,7 @@ function selectDriverFromDropdown(driverId) {
   setCell('truck_number', plate);
 
   hideDriverDropdown();
-  const displayName = driver.name_ar || driver.name || driver.name_en || 'السائق';
+  const displayName = driver.name_en || driver.name_ar || driver.name || 'السائق';
   toast(`✓ ${displayName} — البيانات تم تعبئتها`, 'success');
 }
 
@@ -1821,7 +1821,7 @@ function batchSelectDriver(driverId) {
   }
 
   // Fill batch truck object
-  _batchTrucks[idx].driver_name = driver.name_ar || driver.name || driver.name_en || '';
+  _batchTrucks[idx].driver_name = driver.name_en || driver.name_ar || driver.name || '';
   _batchTrucks[idx].driver_id_number = driver.iqama || '';
   _batchTrucks[idx].driver_nationality = driver.nationality || '';
   _batchTrucks[idx].truck_number = plate;
