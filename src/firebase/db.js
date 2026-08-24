@@ -342,14 +342,30 @@ export async function updateShipment(shipmentId, updates) {
 // CREATE SHIPMENT FROM TRANSPORT REQUEST
 // ─────────────────────────────────────────────
 // Automatically creates a shipment from a transport request.
-// Uses driver.name_ar if available, falls back to name_en.
+// Uses driver.name_ar if available (customs docs need Arabic), falls back to name_en.
 // Creates as 'draft' status - admin fills declaration#, date, attachments later.
 export async function createShipmentFromTransportRequest(req, driver) {
-  // Get plate from driver's most recent truck (or from request if driver is new)
-  const plate = req.truck_number || driver?.truck_number || '';
+  // If driver not provided or lacks Arabic name, try to look up from drivers collection
+  // using the request's driver_name / iqama. This ensures clearance receives Arabic.
+  let resolvedDriver = driver;
+  if (!resolvedDriver?.name_ar || !resolvedDriver.name_ar.trim()) {
+    try {
+      const looked = await findDriverByEnOrIqama(req.driver_name, req.driver_id_number);
+      if (looked) resolvedDriver = { ...looked, ...(driver || {}) };
+    } catch (e) {
+      // best-effort — fall through with what we have
+    }
+  }
 
-  // Use arabic name if driver has one, otherwise english name
-  const driverDisplayName = driver?.name_ar?.trim() || driver?.name_en || req.driver_name || '';
+  // Get plate from request first (most recent), fallback to driver's latest
+  const plate = req.truck_number || resolvedDriver?.truck_number || '';
+
+  // Prefer Arabic name for clearance (Saudi customs docs). Fallback to English, then request field.
+  const driverDisplayName =
+    resolvedDriver?.name_ar?.trim() ||
+    resolvedDriver?.name?.trim() ||   // legacy field
+    resolvedDriver?.name_en?.trim() ||
+    req.driver_name || '';
 
   const ref = await addDoc(collection(db, "shipments"), {
     // Empty declaration# - admin fills later
@@ -359,16 +375,16 @@ export async function createShipmentFromTransportRequest(req, driver) {
     destination: req.destination || 'uae',
     exporter: req.customer || '',
     // Driver snapshot at time of creation
-    driver_id: driver?.id || null,
+    driver_id: resolvedDriver?.id || null,
     driver_snapshot: {
       name: driverDisplayName,
-      name_en: driver?.name_en || req.driver_name || '',
-      nationality: driver?.nationality || req.driver_nationality || '',
-      passport_country: driver?.iqama || req.driver_id_number || '',
+      name_en: resolvedDriver?.name_en || req.driver_name || '',
+      nationality: resolvedDriver?.nationality || req.driver_nationality || '',
+      passport_country: resolvedDriver?.passport_country || resolvedDriver?.iqama || req.driver_id_number || '',
       plate: plate,
-      plate_nationality: '',
-      vehicle_type: '',
-      carrier_type: '',
+      plate_nationality: resolvedDriver?.plate_nationality || '',
+      vehicle_type: resolvedDriver?.vehicle_type || '',
+      carrier_type: resolvedDriver?.carrier_type || '',
       movement_ref: req.delivery_number || ''
     },
     // Extra transport info
