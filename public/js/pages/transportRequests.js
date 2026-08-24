@@ -3,7 +3,7 @@ import { getUserProfile } from '../../../src/firebase/auth.js';
 import {
   getTransportRequests, createTransportRequest, updateTransportRequest,
   deleteTransportRequest, getTransportDropdowns, addDropdownValue,
-  linkRequestToShipment
+  linkRequestToShipment, createIncomingBatch
 } from '../../../src/firebase/transportDb.js';
 import { getAllDrivers, upsertTransportDriver, createShipmentFromTransportRequest, findDriverByEnOrIqama } from '../../../src/firebase/db.js';
 import { toast } from '../app.js';
@@ -983,6 +983,21 @@ async function confirmSend(id) {
     // 5. Link request → shipment
     await linkRequestToShipment(id, shipmentId);
 
+    // 6. Create incoming_batch record for clearance visibility
+    try {
+      await createIncomingBatch(
+        [{ ...reqObj, _phone: driver?.phone || '' }],
+        [shipmentId],
+        {
+          name: _profile?.name || '',
+          email: _profile?.email || '',
+          uid: _profile?.uid || '',
+        }
+      );
+    } catch (batchErr) {
+      console.warn('Incoming batch record failed (shipment still sent):', batchErr);
+    }
+
     closeSendModal(true);
     await loadData();
     toast('✓ تم الإرسال وإنشاء الشحنة تلقائياً', 'success');
@@ -1145,6 +1160,9 @@ async function bulkSendToClearance() {
 
   try {
     let ok = 0, fail = 0;
+    // Track successful sends by batch_id so we can create incoming_batch records
+    const sentByBatch = {}; // batch_id → { requests: [], shipment_ids: [] }
+
     for (const r of selectedDrafts) {
       try {
         const driver = await findDriverByEnOrIqama(r.driver_name, r.driver_id_number);
@@ -1152,11 +1170,33 @@ async function bulkSendToClearance() {
         await linkRequestToShipment(r.id, shipmentId);
         await updateTransportRequest(r.id, { status: 'converted', shipment_id: shipmentId });
         ok++;
+
+        // Group by batch_id (or fallback key for legacy single-truck requests)
+        const key = r.batch_id || `single-${r.id}`;
+        if (!sentByBatch[key]) {
+          sentByBatch[key] = { requests: [], shipment_ids: [] };
+        }
+        sentByBatch[key].requests.push({ ...r, _phone: driver?.phone || '' });
+        sentByBatch[key].shipment_ids.push(shipmentId);
       } catch (e) {
         console.error('Failed to send request', r.id, e);
         fail++;
       }
     }
+
+    // Create one incoming_batch record per batch (or per single request)
+    for (const [key, data] of Object.entries(sentByBatch)) {
+      try {
+        await createIncomingBatch(data.requests, data.shipment_ids, {
+          name: _profile?.name || '',
+          email: _profile?.email || '',
+          uid: _profile?.uid || '',
+        });
+      } catch (e) {
+        console.warn('Incoming batch record failed (shipments still sent):', e);
+      }
+    }
+
     _selected.clear();
     await loadData();
     toast(`✓ أُرسلت ${ok} طلب${fail > 0 ? ` (فشل ${fail})` : ''}`, fail > 0 ? 'error' : 'success');
@@ -1922,11 +1962,14 @@ async function saveBatch(sendToClearance) {
 
     // Send each to clearance if requested
     if (sendToClearance) {
+      const batchRequests = [];
+      const batchShipmentIds = [];
       for (let i = 0; i < createdIds.length; i++) {
         const reqId = createdIds[i];
         const reqDoc = validTrucks[i];
         const fullData = {
           id: reqId,
+          batch_id, batch_label,
           customer, material, loading_location, destination,
           dispatch_date: (reqDoc.dispatch_date || '').trim() || dispatch_date,
           driver_name: reqDoc.driver_name,
@@ -1940,6 +1983,20 @@ async function saveBatch(sendToClearance) {
         const shipmentId = await createShipmentFromTransportRequest(fullData, driver);
         await linkRequestToShipment(reqId, shipmentId);
         await updateTransportRequest(reqId, { status: 'converted', shipment_id: shipmentId });
+        batchRequests.push({ ...fullData, _phone: (reqDoc.phone || driver?.phone || '') });
+        batchShipmentIds.push(shipmentId);
+      }
+      // Single incoming_batch record for the whole batch
+      if (batchRequests.length > 0) {
+        try {
+          await createIncomingBatch(batchRequests, batchShipmentIds, {
+            name: _profile?.name || '',
+            email: _profile?.email || '',
+            uid: _profile?.uid || '',
+          });
+        } catch (batchErr) {
+          console.warn('Incoming batch record failed (shipments still sent):', batchErr);
+        }
       }
     }
 
