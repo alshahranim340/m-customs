@@ -247,7 +247,7 @@ export async function updateBadges() {
 
   // Incoming batches (new/unviewed) count
   try {
-    const { getUnviewedBatchCount } = await import('../src/firebase/transportDb.js');
+    const { getUnviewedBatchCount } = await import('../../src/firebase/transportDb.js');
     const count = await getUnviewedBatchCount();
     const ibBadge = document.getElementById('badge-incoming-batches');
     if (ibBadge) {
