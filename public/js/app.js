@@ -1617,6 +1617,9 @@ function renderAppShell(profile) {
           <a class="nav-item active" data-page="transport-requests" onclick="navigate('transport-requests')">
             <i class="ti ti-truck-delivery"></i> طلبات النقل
           </a>
+          <a class="nav-item" data-page="drivers" onclick="navigate('drivers')">
+            <i class="ti ti-user"></i> السائقون
+          </a>
           <a class="nav-item" data-page="transport-settings" onclick="navigate('transport-settings')">
             <i class="ti ti-settings"></i> إدارة القوائم
           </a>
