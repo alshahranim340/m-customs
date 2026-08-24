@@ -52,6 +52,7 @@ export async function renderUsers(container) {
           <select id="u-role">
             <option value="employee">موظف تخليص</option>
             <option value="supervisor">مشرف</option>
+            <option value="manager">مدير قسم</option>
             <option value="transport">موظف نقل</option>
           </select>
         </div>
@@ -76,6 +77,7 @@ export async function renderUsers(container) {
           <select id="edit-role">
             <option value="employee">موظف تخليص</option>
             <option value="supervisor">مشرف</option>
+            <option value="manager">مدير قسم</option>
             <option value="transport">موظف نقل</option>
           </select>
         </div>
@@ -123,7 +125,7 @@ async function loadUsers() {
 
       <!-- Avatar -->
       <div style="width:42px;height:42px;border-radius:50%;
-        background:${isAdmin?'var(--gold)':u.role==='supervisor'?'var(--blue)':'var(--green)'};
+        background:${isAdmin?'var(--gold)':u.role==='manager'?'#8B5CF6':u.role==='supervisor'?'var(--blue)':u.role==='transport'?'#3B82F6':'var(--green)'};
         color:white;display:flex;align-items:center;justify-content:center;
         font-size:15px;font-weight:700;flex-shrink:0;">
         ${initials}

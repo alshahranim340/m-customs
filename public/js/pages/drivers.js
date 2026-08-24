@@ -825,8 +825,8 @@ function showDriverUndoToast(message, driverId) {
 function updateDeletedDrawer() {
   document.getElementById('drv-deleted-drawer')?.remove();
 
-  // Only admin sees the deleted drawer
-  if (_profile?.role !== 'admin') return;
+  // Only admin and manager see the deleted drawer
+  if (_profile?.role !== 'admin' && _profile?.role !== 'manager') return;
   if (!_deletedDrivers || _deletedDrivers.length === 0) return;
 
   const drawer = document.createElement('div');

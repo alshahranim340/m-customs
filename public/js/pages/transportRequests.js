@@ -2699,8 +2699,8 @@ function updateDeletedDrawer() {
   // Remove existing drawer if any
   document.getElementById('tr-deleted-drawer')?.remove();
 
-  // Only admin sees the deleted drawer
-  if (_profile?.role !== 'admin') return;
+  // Only admin and manager see the deleted drawer
+  if (_profile?.role !== 'admin' && _profile?.role !== 'manager') return;
   if (!_deletedRequests || _deletedRequests.length === 0) return;
 
   const drawer = document.createElement('div');
