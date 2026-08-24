@@ -11,6 +11,7 @@ import { todayHijri, buildHijriPicker } from '../../../src/utils/hijriDate.js';
 
 let _profile = null;
 let _requests = [];
+let _deletedRequests = []; // soft-deleted requests (for admin recovery drawer)
 let _dropdowns = { customers: [], materials: [], nationalities: [] };
 let _drivers = []; // all drivers cached for autocomplete
 let _selected = new Set(); // selected request IDs for bulk print/export
@@ -238,11 +239,16 @@ export async function renderTransportRequests(container) {
 
 async function loadData() {
   try {
-    [_requests, _dropdowns, _drivers] = await Promise.all([
+    const [allRequests, dropdowns, drivers] = await Promise.all([
       getTransportRequests(200),
       getTransportDropdowns(),
       getAllDrivers(),
     ]);
+    // Split active vs soft-deleted (deleted: true means hidden from main view)
+    _requests = allRequests.filter(r => !r.deleted);
+    _deletedRequests = allRequests.filter(r => r.deleted);
+    _dropdowns = dropdowns;
+    _drivers = drivers;
     renderStats();
     // Route to current view (cards default, table optional via _viewMode)
     if (_viewMode === 'cards') {
@@ -250,6 +256,8 @@ async function loadData() {
     } else {
       renderTable();
     }
+    // Update deleted drawer badge
+    updateDeletedDrawer();
   } catch (e) {
     console.error('load transport error:', e);
     toast('خطأ في التحميل', 'error');
@@ -2392,6 +2400,7 @@ function batchCardEdit(batchKey) {
 function openBatchEditModal(batchKey, items) {
   const first = items[0];
   const isLegacy = batchKey.startsWith('legacy-');
+  const convertedCount = items.filter(r => r.status === 'converted' || r.status === 'done').length;
 
   const existing = document.getElementById('tr-batch-edit-modal');
   if (existing) existing.remove();
@@ -2420,12 +2429,20 @@ function openBatchEditModal(batchKey, items) {
 
       <!-- Body -->
       <div style="flex:1;overflow-y:auto;padding:20px;">
+        ${convertedCount > 0 ? `
+          <div style="background:#FEF9E7;border:1px solid #F0C040;border-radius:6px;padding:12px 14px;margin-bottom:14px;font-size:12px;color:#8A6B33;">
+            <i class="ti ti-alert-triangle" style="color:#C2410C;"></i>
+            <b>${convertedCount} شاحنة</b> من هذه الدفعة أُرسلت للتخليص (لون أصفر خفيف).
+            التعديل هنا لن يُحدّث الشحنات في قسم التخليص — عدّلها من هناك للحفاظ على التطابق.
+          </div>
+        ` : ''}
+
         <div style="background:white;border-radius:8px;overflow:hidden;">
           <div style="overflow-x:auto;">
             <table style="width:100%;border-collapse:collapse;font-size:12px;">
               <thead>
                 <tr style="background:#0E1A2E;color:white;">
-                  <th style="padding:9px 6px;text-align:center;font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:1px;font-weight:800;width:36px;">#</th>
+                  <th style="padding:9px 6px;text-align:center;font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:1px;font-weight:800;width:60px;">#</th>
                   <th style="padding:9px 6px;text-align:right;font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:1px;font-weight:800;">DRIVER</th>
                   <th style="padding:9px 6px;text-align:right;font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:1px;font-weight:800;">TRUCK</th>
                   <th style="padding:9px 6px;text-align:right;font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:1px;font-weight:800;">IQAMA</th>
@@ -2434,7 +2451,7 @@ function openBatchEditModal(batchKey, items) {
                   <th style="padding:9px 6px;text-align:right;font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:1px;font-weight:800;">LOCATION</th>
                   <th style="padding:9px 6px;text-align:right;font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:1px;font-weight:800;">DATE</th>
                   <th style="padding:9px 6px;text-align:center;font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:1px;font-weight:800;">STATUS</th>
-                  <th style="padding:9px 6px;text-align:center;font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:1px;font-weight:800;width:80px;">ACTIONS</th>
+                  <th style="padding:9px 6px;text-align:center;font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:1px;font-weight:800;width:60px;">DEL</th>
                 </tr>
               </thead>
               <tbody id="batch-edit-tbody">
@@ -2446,18 +2463,23 @@ function openBatchEditModal(batchKey, items) {
 
         <div style="margin-top:14px;background:#EEF2FF;border:1px solid #C7D4F5;border-radius:6px;padding:12px;font-size:12px;color:#1C4B8E;">
           <i class="ti ti-info-circle"></i>
-          عدّل الحقول مباشرة ثم اضغط "حفظ التغييرات". لحذف شاحنة استخدم أيقونة السلة.
+          عدّل الحقول مباشرة ثم اضغط "حفظ التغييرات". لحذف شاحنة استخدم أيقونة السلة. لحذف الدفعة كاملة استخدم الزر الأحمر أدناه.
         </div>
       </div>
 
       <!-- Footer -->
-      <div style="background:white;border-top:1px solid #E8E5DC;padding:14px 22px;display:flex;justify-content:flex-end;gap:10px;">
-        <button onclick="_closeBatchEditModal()" style="background:#F5F3EC;color:#6B6659;border:1px solid #E8E5DC;border-radius:5px;padding:9px 18px;font-family:Tajawal,sans-serif;font-size:13px;font-weight:700;cursor:pointer;">
-          إلغاء
+      <div style="background:white;border-top:1px solid #E8E5DC;padding:14px 22px;display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;">
+        <button onclick="_deleteBatchFull('${batchKey}')" style="background:#CC2229;color:white;border:none;border-radius:5px;padding:9px 18px;font-family:Tajawal,sans-serif;font-size:13px;font-weight:800;cursor:pointer;">
+          <i class="ti ti-trash"></i> حذف الدفعة كاملة
         </button>
-        <button onclick="_saveBatchEdit('${batchKey}')" style="background:#2E8B57;color:white;border:none;border-radius:5px;padding:9px 24px;font-family:Tajawal,sans-serif;font-size:13px;font-weight:800;cursor:pointer;">
-          <i class="ti ti-device-floppy"></i> حفظ التغييرات
-        </button>
+        <div style="display:flex;gap:10px;">
+          <button onclick="_closeBatchEditModal()" style="background:#F5F3EC;color:#6B6659;border:1px solid #E8E5DC;border-radius:5px;padding:9px 18px;font-family:Tajawal,sans-serif;font-size:13px;font-weight:700;cursor:pointer;">
+            إلغاء
+          </button>
+          <button onclick="_saveBatchEdit('${batchKey}')" style="background:#2E8B57;color:white;border:none;border-radius:5px;padding:9px 24px;font-family:Tajawal,sans-serif;font-size:13px;font-weight:800;cursor:pointer;">
+            <i class="ti ti-device-floppy"></i> حفظ التغييرات
+          </button>
+        </div>
       </div>
     </div>
   `;
@@ -2468,25 +2490,23 @@ function openBatchEditModal(batchKey, items) {
 function renderBatchEditRow(r, idx) {
   const status = STATUS_LABELS[r.status] || STATUS_LABELS.draft;
   const isConverted = r.status === 'converted' || r.status === 'done';
-  const readonly = isConverted ? 'readonly' : '';
-  const rowBg = isConverted ? 'background:#FAFAF7;' : '';
+  const rowBg = isConverted ? 'background:#FEF9E7;' : ''; // subtle warning tint
+  const warnIcon = isConverted ? `<i class="ti ti-alert-triangle" style="color:#C2410C;font-size:14px;" title="محوّل للتخليص"></i>` : '';
   return `
     <tr data-req-id="${r.id}" style="border-bottom:1px solid #F0EDE4;${rowBg}">
-      <td style="padding:6px;text-align:center;font-family:'JetBrains Mono',monospace;color:#8A8578;font-weight:700;font-size:11px;">${String(idx+1).padStart(2,'0')}</td>
-      <td style="padding:4px;"><input type="text" data-f="driver_name" value="${(r.driver_name||'').replace(/"/g,'&quot;')}" ${readonly} style="width:100%;padding:6px;border:1px solid #E8E5DC;border-radius:4px;font-family:Tajawal,sans-serif;font-size:12px;outline:none;"></td>
-      <td style="padding:4px;"><input type="text" data-f="truck_number" value="${(r.truck_number||'').replace(/"/g,'&quot;')}" ${readonly} style="width:100%;padding:6px;border:1px solid #E8E5DC;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:12px;direction:ltr;text-align:right;outline:none;"></td>
-      <td style="padding:4px;"><input type="text" data-f="driver_id_number" value="${(r.driver_id_number||'').replace(/"/g,'&quot;')}" ${readonly} style="width:100%;padding:6px;border:1px solid #E8E5DC;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:12px;direction:ltr;text-align:right;outline:none;"></td>
-      <td style="padding:4px;"><input type="number" step="0.01" data-f="quantity" value="${r.quantity||''}" ${readonly} style="width:100%;padding:6px;border:1px solid #E8E5DC;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:12px;direction:ltr;text-align:right;outline:none;"></td>
-      <td style="padding:4px;"><input type="text" data-f="delivery_number" value="${(r.delivery_number||'').replace(/"/g,'&quot;')}" ${readonly} style="width:100%;padding:6px;border:1px solid #E8E5DC;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:12px;direction:ltr;text-align:right;outline:none;"></td>
-      <td style="padding:4px;"><input type="text" data-f="loading_location" value="${(r.loading_location||'').replace(/"/g,'&quot;')}" ${readonly} style="width:100%;padding:6px;border:1px solid #E8E5DC;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:11px;direction:ltr;text-align:right;outline:none;"></td>
-      <td style="padding:4px;"><input type="text" data-f="dispatch_date" value="${(r.dispatch_date||'').replace(/"/g,'&quot;')}" ${readonly} style="width:100%;padding:6px;border:1px solid #E8E5DC;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:11px;direction:ltr;text-align:right;outline:none;"></td>
+      <td style="padding:6px;text-align:center;font-family:'JetBrains Mono',monospace;color:#8A8578;font-weight:700;font-size:11px;">${warnIcon} ${String(idx+1).padStart(2,'0')}</td>
+      <td style="padding:4px;"><input type="text" data-f="driver_name" value="${(r.driver_name||'').replace(/"/g,'&quot;')}" style="width:100%;padding:6px;border:1px solid #E8E5DC;border-radius:4px;font-family:Tajawal,sans-serif;font-size:12px;outline:none;"></td>
+      <td style="padding:4px;"><input type="text" data-f="truck_number" value="${(r.truck_number||'').replace(/"/g,'&quot;')}" style="width:100%;padding:6px;border:1px solid #E8E5DC;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:12px;direction:ltr;text-align:right;outline:none;"></td>
+      <td style="padding:4px;"><input type="text" data-f="driver_id_number" value="${(r.driver_id_number||'').replace(/"/g,'&quot;')}" style="width:100%;padding:6px;border:1px solid #E8E5DC;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:12px;direction:ltr;text-align:right;outline:none;"></td>
+      <td style="padding:4px;"><input type="number" step="0.01" data-f="quantity" value="${r.quantity||''}" style="width:100%;padding:6px;border:1px solid #E8E5DC;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:12px;direction:ltr;text-align:right;outline:none;"></td>
+      <td style="padding:4px;"><input type="text" data-f="delivery_number" value="${(r.delivery_number||'').replace(/"/g,'&quot;')}" style="width:100%;padding:6px;border:1px solid #E8E5DC;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:12px;direction:ltr;text-align:right;outline:none;"></td>
+      <td style="padding:4px;"><input type="text" data-f="loading_location" value="${(r.loading_location||'').replace(/"/g,'&quot;')}" style="width:100%;padding:6px;border:1px solid #E8E5DC;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:11px;direction:ltr;text-align:right;outline:none;"></td>
+      <td style="padding:4px;"><input type="text" data-f="dispatch_date" value="${(r.dispatch_date||'').replace(/"/g,'&quot;')}" style="width:100%;padding:6px;border:1px solid #E8E5DC;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:11px;direction:ltr;text-align:right;outline:none;"></td>
       <td style="padding:6px;text-align:center;"><span class="modern-badge ${status.class}" style="font-size:9px;">${status.en}</span></td>
       <td style="padding:6px;text-align:center;">
-        ${isConverted ? '<span style="color:#8A8578;font-size:10px;">مقفل</span>' : `
-          <button onclick="_batchEditDeleteRow('${r.id}')" title="حذف من الدفعة" style="background:transparent;border:none;color:#CC2229;cursor:pointer;padding:4px 8px;font-size:15px;">
-            <i class="ti ti-trash"></i>
-          </button>
-        `}
+        <button onclick="_batchEditDeleteRow('${r.id}')" title="حذف من الدفعة" style="background:transparent;border:none;color:#CC2229;cursor:pointer;padding:4px 8px;font-size:15px;">
+          <i class="ti ti-trash"></i>
+        </button>
       </td>
     </tr>
   `;
@@ -2499,23 +2519,255 @@ function closeBatchEditModal() {
 async function batchEditDeleteRow(reqId) {
   const req = _requests.find(r => r.id === reqId);
   if (!req) return;
-  if (req.status === 'converted' || req.status === 'done') {
-    toast('لا يمكن حذف طلب محوّل', 'error');
-    return;
-  }
-  if (!confirm(`حذف الشاحنة "${req.driver_name || req.truck_number || 'بدون بيانات'}" من الدفعة؟`)) return;
+
+  const wasConverted = req.status === 'converted' || req.status === 'done';
+  const warnMsg = wasConverted
+    ? `⚠ هذه الشاحنة أُرسلت للتخليص.\nالحذف من هنا لا يحذفها من قسم التخليص.\n\nحذف "${req.driver_name || req.truck_number || 'الشاحنة'}"؟`
+    : `حذف الشاحنة "${req.driver_name || req.truck_number || 'بدون بيانات'}" من الدفعة؟`;
+  if (!confirm(warnMsg)) return;
+
   try {
-    await deleteTransportRequest(reqId);
-    // Remove the row from the modal immediately (visual feedback)
+    // Soft delete: mark as deleted instead of removing
+    await updateTransportRequest(reqId, {
+      deleted: true,
+      deleted_at: new Date().toISOString(),
+      deleted_by: 'user', // could be enhanced with auth.currentUser
+    });
+    // Remove from modal immediately
     document.querySelector(`#tr-batch-edit-modal tr[data-req-id="${reqId}"]`)?.remove();
-    // Refresh cache
     await loadData();
-    toast('✓ حُذفت الشاحنة', 'success');
+    // Show undo toast for 5 seconds
+    showUndoToast(`حُذفت شاحنة ${req.driver_name || ''}`, [reqId]);
   } catch (e) {
     console.error(e);
     toast('خطأ في الحذف', 'error');
   }
 }
+
+// Delete entire batch (all trucks) with warning for converted, undo toast
+async function deleteBatchFull(batchKey) {
+  const items = _requests.filter(r =>
+    (r.batch_id || `legacy-${r.customer}-${r.created_at?.toDate?.().toISOString?.().slice(0,10)}`) === batchKey
+  );
+  if (items.length === 0) return;
+
+  const convertedCount = items.filter(r => r.status === 'converted' || r.status === 'done').length;
+  const first = items[0];
+  let msg = `حذف الدفعة كاملة (${items.length} شاحنة) — ${first.customer || ''}؟`;
+  if (convertedCount > 0) {
+    msg = `⚠ تنبيه: ${convertedCount} شاحنة من هذه الدفعة أُرسلت للتخليص.\n` +
+          `الحذف من هنا لا يحذفها من قسم التخليص.\n\n` +
+          `حذف الدفعة كاملة (${items.length} شاحنة)؟`;
+  }
+  if (!confirm(msg)) return;
+
+  const nowIso = new Date().toISOString();
+  const ids = items.map(r => r.id);
+  let failed = 0;
+  for (const id of ids) {
+    try {
+      await updateTransportRequest(id, {
+        deleted: true,
+        deleted_at: nowIso,
+        deleted_by: 'user',
+      });
+    } catch (e) {
+      console.error('soft delete failed', id, e);
+      failed++;
+    }
+  }
+
+  closeBatchEditModal();
+  await loadData();
+
+  if (failed === 0) {
+    showUndoToast(`حُذفت الدفعة (${items.length} شاحنة)`, ids);
+  } else {
+    toast(`حُذفت ${items.length - failed}، فشل ${failed}`, 'error');
+  }
+}
+
+// Undo toast — sticky for 5 seconds with undo button
+let _undoTimer = null;
+function showUndoToast(message, reqIds) {
+  const existing = document.getElementById('tr-undo-toast');
+  if (existing) existing.remove();
+  if (_undoTimer) clearTimeout(_undoTimer);
+
+  const t = document.createElement('div');
+  t.id = 'tr-undo-toast';
+  t.style.cssText = `
+    position:fixed;bottom:24px;left:50%;transform:translateX(-50%);
+    background:#0E1A2E;color:white;padding:12px 18px;border-radius:8px;
+    box-shadow:0 8px 24px rgba(14,26,46,0.35);z-index:10001;
+    display:flex;align-items:center;gap:14px;font-family:Tajawal,sans-serif;
+    font-size:13px;font-weight:700;min-width:280px;
+    animation:slideUp 0.25s ease-out;
+  `;
+  t.innerHTML = `
+    <span><i class="ti ti-trash" style="color:#F0C040;"></i> ${message}</span>
+    <button id="undo-btn" style="background:#D4B266;color:#0E1A2E;border:none;border-radius:5px;padding:6px 14px;font-family:Tajawal,sans-serif;font-size:12px;font-weight:800;cursor:pointer;">
+      <i class="ti ti-arrow-back-up"></i> تراجع
+    </button>
+    <button id="undo-close" style="background:transparent;border:none;color:#B8B0A0;cursor:pointer;font-size:18px;padding:0 4px;">×</button>
+  `;
+  document.body.appendChild(t);
+
+  document.getElementById('undo-btn').onclick = async () => {
+    clearTimeout(_undoTimer);
+    t.remove();
+    let restored = 0;
+    for (const id of reqIds) {
+      try {
+        await updateTransportRequest(id, {
+          deleted: false,
+          deleted_at: null,
+          deleted_by: null,
+        });
+        restored++;
+      } catch (e) { console.error('restore failed', id, e); }
+    }
+    await loadData();
+    toast(`✓ استُعيدت ${restored} شاحنة`, 'success');
+  };
+  document.getElementById('undo-close').onclick = () => {
+    clearTimeout(_undoTimer);
+    t.remove();
+  };
+
+  _undoTimer = setTimeout(() => t.remove(), 5000);
+}
+
+// Restore a deleted request from the drawer
+async function restoreDeletedRequest(reqId) {
+  try {
+    await updateTransportRequest(reqId, {
+      deleted: false,
+      deleted_at: null,
+      deleted_by: null,
+    });
+    await loadData();
+    toast('✓ استُعيد الطلب', 'success');
+  } catch (e) {
+    console.error(e);
+    toast('فشل الاستعادة', 'error');
+  }
+}
+
+// Update the deleted-drawer badge/section at the bottom of the page (admin only)
+function updateDeletedDrawer() {
+  // Remove existing drawer if any
+  document.getElementById('tr-deleted-drawer')?.remove();
+
+  // Only admin sees the deleted drawer
+  if (_profile?.role !== 'admin') return;
+  if (!_deletedRequests || _deletedRequests.length === 0) return;
+
+  const drawer = document.createElement('div');
+  drawer.id = 'tr-deleted-drawer';
+  drawer.style.cssText = `
+    margin:20px 24px 24px;background:white;border:1px solid #E8E5DC;
+    border-radius:10px;overflow:hidden;
+  `;
+
+  // Group deleted by batch
+  const groups = {};
+  _deletedRequests.forEach(r => {
+    let key = r.batch_id || `legacy-${r.customer || '_'}`;
+    if (!groups[key]) groups[key] = [];
+    groups[key].push(r);
+  });
+  const groupArr = Object.entries(groups);
+
+  drawer.innerHTML = `
+    <div id="deleted-drawer-header" style="background:#FAFAF7;padding:12px 18px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;user-select:none;border-bottom:1px solid #F0EDE4;" onclick="_toggleDeletedDrawer()">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <i class="ti ti-trash" style="color:#8A8578;"></i>
+        <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#8A8578;letter-spacing:1.5px;font-weight:800;">DELETED</span>
+        <span style="background:#CC2229;color:white;font-family:'JetBrains Mono',monospace;font-size:10px;padding:2px 8px;border-radius:10px;font-weight:800;">${_deletedRequests.length}</span>
+        <span style="color:#6B6659;font-size:12px;">سجل المحذوفات — يمكن استرجاعها</span>
+      </div>
+      <i class="ti ti-chevron-down" id="deleted-drawer-icon" style="color:#8A8578;transition:transform 0.2s;"></i>
+    </div>
+    <div id="deleted-drawer-body" style="max-height:0;overflow:hidden;transition:max-height 0.3s ease;">
+      <div style="padding:14px 18px;">
+        ${groupArr.map(([key, items]) => {
+          const first = items[0];
+          const isLegacy = key.startsWith('legacy-');
+          const totalQty = items.reduce((s, r) => s + (parseFloat(r.quantity) || 0), 0).toFixed(2);
+          const delDate = items[0].deleted_at ? new Date(items[0].deleted_at).toLocaleString('en-GB') : '—';
+          return `
+            <div style="border:1px solid #F0EDE4;border-radius:6px;padding:12px;margin-bottom:8px;background:#FAFAF7;">
+              <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;">
+                <div style="min-width:0;">
+                  <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:#8A8578;letter-spacing:1.5px;font-weight:700;">${isLegacy ? 'LEGACY' : 'BATCH · ' + key.substring(0,12)}</div>
+                  <div style="font-size:14px;font-weight:800;color:#0E1A2E;margin-top:2px;">${first.customer || 'بلا عميل'}</div>
+                  <div style="font-size:11px;color:#6B6659;margin-top:2px;font-family:'JetBrains Mono',monospace;">${items.length} شاحنة · ${totalQty} MT · حُذف في ${delDate}</div>
+                </div>
+                <button onclick="_restoreDeletedBatch('${key.replace(/'/g,"\\'")}')" style="background:#2E8B57;color:white;border:none;border-radius:5px;padding:7px 14px;font-family:Tajawal,sans-serif;font-size:12px;font-weight:800;cursor:pointer;white-space:nowrap;">
+                  <i class="ti ti-arrow-back-up"></i> استرجاع
+                </button>
+              </div>
+            </div>
+          `;
+        }).join('')}
+      </div>
+    </div>
+  `;
+
+  const container = document.getElementById('cards-view-container');
+  if (container) {
+    container.parentNode.insertBefore(drawer, container.nextSibling);
+  } else {
+    document.body.appendChild(drawer);
+  }
+}
+
+function toggleDeletedDrawer() {
+  const body = document.getElementById('deleted-drawer-body');
+  const icon = document.getElementById('deleted-drawer-icon');
+  if (!body) return;
+  if (body.style.maxHeight === '0px' || !body.style.maxHeight) {
+    body.style.maxHeight = '600px';
+    body.style.overflowY = 'auto';
+    if (icon) icon.style.transform = 'rotate(180deg)';
+  } else {
+    body.style.maxHeight = '0px';
+    if (icon) icon.style.transform = 'rotate(0deg)';
+  }
+}
+
+async function restoreDeletedBatch(batchKey) {
+  const items = _deletedRequests.filter(r => {
+    const key = r.batch_id || `legacy-${r.customer || '_'}`;
+    return key === batchKey;
+  });
+  if (items.length === 0) return;
+  if (!confirm(`استرجاع ${items.length} شاحنة؟`)) return;
+
+  let restored = 0;
+  for (const r of items) {
+    try {
+      await updateTransportRequest(r.id, {
+        deleted: false,
+        deleted_at: null,
+        deleted_by: null,
+      });
+      restored++;
+    } catch (e) { console.error('restore failed', r.id, e); }
+  }
+  await loadData();
+  toast(`✓ استُعيدت ${restored} شاحنة`, 'success');
+}
+
+window._closeBatchEditModal = closeBatchEditModal;
+window._saveBatchEdit = saveBatchEdit;
+window._batchEditDeleteRow = batchEditDeleteRow;
+window._deleteBatchFull = deleteBatchFull;
+window._toggleDeletedDrawer = toggleDeletedDrawer;
+window._restoreDeletedBatch = restoreDeletedBatch;
+window._restoreDeletedRequest = restoreDeletedRequest;
+
 
 async function saveBatchEdit(batchKey) {
   const modal = document.getElementById('tr-batch-edit-modal');
@@ -2533,7 +2785,6 @@ async function saveBatchEdit(batchKey) {
     row.querySelectorAll('input[data-f]').forEach(input => {
       const field = input.dataset.f;
       let val = input.value;
-      if (input.readOnly) return; // skip locked rows
       if (field === 'quantity') val = parseFloat(val) || 0;
       else val = (val || '').trim();
       updates[field] = val;
@@ -2565,10 +2816,6 @@ async function saveBatchEdit(batchKey) {
   if (failed === 0) toast(`✓ حُفظت ${updated} شاحنة`, 'success');
   else toast(`حُفظت ${updated}، فشل ${failed}`, 'error');
 }
-
-window._closeBatchEditModal = closeBatchEditModal;
-window._saveBatchEdit = saveBatchEdit;
-window._batchEditDeleteRow = batchEditDeleteRow;
 
 
 window._batchCardSelectAll = batchCardSelectAll;
