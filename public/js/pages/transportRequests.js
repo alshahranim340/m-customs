@@ -2437,6 +2437,46 @@ function openBatchEditModal(batchKey, items) {
           </div>
         ` : ''}
 
+        <!-- Batch defaults section -->
+        <div style="background:white;border:1px solid #E8E5DC;border-radius:8px;padding:14px 16px;margin-bottom:14px;">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+            <i class="ti ti-settings" style="color:#8B6914;font-size:16px;"></i>
+            <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#8B6914;letter-spacing:1.5px;font-weight:800;">BATCH DEFAULTS</span>
+            <span style="color:#8A8578;font-size:11px;">— تُطبَّق على كل الشاحنات</span>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;">
+            <div>
+              <label style="font-size:10px;font-weight:700;color:#6B6659;display:block;margin-bottom:4px;">العميل *</label>
+              <input id="be-customer" type="text" value="${(first.customer || '').replace(/"/g,'&quot;')}" list="dl-be-customer"
+                style="width:100%;padding:8px 10px;border:1.5px solid #E8E5DC;border-radius:5px;font-family:Tajawal,sans-serif;font-size:12px;outline:none;">
+              <datalist id="dl-be-customer">${_dropdowns.customers.map(c => `<option value="${c}"></option>`).join('')}</datalist>
+            </div>
+            <div>
+              <label style="font-size:10px;font-weight:700;color:#6B6659;display:block;margin-bottom:4px;">المادة *</label>
+              <input id="be-material" type="text" value="${(first.material || '').replace(/"/g,'&quot;')}" list="dl-be-material"
+                style="width:100%;padding:8px 10px;border:1.5px solid #E8E5DC;border-radius:5px;font-family:Tajawal,sans-serif;font-size:12px;outline:none;">
+              <datalist id="dl-be-material">${_dropdowns.materials.map(m => `<option value="${m}"></option>`).join('')}</datalist>
+            </div>
+            <div>
+              <label style="font-size:10px;font-weight:700;color:#6B6659;display:block;margin-bottom:4px;">الوجهة *</label>
+              <select id="be-destination" style="width:100%;padding:8px 10px;border:1.5px solid #E8E5DC;border-radius:5px;font-family:Tajawal,sans-serif;font-size:12px;background:white;outline:none;">
+                ${Object.entries(DEST_LABELS).map(([k, v]) => `<option value="${k}" ${first.destination === k ? 'selected' : ''}>${v.en} — ${v.ar}</option>`).join('')}
+              </select>
+            </div>
+            <div>
+              <label style="font-size:10px;font-weight:700;color:#6B6659;display:block;margin-bottom:4px;">منطقة التحميل *</label>
+              <input id="be-loading-location" type="text" value="${(first.loading_location || '').replace(/"/g,'&quot;')}" list="dl-be-location"
+                style="width:100%;padding:8px 10px;border:1.5px solid #E8E5DC;border-radius:5px;font-family:'JetBrains Mono',monospace;font-size:12px;direction:ltr;text-align:right;outline:none;">
+              <datalist id="dl-be-location">${LOADING_LOCATIONS.map(l => `<option value="${l}"></option>`).join('')}</datalist>
+            </div>
+            <div>
+              <label style="font-size:10px;font-weight:700;color:#6B6659;display:block;margin-bottom:4px;">تاريخ التحميل</label>
+              <input id="be-dispatch-date" type="text" value="${(first.dispatch_date || '').replace(/"/g,'&quot;')}" placeholder="1447-12-05"
+                style="width:100%;padding:8px 10px;border:1.5px solid #E8E5DC;border-radius:5px;font-family:'JetBrains Mono',monospace;font-size:12px;direction:ltr;text-align:right;outline:none;">
+            </div>
+          </div>
+        </div>
+
         <div style="background:white;border-radius:8px;overflow:hidden;">
           <div style="overflow-x:auto;">
             <table style="width:100%;border-collapse:collapse;font-size:12px;">
@@ -2778,10 +2818,32 @@ async function saveBatchEdit(batchKey) {
   const btn = modal.querySelector('button[onclick*="_saveBatchEdit"]');
   if (btn) { btn.disabled = true; btn.textContent = '⏳ حفظ...'; }
 
+  // Read batch defaults from the header inputs (applied to every row)
+  const g = (id) => document.getElementById(id);
+  const batchDefaults = {
+    customer:         g('be-customer')?.value?.trim() || '',
+    material:         g('be-material')?.value?.trim() || '',
+    destination:      g('be-destination')?.value || 'uae',
+    loading_location: (g('be-loading-location')?.value || '').trim().toUpperCase(),
+    dispatch_date:    g('be-dispatch-date')?.value?.trim() || '',
+  };
+  // Validation: customer and material are required
+  if (!batchDefaults.customer || !batchDefaults.material) {
+    toast('العميل والمادة إلزاميان', 'error');
+    if (btn) { btn.disabled = false; btn.innerHTML = '<i class="ti ti-device-floppy"></i> حفظ التغييرات'; }
+    return;
+  }
+
   let updated = 0, failed = 0;
   for (const row of rows) {
     const id = row.dataset.reqId;
-    const updates = {};
+    // Start with batch-level defaults (applied to every truck)
+    const updates = {
+      customer: batchDefaults.customer,
+      material: batchDefaults.material,
+      destination: batchDefaults.destination,
+    };
+    // Per-row fields override defaults
     row.querySelectorAll('input[data-f]').forEach(input => {
       const field = input.dataset.f;
       let val = input.value;
@@ -2789,7 +2851,10 @@ async function saveBatchEdit(batchKey) {
       else val = (val || '').trim();
       updates[field] = val;
     });
-    if (Object.keys(updates).length === 0) continue;
+    // For loading_location and dispatch_date: if row didn't specify, use batch default
+    if (!updates.loading_location) updates.loading_location = batchDefaults.loading_location;
+    if (!updates.dispatch_date) updates.dispatch_date = batchDefaults.dispatch_date;
+
     try {
       await updateTransportRequest(id, updates);
       // Also sync driver record if driver info was edited
@@ -2810,6 +2875,16 @@ async function saveBatchEdit(batchKey) {
       failed++;
     }
   }
+
+  // Learn new customer/material for future autocomplete
+  try {
+    if (batchDefaults.customer && !_dropdowns.customers.includes(batchDefaults.customer)) {
+      await addDropdownValue('customers', batchDefaults.customer);
+    }
+    if (batchDefaults.material && !_dropdowns.materials.includes(batchDefaults.material)) {
+      await addDropdownValue('materials', batchDefaults.material);
+    }
+  } catch (e) { console.warn('dropdown learn failed:', e); }
 
   closeBatchEditModal();
   await loadData();
