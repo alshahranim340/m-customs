@@ -17,6 +17,7 @@ import { renderExportReport } from './pages/exportReport.js';
 import { renderTransportRequests } from './pages/transportRequests.js';
 import { renderTransportSettings } from './pages/transportSettings.js';
 import { renderTransportDashboard } from './pages/transportDashboard.js';
+import { renderIncomingBatches } from './pages/incomingBatches.js';
 import { renderUserAvatar, openAvatarPicker } from './avatars.js';
 import { initCommandPalette, reloadCommandPaletteData } from './commandPalette.js';
 import { initDarkMode, showSplashScreen, playSound, celebrate, checkMilestone, renderAvatar } from './enhancements.js';
@@ -79,6 +80,7 @@ const PAGES = {
   'transport-requests': renderTransportRequests,
   'transport-settings': renderTransportSettings,
   'transport-dashboard': renderTransportDashboard,
+  'incoming-batches': renderIncomingBatches,
 };
 
 // ─────────────────────────────────────────────
@@ -242,6 +244,21 @@ export async function updateBadges() {
     const badge = document.getElementById('badge-shipments');
     if (badge) badge.textContent = shipments.length || '0';
   } catch(e) {}
+
+  // Incoming batches (new/unviewed) count
+  try {
+    const { getUnviewedBatchCount } = await import('../src/firebase/transportDb.js');
+    const count = await getUnviewedBatchCount();
+    const ibBadge = document.getElementById('badge-incoming-batches');
+    if (ibBadge) {
+      if (count > 0) {
+        ibBadge.style.display = '';
+        ibBadge.textContent = count;
+      } else {
+        ibBadge.style.display = 'none';
+      }
+    }
+  } catch(e) { /* badge is optional */ }
 }
 
 // ─────────────────────────────────────────────
@@ -1651,6 +1668,10 @@ function renderAppShell(profile) {
           <a class="nav-item" data-page="shipments" onclick="navigate('shipments')">
             <i class="ti ti-list"></i> سجل الشحنات
             <span class="nav-badge" id="badge-shipments">—</span>
+          </a>
+          <a class="nav-item" data-page="incoming-batches" onclick="navigate('incoming-batches')">
+            <i class="ti ti-inbox"></i> الدفعات الواردة
+            <span class="nav-badge" id="badge-incoming-batches" style="display:none;background:#CC2229;">0</span>
           </a>
           <a class="nav-item" data-page="drivers" onclick="navigate('drivers')">
             <i class="ti ti-user"></i> السائقون
