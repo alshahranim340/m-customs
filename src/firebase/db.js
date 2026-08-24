@@ -40,10 +40,12 @@ export async function findDriverByEnOrIqama(nameEn, iqama) {
   return null;
 }
 
-// Get all drivers - for autocomplete lists
+// Get all drivers (excluding soft-deleted) - for autocomplete lists
 export async function getAllDrivers() {
   const snap = await getDocs(collection(db, "drivers"));
-  return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  return snap.docs
+    .map(d => ({ id: d.id, ...d.data() }))
+    .filter(d => d.deleted !== true);
 }
 
 // Get drivers that are missing arabic name (for admin alert)
@@ -201,6 +203,38 @@ export async function updateDriverArabicName(driverId, nameAr) {
     name_ar: nameAr,
     updated_at: serverTimestamp(),
   });
+}
+
+// ─────────────────────────────────────────────
+// DRIVER SOFT-DELETE (with restore support)
+// ─────────────────────────────────────────────
+// Mark a driver as deleted (soft-delete). Tracks who deleted and when.
+// The driver document remains in the collection but is hidden from the main list.
+export async function softDeleteDriver(driverId, deletedByName) {
+  await updateDoc(doc(db, "drivers", driverId), {
+    deleted: true,
+    deleted_at: new Date().toISOString(),
+    deleted_by: deletedByName || 'مستخدم',
+    updated_at: serverTimestamp(),
+  });
+}
+
+// Restore a soft-deleted driver (removes the deleted flag)
+export async function restoreDeletedDriver(driverId) {
+  await updateDoc(doc(db, "drivers", driverId), {
+    deleted: false,
+    deleted_at: null,
+    deleted_by: null,
+    updated_at: serverTimestamp(),
+  });
+}
+
+// Get only deleted drivers — for admin recovery drawer
+export async function getDeletedDrivers() {
+  const snap = await getDocs(collection(db, "drivers"));
+  return snap.docs
+    .map(d => ({ id: d.id, ...d.data() }))
+    .filter(d => d.deleted === true);
 }
 
 /**
