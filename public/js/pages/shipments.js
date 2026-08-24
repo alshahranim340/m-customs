@@ -1,6 +1,6 @@
 import { buildHijriPicker, todayHijri, getDayName, dayNameFromHijri } from '../../../src/utils/hijriDate.js';
 import { LOGO_B64, STAMP_B64, AEO_PDF_B64 } from '../../../src/utils/assets.js';
-import { getShipments, updateShipment, getShipment } from '../../../src/firebase/db.js';
+import { getShipments, updateShipment, getShipment, upsertTransportDriver } from '../../../src/firebase/db.js';
 import { saveAttachments, getAttachments, saveAttachment, deleteAttachment } from '../../../src/firebase/attachments.js';
 import { getFolders, createFolder, deleteFolder } from '../../../src/firebase/folders.js';
 import { deleteDoc, doc } from 'firebase/firestore';
@@ -690,6 +690,18 @@ async function saveEdit() {
 
   try {
     const dest = document.getElementById('e-dest').value;
+
+    // Capture driver snapshot for upsert after save
+    const driverSnapshot = {
+      name:              document.getElementById('e-drv-name').value.trim(),
+      nationality:       document.getElementById('e-drv-nat').value.trim(),
+      passport_country:  document.getElementById('e-drv-passport').value.trim(),
+      plate:             document.getElementById('e-drv-plate').value.trim(),
+      vehicle_type:      document.getElementById('e-drv-vtype').value.trim(),
+      carrier_type:      document.getElementById('e-drv-ctype').value.trim(),
+      plate_nationality: document.getElementById('e-drv-pnat').value.trim(),
+    };
+
     await updateShipment(_editingId, {
       destination:       dest,
       port:              dest === 'bahrain' ? 'bahrain' : 'uae',
@@ -701,20 +713,45 @@ async function saveEdit() {
       status:            document.getElementById('e-status').value,
       exporter:          document.getElementById('e-exporter').value.trim(),
       goods_description: document.getElementById('e-goods').value.trim(),
-      driver_snapshot: {
-        name:              document.getElementById('e-drv-name').value.trim(),
-        nationality:       document.getElementById('e-drv-nat').value.trim(),
-        passport_country:  document.getElementById('e-drv-passport').value.trim(),
-        plate:             document.getElementById('e-drv-plate').value.trim(),
-        vehicle_type:      document.getElementById('e-drv-vtype').value.trim(),
-        carrier_type:      document.getElementById('e-drv-ctype').value.trim(),
-        plate_nationality: document.getElementById('e-drv-pnat').value.trim(),
-      }
+      driver_snapshot:   driverSnapshot,
     });
 
     if (Object.keys(_editFiles).length > 0) {
       await saveAttachments(_editingId, _editFiles);
     }
+
+    // Sync driver into drivers collection (auto-update truck history, extended fields)
+    // This is best-effort — shipment save already succeeded above; we don't want a driver
+    // sync failure to fail the whole save. Errors are logged only.
+    if (driverSnapshot.name) {
+      try {
+        // Detect if name is arabic (for correct field routing)
+        const isArabic = /[\u0600-\u06FF]/.test(driverSnapshot.name);
+        const result = await upsertTransportDriver({
+          name_ar:           isArabic ? driverSnapshot.name : '',
+          name_en:           !isArabic ? driverSnapshot.name : '',
+          iqama:             '', // clearance form doesn't have separate iqama field
+          nationality:       driverSnapshot.nationality,
+          truck_number:      driverSnapshot.plate,
+          phone:             '',
+          passport_country:  driverSnapshot.passport_country,
+          vehicle_type:      driverSnapshot.vehicle_type,
+          carrier_type:      driverSnapshot.carrier_type,
+          plate_nationality: driverSnapshot.plate_nationality,
+        });
+
+        // Show toast if truck changed
+        if (result?.changes?.truck_changed) {
+          const c = result.changes.truck_changed;
+          if (c.from && c.to && c.from !== c.to) {
+            toast(`🔄 تحدثت شاحنة ${driverSnapshot.name}: من (${c.from}) إلى (${c.to})`, 'info');
+          }
+        }
+      } catch (driverErr) {
+        console.warn('Driver sync failed (shipment saved OK):', driverErr);
+      }
+    }
+
     toast('✅ تم الحفظ', 'success');
     closeEditModal();
     await loadShipments();
