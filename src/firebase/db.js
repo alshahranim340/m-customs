@@ -55,50 +55,144 @@ export async function getDriversMissingArabic() {
 }
 
 // Upsert driver from transport department input
-// - If exists (by iqama or name_en): update phone/truck_number, keep name_ar
-// - If new: create with name_ar empty
+// - If exists (by iqama or name_en): update fields, keep name_ar
+// - Tracks vehicle history in vehicles[] when truck_number changes
+// - Accepts extended fields (passport_country, vehicle_type, carrier_type, plate_nationality)
+//   used by the clearance section
+// - Returns { id, ...driverData, changes: { truck_changed: {from,to}|null, phone_changed, ... } }
 export async function upsertTransportDriver(data) {
   const existing = await findDriverByEnOrIqama(data.name_en, data.iqama);
 
-  if (existing) {
-    // ALWAYS update mutable fields when they have new values
-    // (any change from transport dept is treated as authoritative for these)
-    const updates = {
-      updated_at: serverTimestamp(),
-    };
-    if (data.phone && data.phone !== existing.phone) updates.phone = data.phone;
-    if (data.truck_number && data.truck_number !== existing.truck_number) {
-      updates.truck_number = data.truck_number;
-    }
-    if (data.nationality && data.nationality !== existing.nationality) {
-      updates.nationality = data.nationality;
-    }
-    if (data.iqama && data.iqama !== existing.iqama) {
-      updates.iqama = data.iqama;
-    }
-    // Fill english name if missing
-    if (data.name_en && !existing.name_en) updates.name_en = data.name_en;
+  // Normalize incoming values (trim strings)
+  const clean = (v) => (typeof v === 'string' ? v.trim() : v);
+  const inbound = {
+    name_en:           clean(data.name_en) || '',
+    name_ar:           clean(data.name_ar) || '',
+    iqama:             clean(data.iqama) || '',
+    phone:             clean(data.phone) || '',
+    nationality:       clean(data.nationality) || '',
+    truck_number:      clean(data.truck_number) || '',
+    passport_country:  clean(data.passport_country) || '',
+    vehicle_type:      clean(data.vehicle_type) || '',
+    carrier_type:      clean(data.carrier_type) || '',
+    plate_nationality: clean(data.plate_nationality) || '',
+  };
 
-    if (Object.keys(updates).length > 1) { // more than just updated_at
+  if (existing) {
+    const updates = { updated_at: serverTimestamp() };
+    const changes = {
+      truck_changed: null,
+      phone_changed: false,
+      other_changed: false,
+    };
+
+    // Truck number: track history in vehicles[]
+    if (inbound.truck_number && inbound.truck_number !== (existing.truck_number || '')) {
+      const nowIso = new Date().toISOString();
+      const vehicles = Array.isArray(existing.vehicles) ? [...existing.vehicles] : [];
+
+      // Mark previous vehicle as replaced (find last one without replaced_at)
+      const lastActiveIdx = vehicles.map(v => !v.replaced_at).lastIndexOf(true);
+      if (lastActiveIdx >= 0) {
+        vehicles[lastActiveIdx] = { ...vehicles[lastActiveIdx], replaced_at: nowIso };
+      }
+
+      // Add new vehicle entry (only if not already the last one)
+      const lastPlate = vehicles.length ? vehicles[vehicles.length - 1].plate : null;
+      if (lastPlate !== inbound.truck_number) {
+        vehicles.push({
+          plate: inbound.truck_number,
+          plate_nationality: inbound.plate_nationality || '',
+          vehicle_type: inbound.vehicle_type || '',
+          carrier_type: inbound.carrier_type || '',
+          added_at: nowIso,
+        });
+      }
+
+      updates.truck_number = inbound.truck_number;
+      updates.vehicles = vehicles;
+      changes.truck_changed = { from: existing.truck_number || '', to: inbound.truck_number };
+    }
+
+    // Extended fields (clearance-only): update to latest when provided
+    const extendedFields = ['passport_country', 'vehicle_type', 'carrier_type', 'plate_nationality'];
+    for (const field of extendedFields) {
+      if (inbound[field] && inbound[field] !== (existing[field] || '')) {
+        updates[field] = inbound[field];
+        changes.other_changed = true;
+      }
+    }
+
+    // Core mutable fields
+    if (inbound.phone && inbound.phone !== (existing.phone || '')) {
+      updates.phone = inbound.phone;
+      changes.phone_changed = true;
+    }
+    if (inbound.nationality && inbound.nationality !== (existing.nationality || '')) {
+      updates.nationality = inbound.nationality;
+      changes.other_changed = true;
+    }
+    if (inbound.iqama && inbound.iqama !== (existing.iqama || '')) {
+      updates.iqama = inbound.iqama;
+      changes.other_changed = true;
+    }
+
+    // Fill english name if missing (don't overwrite)
+    if (inbound.name_en && !existing.name_en) {
+      updates.name_en = inbound.name_en;
+      changes.other_changed = true;
+    }
+    // Fill arabic name if missing (don't overwrite)
+    if (inbound.name_ar && !existing.name_ar) {
+      updates.name_ar = inbound.name_ar;
+      changes.other_changed = true;
+    }
+
+    // Only write if something actually changed (beyond updated_at)
+    if (Object.keys(updates).length > 1) {
       await updateDoc(doc(db, "drivers", existing.id), updates);
     }
-    return { id: existing.id, ...existing, ...updates };
+
+    return {
+      id: existing.id,
+      ...existing,
+      ...updates,
+      changes,
+    };
   }
 
   // Create new driver
-  const ref = await addDoc(collection(db, "drivers"), {
-    name_en: data.name_en || '',
-    name_ar: '', // empty — admin fills later
-    iqama: data.iqama || '',
-    nationality: data.nationality || '',
-    phone: data.phone || '',
-    truck_number: data.truck_number || '',
+  const nowIso = new Date().toISOString();
+  const vehicles = inbound.truck_number ? [{
+    plate: inbound.truck_number,
+    plate_nationality: inbound.plate_nationality || '',
+    vehicle_type: inbound.vehicle_type || '',
+    carrier_type: inbound.carrier_type || '',
+    added_at: nowIso,
+  }] : [];
+
+  const newDoc = {
+    name_en: inbound.name_en,
+    name_ar: inbound.name_ar || '',
+    iqama: inbound.iqama,
+    nationality: inbound.nationality,
+    phone: inbound.phone,
+    truck_number: inbound.truck_number,
+    passport_country: inbound.passport_country,
+    vehicle_type: inbound.vehicle_type,
+    carrier_type: inbound.carrier_type,
+    plate_nationality: inbound.plate_nationality,
+    vehicles,
     source: 'transport',
     created_at: serverTimestamp(),
     updated_at: serverTimestamp(),
-  });
-  return { id: ref.id, name_en: data.name_en, name_ar: '', iqama: data.iqama,
-    nationality: data.nationality, phone: data.phone, truck_number: data.truck_number };
+  };
+  const ref = await addDoc(collection(db, "drivers"), newDoc);
+  return {
+    id: ref.id,
+    ...newDoc,
+    changes: { truck_changed: null, phone_changed: false, other_changed: false, is_new: true },
+  };
 }
 
 // Update just the arabic name (for admin)
