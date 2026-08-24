@@ -14,6 +14,7 @@ let _requests = [];
 let _dropdowns = { customers: [], materials: [], nationalities: [] };
 let _drivers = []; // all drivers cached for autocomplete
 let _selected = new Set(); // selected request IDs for bulk print/export
+let _expandedBatches = new Set(); // batch keys currently expanded in cards view
 let _filter = 'all'; // all | draft | sent | converted
 let _search = '';
 
@@ -90,17 +91,8 @@ export async function renderTransportRequests(container) {
             <button class="modern-btn" onclick="_openReports()" style="background:#1C4B8E;color:white;border-color:#1C4B8E;">
               <i class="ti ti-chart-bar"></i> التقارير
             </button>
-            <button class="modern-btn" id="btn-view-toggle" onclick="_toggleView()" title="عرض بطاقات/جدول">
-              <i class="ti ti-layout-grid" id="view-icon"></i> <span id="view-label">بطاقات</span>
-            </button>
-            <button class="modern-btn" onclick="navigate('transport-settings')">
-              <i class="ti ti-settings"></i> إدارة القوائم
-            </button>
-            <button class="modern-btn" style="background:#F5F0E4;color:#8B6914;border-color:#D4B266;" onclick="_openBatchModal()">
+            <button class="modern-btn modern-btn-primary" style="background:#0E1A2E;color:white;border-color:#0E1A2E;" onclick="_openBatchModal()">
               <i class="ti ti-package"></i> دفعة جديدة
-            </button>
-            <button class="modern-btn modern-btn-primary" onclick="_addRow()">
-              <i class="ti ti-plus"></i> صف جديد
             </button>
           </div>
         </div>
@@ -210,16 +202,22 @@ export async function renderTransportRequests(container) {
     </style>
   `;
 
+  // Helper: render whichever view is active
+  const renderActive = () => {
+    if (_viewMode === 'cards') renderCardsView();
+    else renderTable();
+  };
+
   // Wire up filter buttons + search
   document.querySelectorAll('.rep-period-btn').forEach(btn => {
     btn.onclick = () => {
       _filter = btn.dataset.filter;
       document.querySelectorAll('.rep-period-btn').forEach(b => b.classList.toggle('active', b.dataset.filter === _filter));
-      renderTable();
+      renderActive();
     };
     if (btn.dataset.filter === _filter) btn.classList.add('active');
   });
-  document.getElementById('tr-search').oninput = (e) => { _search = e.target.value.trim().toLowerCase(); renderTable(); };
+  document.getElementById('tr-search').oninput = (e) => { _search = e.target.value.trim().toLowerCase(); renderActive(); };
 
   // Expose functions to window
   window._addRow = addNewRow;
@@ -246,7 +244,12 @@ async function loadData() {
       getAllDrivers(),
     ]);
     renderStats();
-    renderTable();
+    // Route to current view (cards default, table optional via _viewMode)
+    if (_viewMode === 'cards') {
+      renderCardsView();
+    } else {
+      renderTable();
+    }
   } catch (e) {
     console.error('load transport error:', e);
     toast('خطأ في التحميل', 'error');
@@ -2140,31 +2143,28 @@ window._bulkDelete = bulkDelete;
 // VIEW TOGGLE — Flat table vs grouped cards
 // ══════════════════════════════════════════════════════════════
 
-let _viewMode = 'table'; // 'table' | 'cards'
-
-function toggleView() {
-  _viewMode = _viewMode === 'table' ? 'cards' : 'table';
-  const icon = document.getElementById('view-icon');
-  const label = document.getElementById('view-label');
-  if (_viewMode === 'cards') {
-    icon.className = 'ti ti-table';
-    label.textContent = 'جدول';
-    renderCardsView();
-  } else {
-    icon.className = 'ti ti-layout-grid';
-    label.textContent = 'بطاقات';
-    document.getElementById('cards-view-container')?.remove();
-    document.querySelector('.tr-table').style.display = '';
-    renderTable();
-  }
-}
+let _viewMode = 'cards'; // 'table' | 'cards' — default is grouped batches view
+// Note: table view is kept in code for future use but no UI toggle exposes it currently.
 
 function renderCardsView() {
-  document.querySelector('.tr-table').style.display = 'none';
+  const tableEl = document.querySelector('.tr-table');
+  if (tableEl) tableEl.style.display = 'none';
+
+  // Apply status filter and search (same as renderTable)
+  let list = _requests;
+  if (_filter !== 'all') list = list.filter(r => r.status === _filter);
+  if (_search) {
+    list = list.filter(r =>
+      (r.driver_name || '').toLowerCase().includes(_search) ||
+      (r.truck_number || '').toLowerCase().includes(_search) ||
+      (r.customer || '').toLowerCase().includes(_search) ||
+      (r.driver_id_number || '').toLowerCase().includes(_search)
+    );
+  }
 
   // Group by batch_id (or fallback to date+customer for legacy)
   const groups = {};
-  _requests.forEach(r => {
+  list.forEach(r => {
     let key = r.batch_id;
     let label = r.batch_label;
     if (!key) {
@@ -2192,16 +2192,27 @@ function renderCardsView() {
 
   if (sortedGroups.length === 0) {
     container.innerHTML = `
-      <div style="background:white;border:1px solid #E8E5DC;border-radius:8px;padding:40px;text-align:center;">
-        <div style="font-size:44px;">📦</div>
-        <div style="font-size:14px;color:#0E1A2E;font-weight:700;margin-top:8px;">لا توجد دفعات</div>
+      <div style="background:white;border:1px solid #E8E5DC;border-radius:10px;padding:60px 40px;text-align:center;">
+        <div style="font-size:48px;opacity:0.5;">📦</div>
+        <div style="font-size:15px;color:#0E1A2E;font-weight:800;margin-top:12px;">لا توجد دفعات نقل</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#8A8578;margin-top:6px;letter-spacing:1.5px;">CREATE FIRST BATCH</div>
+        <button onclick="_openBatchModal()" style="margin-top:20px;background:#0E1A2E;color:white;border:none;border-radius:6px;padding:11px 26px;font-family:Tajawal,sans-serif;font-size:13px;font-weight:800;cursor:pointer;">
+          <i class="ti ti-package"></i> إنشاء دفعة جديدة
+        </button>
       </div>`;
   } else {
     container.innerHTML = sortedGroups.map(g => renderGroupCard(g)).join('');
   }
 
-  const tableWrapper = document.querySelector('.tr-table').closest('div[style*="padding:0 24px 24px"]');
-  tableWrapper.parentNode.insertBefore(container, tableWrapper.nextSibling);
+  // Insert container after the table wrapper
+  if (tableEl) {
+    const tableWrapper = tableEl.closest('div[style*="padding:0 24px 24px"]');
+    if (tableWrapper) {
+      tableWrapper.parentNode.insertBefore(container, tableWrapper.nextSibling);
+    } else {
+      tableEl.parentNode.insertBefore(container, tableEl.nextSibling);
+    }
+  }
 }
 
 function renderGroupCard(group) {
@@ -2213,39 +2224,44 @@ function renderGroupCard(group) {
   const material = items[0].material || '—';
   const dateStr = group.firstDate ? group.firstDate.toLocaleDateString('en-GB') : '—';
   const draftIds = items.filter(r => r.status === 'draft').map(r => r.id);
-  const allIds = items.map(r => r.id);
+  const isLegacy = group.key.startsWith('legacy-');
+  // Persist expanded state across re-renders using _expandedBatches Set
+  const isExpanded = _expandedBatches.has(group.key);
 
   return `
-    <div class="batch-card" style="background:white;border:1px solid #E8E5DC;border-radius:10px;margin-bottom:16px;overflow:hidden;box-shadow:0 2px 8px rgba(14,26,46,0.04);">
-      <!-- Card Header -->
-      <div style="background:linear-gradient(135deg,#0E1A2E 0%,#1C2B48 100%);color:white;padding:16px 20px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
-        <div>
-          <div style="font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:1.5px;color:#D4B266;font-weight:700;">
-            BATCH · ${group.key.substring(0, 12)}
-          </div>
-          <div style="font-size:16px;font-weight:900;margin-top:3px;">${items[0].customer || 'بلا عميل'}</div>
-          <div style="font-size:11px;color:#B8B0A0;margin-top:2px;font-family:'JetBrains Mono',monospace;">
-            ${dateStr} · ${location} · ${material}
+    <div class="batch-card" data-batch-key="${group.key}" style="background:white;border:1px solid #E8E5DC;border-radius:10px;margin-bottom:14px;overflow:hidden;box-shadow:0 2px 8px rgba(14,26,46,0.04);transition:box-shadow 0.2s;">
+      <!-- Card Header (clickable to expand) -->
+      <div onclick="_batchCardToggle('${group.key}')" style="background:linear-gradient(135deg,#0E1A2E 0%,#1C2B48 100%);color:white;padding:16px 20px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;cursor:pointer;user-select:none;">
+        <div style="display:flex;align-items:center;gap:14px;flex:1;min-width:0;">
+          <i class="ti ti-chevron-${isExpanded ? 'up' : 'down'}" style="font-size:18px;color:#D4B266;transition:transform 0.2s;"></i>
+          <div style="min-width:0;">
+            <div style="font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:1.5px;color:#D4B266;font-weight:700;">
+              ${isLegacy ? 'LEGACY · ' : 'BATCH · '}${group.key.substring(0, 12)}
+            </div>
+            <div style="font-size:16px;font-weight:900;margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${items[0].customer || 'بلا عميل'}</div>
+            <div style="font-size:11px;color:#B8B0A0;margin-top:2px;font-family:'JetBrains Mono',monospace;">
+              ${dateStr} · ${location} · ${material}
+            </div>
           </div>
         </div>
-        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;" onclick="event.stopPropagation()">
           <div style="display:flex;gap:6px;">
             ${statusCounts.draft > 0 ? `<span class="modern-badge gray" style="font-size:10px;">DRAFT ${statusCounts.draft}</span>` : ''}
             ${statusCounts.sent > 0 ? `<span class="modern-badge blue" style="font-size:10px;">SENT ${statusCounts.sent}</span>` : ''}
             ${statusCounts.converted > 0 ? `<span class="modern-badge amber" style="font-size:10px;">CONVERTED ${statusCounts.converted}</span>` : ''}
           </div>
           <div style="display:flex;gap:6px;">
-            <button onclick="_batchCardSelectAll('${group.key}')" style="background:rgba(255,255,255,0.1);color:white;border:1px solid rgba(255,255,255,0.3);border-radius:4px;padding:6px 10px;font-family:Tajawal,sans-serif;font-size:11px;cursor:pointer;">
-              <i class="ti ti-checks"></i> تحديد الكل
+            <button onclick="_batchCardEdit('${group.key}')" title="تعديل الدفعة" style="background:rgba(255,255,255,0.1);color:white;border:1px solid rgba(255,255,255,0.3);border-radius:4px;padding:6px 10px;font-family:Tajawal,sans-serif;font-size:11px;cursor:pointer;">
+              <i class="ti ti-edit"></i> تعديل
             </button>
-            <button onclick="_batchCardExport('${group.key}')" style="background:white;color:#0E1A2E;border:none;border-radius:4px;padding:6px 10px;font-family:Tajawal,sans-serif;font-size:11px;font-weight:700;cursor:pointer;">
+            <button onclick="_batchCardExport('${group.key}')" title="تصدير Excel" style="background:white;color:#0E1A2E;border:none;border-radius:4px;padding:6px 10px;font-family:Tajawal,sans-serif;font-size:11px;font-weight:700;cursor:pointer;">
               <i class="ti ti-file-spreadsheet"></i> Excel
             </button>
-            <button onclick="_batchCardPrint('${group.key}')" style="background:white;color:#0E1A2E;border:none;border-radius:4px;padding:6px 10px;font-family:Tajawal,sans-serif;font-size:11px;font-weight:700;cursor:pointer;">
+            <button onclick="_batchCardPrint('${group.key}')" title="طباعة" style="background:white;color:#0E1A2E;border:none;border-radius:4px;padding:6px 10px;font-family:Tajawal,sans-serif;font-size:11px;font-weight:700;cursor:pointer;">
               <i class="ti ti-printer"></i> طباعة
             </button>
             ${draftIds.length > 0 ? `
-              <button onclick="_batchCardSend('${group.key}')" style="background:#2E8B57;color:white;border:none;border-radius:4px;padding:6px 10px;font-family:Tajawal,sans-serif;font-size:11px;font-weight:700;cursor:pointer;">
+              <button onclick="_batchCardSend('${group.key}')" title="إرسال المسودات للتخليص" style="background:#2E8B57;color:white;border:none;border-radius:4px;padding:6px 10px;font-family:Tajawal,sans-serif;font-size:11px;font-weight:700;cursor:pointer;">
                 <i class="ti ti-send"></i> إرسال ${draftIds.length}
               </button>
             ` : ''}
@@ -2253,7 +2269,7 @@ function renderGroupCard(group) {
         </div>
       </div>
 
-      <!-- Summary Stats -->
+      <!-- Summary Stats (always visible) -->
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:1px;background:#F0EDE4;">
         <div style="background:white;padding:12px 16px;text-align:center;">
           <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:#8A8578;letter-spacing:1.5px;font-weight:700;">TRUCKS</div>
@@ -2273,38 +2289,50 @@ function renderGroupCard(group) {
         </div>
       </div>
 
-      <!-- Trucks table -->
-      <div style="overflow-x:auto;">
-        <table style="width:100%;border-collapse:collapse;font-size:12px;">
-          <thead>
-            <tr style="background:#FAFAF7;border-bottom:1px solid #E8E5DC;">
-              <th style="padding:8px;text-align:center;font-family:'JetBrains Mono',monospace;font-size:9px;color:#6B6659;letter-spacing:1px;font-weight:800;width:40px;">#</th>
-              <th style="padding:8px;text-align:right;font-family:'JetBrains Mono',monospace;font-size:9px;color:#6B6659;letter-spacing:1px;font-weight:800;">DRIVER</th>
-              <th style="padding:8px;text-align:right;font-family:'JetBrains Mono',monospace;font-size:9px;color:#6B6659;letter-spacing:1px;font-weight:800;">TRUCK</th>
-              <th style="padding:8px;text-align:right;font-family:'JetBrains Mono',monospace;font-size:9px;color:#6B6659;letter-spacing:1px;font-weight:800;">IQAMA</th>
-              <th style="padding:8px;text-align:right;font-family:'JetBrains Mono',monospace;font-size:9px;color:#6B6659;letter-spacing:1px;font-weight:800;">QTY</th>
-              <th style="padding:8px;text-align:right;font-family:'JetBrains Mono',monospace;font-size:9px;color:#6B6659;letter-spacing:1px;font-weight:800;">DELIVERY</th>
-              <th style="padding:8px;text-align:center;font-family:'JetBrains Mono',monospace;font-size:9px;color:#6B6659;letter-spacing:1px;font-weight:800;">STATUS</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${items.map((r, i) => {
-              const status = STATUS_LABELS[r.status] || STATUS_LABELS.draft;
-              return `
-                <tr style="border-bottom:1px solid #F5F3EC;">
-                  <td style="padding:8px;text-align:center;font-family:'JetBrains Mono',monospace;color:#8A8578;font-weight:700;">${String(i+1).padStart(2,'0')}</td>
-                  <td style="padding:8px;color:#0E1A2E;font-weight:600;">${r.driver_name || '—'}</td>
-                  <td style="padding:8px;font-family:'JetBrains Mono',monospace;color:#0E1A2E;direction:ltr;text-align:right;">${r.truck_number || '—'}</td>
-                  <td style="padding:8px;font-family:'JetBrains Mono',monospace;color:#6B6659;direction:ltr;text-align:right;">${r.driver_id_number || '—'}</td>
-                  <td style="padding:8px;font-family:'JetBrains Mono',monospace;color:#0E1A2E;font-weight:700;">${r.quantity || '—'}</td>
-                  <td style="padding:8px;font-family:'JetBrains Mono',monospace;color:#0E1A2E;">${r.delivery_number || '—'}</td>
-                  <td style="padding:8px;text-align:center;"><span class="modern-badge ${status.class}" style="font-size:9px;">${status.en}</span></td>
-                </tr>`;
-            }).join('')}
-          </tbody>
-        </table>
+      <!-- Trucks table (collapsible) -->
+      <div class="batch-card-body" style="overflow:hidden;max-height:${isExpanded ? '2000px' : '0'};transition:max-height 0.3s ease;">
+        <div style="overflow-x:auto;border-top:1px solid #E8E5DC;">
+          <table style="width:100%;border-collapse:collapse;font-size:12px;">
+            <thead>
+              <tr style="background:#FAFAF7;border-bottom:1px solid #E8E5DC;">
+                <th style="padding:8px;text-align:center;font-family:'JetBrains Mono',monospace;font-size:9px;color:#6B6659;letter-spacing:1px;font-weight:800;width:40px;">#</th>
+                <th style="padding:8px;text-align:right;font-family:'JetBrains Mono',monospace;font-size:9px;color:#6B6659;letter-spacing:1px;font-weight:800;">DRIVER</th>
+                <th style="padding:8px;text-align:right;font-family:'JetBrains Mono',monospace;font-size:9px;color:#6B6659;letter-spacing:1px;font-weight:800;">TRUCK</th>
+                <th style="padding:8px;text-align:right;font-family:'JetBrains Mono',monospace;font-size:9px;color:#6B6659;letter-spacing:1px;font-weight:800;">IQAMA</th>
+                <th style="padding:8px;text-align:right;font-family:'JetBrains Mono',monospace;font-size:9px;color:#6B6659;letter-spacing:1px;font-weight:800;">QTY</th>
+                <th style="padding:8px;text-align:right;font-family:'JetBrains Mono',monospace;font-size:9px;color:#6B6659;letter-spacing:1px;font-weight:800;">DELIVERY</th>
+                <th style="padding:8px;text-align:center;font-family:'JetBrains Mono',monospace;font-size:9px;color:#6B6659;letter-spacing:1px;font-weight:800;">STATUS</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${items.map((r, i) => {
+                const status = STATUS_LABELS[r.status] || STATUS_LABELS.draft;
+                return `
+                  <tr style="border-bottom:1px solid #F5F3EC;">
+                    <td style="padding:8px;text-align:center;font-family:'JetBrains Mono',monospace;color:#8A8578;font-weight:700;">${String(i+1).padStart(2,'0')}</td>
+                    <td style="padding:8px;color:#0E1A2E;font-weight:600;">${r.driver_name || '—'}</td>
+                    <td style="padding:8px;font-family:'JetBrains Mono',monospace;color:#0E1A2E;direction:ltr;text-align:right;">${r.truck_number || '—'}</td>
+                    <td style="padding:8px;font-family:'JetBrains Mono',monospace;color:#6B6659;direction:ltr;text-align:right;">${r.driver_id_number || '—'}</td>
+                    <td style="padding:8px;font-family:'JetBrains Mono',monospace;color:#0E1A2E;font-weight:700;">${r.quantity || '—'}</td>
+                    <td style="padding:8px;font-family:'JetBrains Mono',monospace;color:#0E1A2E;">${r.delivery_number || '—'}</td>
+                    <td style="padding:8px;text-align:center;"><span class="modern-badge ${status.class}" style="font-size:9px;">${status.en}</span></td>
+                  </tr>`;
+              }).join('')}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>`;
+}
+
+// Toggle expand/collapse for a batch card
+function batchCardToggle(batchKey) {
+  if (_expandedBatches.has(batchKey)) {
+    _expandedBatches.delete(batchKey);
+  } else {
+    _expandedBatches.add(batchKey);
+  }
+  renderCardsView();
 }
 
 async function batchCardSelectAll(batchKey) {
@@ -2344,11 +2372,211 @@ async function batchCardSend(batchKey) {
   if (_viewMode === 'cards') renderCardsView();
 }
 
-window._toggleView = toggleView;
+// Open an edit modal for an existing batch - lets user modify each truck row
+function batchCardEdit(batchKey) {
+  const items = _requests.filter(r =>
+    (r.batch_id || `legacy-${r.customer}-${r.created_at?.toDate?.().toISOString?.().slice(0,10)}`) === batchKey
+  ).sort((a, b) => {
+    // Sort by creation order within the batch
+    const at = a.created_at?.toDate ? a.created_at.toDate() : new Date(a.created_at || 0);
+    const bt = b.created_at?.toDate ? b.created_at.toDate() : new Date(b.created_at || 0);
+    return at - bt;
+  });
+  if (items.length === 0) {
+    toast('الدفعة فارغة', 'error');
+    return;
+  }
+  openBatchEditModal(batchKey, items);
+}
+
+function openBatchEditModal(batchKey, items) {
+  const first = items[0];
+  const isLegacy = batchKey.startsWith('legacy-');
+
+  const existing = document.getElementById('tr-batch-edit-modal');
+  if (existing) existing.remove();
+
+  const modal = document.createElement('div');
+  modal.id = 'tr-batch-edit-modal';
+  modal.style.cssText = `
+    position:fixed;inset:0;background:rgba(14,26,46,0.65);z-index:9999;
+    display:flex;align-items:center;justify-content:center;padding:20px;
+    font-family:Tajawal,sans-serif;overflow-y:auto;
+  `;
+
+  const totalQty = items.reduce((s, r) => s + (parseFloat(r.quantity) || 0), 0).toFixed(2);
+
+  modal.innerHTML = `
+    <div style="background:#F5F3EC;border-radius:10px;width:100%;max-width:1200px;max-height:92vh;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(14,26,46,0.4);">
+      <!-- Header -->
+      <div style="background:linear-gradient(135deg,#0E1A2E 0%,#1C2B48 100%);color:white;padding:16px 22px;display:flex;justify-content:space-between;align-items:center;">
+        <div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:2px;color:#D4B266;font-weight:700;">SDS · BATCH · EDIT</div>
+          <div style="font-size:18px;font-weight:900;margin-top:3px;">✏ تعديل الدفعة — ${first.customer || 'بلا عميل'}</div>
+          <div style="font-size:11px;color:#B8B0A0;margin-top:2px;font-family:'JetBrains Mono',monospace;">${isLegacy ? 'LEGACY' : batchKey.substring(0,20)} · ${items.length} شاحنة · ${totalQty} MT</div>
+        </div>
+        <button onclick="_closeBatchEditModal()" style="background:transparent;border:none;color:white;font-size:26px;cursor:pointer;padding:4px 10px;">×</button>
+      </div>
+
+      <!-- Body -->
+      <div style="flex:1;overflow-y:auto;padding:20px;">
+        <div style="background:white;border-radius:8px;overflow:hidden;">
+          <div style="overflow-x:auto;">
+            <table style="width:100%;border-collapse:collapse;font-size:12px;">
+              <thead>
+                <tr style="background:#0E1A2E;color:white;">
+                  <th style="padding:9px 6px;text-align:center;font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:1px;font-weight:800;width:36px;">#</th>
+                  <th style="padding:9px 6px;text-align:right;font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:1px;font-weight:800;">DRIVER</th>
+                  <th style="padding:9px 6px;text-align:right;font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:1px;font-weight:800;">TRUCK</th>
+                  <th style="padding:9px 6px;text-align:right;font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:1px;font-weight:800;">IQAMA</th>
+                  <th style="padding:9px 6px;text-align:right;font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:1px;font-weight:800;">QTY</th>
+                  <th style="padding:9px 6px;text-align:right;font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:1px;font-weight:800;">DELIVERY</th>
+                  <th style="padding:9px 6px;text-align:right;font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:1px;font-weight:800;">LOCATION</th>
+                  <th style="padding:9px 6px;text-align:right;font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:1px;font-weight:800;">DATE</th>
+                  <th style="padding:9px 6px;text-align:center;font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:1px;font-weight:800;">STATUS</th>
+                  <th style="padding:9px 6px;text-align:center;font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:1px;font-weight:800;width:80px;">ACTIONS</th>
+                </tr>
+              </thead>
+              <tbody id="batch-edit-tbody">
+                ${items.map((r, i) => renderBatchEditRow(r, i)).join('')}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div style="margin-top:14px;background:#EEF2FF;border:1px solid #C7D4F5;border-radius:6px;padding:12px;font-size:12px;color:#1C4B8E;">
+          <i class="ti ti-info-circle"></i>
+          عدّل الحقول مباشرة ثم اضغط "حفظ التغييرات". لحذف شاحنة استخدم أيقونة السلة.
+        </div>
+      </div>
+
+      <!-- Footer -->
+      <div style="background:white;border-top:1px solid #E8E5DC;padding:14px 22px;display:flex;justify-content:flex-end;gap:10px;">
+        <button onclick="_closeBatchEditModal()" style="background:#F5F3EC;color:#6B6659;border:1px solid #E8E5DC;border-radius:5px;padding:9px 18px;font-family:Tajawal,sans-serif;font-size:13px;font-weight:700;cursor:pointer;">
+          إلغاء
+        </button>
+        <button onclick="_saveBatchEdit('${batchKey}')" style="background:#2E8B57;color:white;border:none;border-radius:5px;padding:9px 24px;font-family:Tajawal,sans-serif;font-size:13px;font-weight:800;cursor:pointer;">
+          <i class="ti ti-device-floppy"></i> حفظ التغييرات
+        </button>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+}
+
+function renderBatchEditRow(r, idx) {
+  const status = STATUS_LABELS[r.status] || STATUS_LABELS.draft;
+  const isConverted = r.status === 'converted' || r.status === 'done';
+  const readonly = isConverted ? 'readonly' : '';
+  const rowBg = isConverted ? 'background:#FAFAF7;' : '';
+  return `
+    <tr data-req-id="${r.id}" style="border-bottom:1px solid #F0EDE4;${rowBg}">
+      <td style="padding:6px;text-align:center;font-family:'JetBrains Mono',monospace;color:#8A8578;font-weight:700;font-size:11px;">${String(idx+1).padStart(2,'0')}</td>
+      <td style="padding:4px;"><input type="text" data-f="driver_name" value="${(r.driver_name||'').replace(/"/g,'&quot;')}" ${readonly} style="width:100%;padding:6px;border:1px solid #E8E5DC;border-radius:4px;font-family:Tajawal,sans-serif;font-size:12px;outline:none;"></td>
+      <td style="padding:4px;"><input type="text" data-f="truck_number" value="${(r.truck_number||'').replace(/"/g,'&quot;')}" ${readonly} style="width:100%;padding:6px;border:1px solid #E8E5DC;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:12px;direction:ltr;text-align:right;outline:none;"></td>
+      <td style="padding:4px;"><input type="text" data-f="driver_id_number" value="${(r.driver_id_number||'').replace(/"/g,'&quot;')}" ${readonly} style="width:100%;padding:6px;border:1px solid #E8E5DC;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:12px;direction:ltr;text-align:right;outline:none;"></td>
+      <td style="padding:4px;"><input type="number" step="0.01" data-f="quantity" value="${r.quantity||''}" ${readonly} style="width:100%;padding:6px;border:1px solid #E8E5DC;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:12px;direction:ltr;text-align:right;outline:none;"></td>
+      <td style="padding:4px;"><input type="text" data-f="delivery_number" value="${(r.delivery_number||'').replace(/"/g,'&quot;')}" ${readonly} style="width:100%;padding:6px;border:1px solid #E8E5DC;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:12px;direction:ltr;text-align:right;outline:none;"></td>
+      <td style="padding:4px;"><input type="text" data-f="loading_location" value="${(r.loading_location||'').replace(/"/g,'&quot;')}" ${readonly} style="width:100%;padding:6px;border:1px solid #E8E5DC;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:11px;direction:ltr;text-align:right;outline:none;"></td>
+      <td style="padding:4px;"><input type="text" data-f="dispatch_date" value="${(r.dispatch_date||'').replace(/"/g,'&quot;')}" ${readonly} style="width:100%;padding:6px;border:1px solid #E8E5DC;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:11px;direction:ltr;text-align:right;outline:none;"></td>
+      <td style="padding:6px;text-align:center;"><span class="modern-badge ${status.class}" style="font-size:9px;">${status.en}</span></td>
+      <td style="padding:6px;text-align:center;">
+        ${isConverted ? '<span style="color:#8A8578;font-size:10px;">مقفل</span>' : `
+          <button onclick="_batchEditDeleteRow('${r.id}')" title="حذف من الدفعة" style="background:transparent;border:none;color:#CC2229;cursor:pointer;padding:4px 8px;font-size:15px;">
+            <i class="ti ti-trash"></i>
+          </button>
+        `}
+      </td>
+    </tr>
+  `;
+}
+
+function closeBatchEditModal() {
+  document.getElementById('tr-batch-edit-modal')?.remove();
+}
+
+async function batchEditDeleteRow(reqId) {
+  const req = _requests.find(r => r.id === reqId);
+  if (!req) return;
+  if (req.status === 'converted' || req.status === 'done') {
+    toast('لا يمكن حذف طلب محوّل', 'error');
+    return;
+  }
+  if (!confirm(`حذف الشاحنة "${req.driver_name || req.truck_number || 'بدون بيانات'}" من الدفعة؟`)) return;
+  try {
+    await deleteTransportRequest(reqId);
+    // Remove the row from the modal immediately (visual feedback)
+    document.querySelector(`#tr-batch-edit-modal tr[data-req-id="${reqId}"]`)?.remove();
+    // Refresh cache
+    await loadData();
+    toast('✓ حُذفت الشاحنة', 'success');
+  } catch (e) {
+    console.error(e);
+    toast('خطأ في الحذف', 'error');
+  }
+}
+
+async function saveBatchEdit(batchKey) {
+  const modal = document.getElementById('tr-batch-edit-modal');
+  if (!modal) return;
+  const rows = modal.querySelectorAll('tr[data-req-id]');
+  if (rows.length === 0) return closeBatchEditModal();
+
+  const btn = modal.querySelector('button[onclick*="_saveBatchEdit"]');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ حفظ...'; }
+
+  let updated = 0, failed = 0;
+  for (const row of rows) {
+    const id = row.dataset.reqId;
+    const updates = {};
+    row.querySelectorAll('input[data-f]').forEach(input => {
+      const field = input.dataset.f;
+      let val = input.value;
+      if (input.readOnly) return; // skip locked rows
+      if (field === 'quantity') val = parseFloat(val) || 0;
+      else val = (val || '').trim();
+      updates[field] = val;
+    });
+    if (Object.keys(updates).length === 0) continue;
+    try {
+      await updateTransportRequest(id, updates);
+      // Also sync driver record if driver info was edited
+      if (updates.driver_name && updates.driver_name.trim()) {
+        try {
+          await smartUpsertDriver({
+            driver_name:  updates.driver_name.trim(),
+            iqama:        updates.driver_id_number || '',
+            nationality:  '',
+            truck_number: updates.truck_number || '',
+            phone:        '',
+          });
+        } catch (e) { console.warn('driver sync failed:', e); }
+      }
+      updated++;
+    } catch (e) {
+      console.error('update failed:', id, e);
+      failed++;
+    }
+  }
+
+  closeBatchEditModal();
+  await loadData();
+  if (failed === 0) toast(`✓ حُفظت ${updated} شاحنة`, 'success');
+  else toast(`حُفظت ${updated}، فشل ${failed}`, 'error');
+}
+
+window._closeBatchEditModal = closeBatchEditModal;
+window._saveBatchEdit = saveBatchEdit;
+window._batchEditDeleteRow = batchEditDeleteRow;
+
+
 window._batchCardSelectAll = batchCardSelectAll;
 window._batchCardExport = batchCardExport;
 window._batchCardPrint = batchCardPrint;
 window._batchCardSend = batchCardSend;
+window._batchCardToggle = batchCardToggle;
+window._batchCardEdit = batchCardEdit;
 
 // ══════════════════════════════════════════════════════════════
 // REPORTS MODAL — Period-based report (monthly / custom)
