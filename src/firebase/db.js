@@ -22,20 +22,34 @@ export async function searchDrivers(nameQuery) {
 // ─────────────────────────────────────────────
 // TRANSPORT DRIVER LOOKUP
 // ─────────────────────────────────────────────
-// Match a driver by english name or iqama. Returns null if not found.
-export async function findDriverByEnOrIqama(nameEn, iqama) {
+// Match a driver by english name, arabic name, or iqama. Returns null if not found.
+export async function findDriverByEnOrIqama(nameEn, iqama, nameAr = '') {
   const snap = await getDocs(collection(db, "drivers"));
-  const list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  const list = snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(d => d.deleted !== true);
   const normalize = (s) => (s || '').trim().toLowerCase();
-  const nameEnN = normalize(nameEn);
   const iqamaN = normalize(iqama);
+  const nameEnN = normalize(nameEn);
+  const nameArN = normalize(nameAr);
+
+  // Priority 1: iqama (most reliable unique identifier)
   if (iqamaN) {
     const byIqama = list.find(d => normalize(d.iqama) === iqamaN);
     if (byIqama) return byIqama;
   }
+  // Priority 2: english name
   if (nameEnN) {
     const byEn = list.find(d => normalize(d.name_en) === nameEnN);
     if (byEn) return byEn;
+  }
+  // Priority 3: arabic name (prevents duplicate creation when user types in Arabic)
+  if (nameArN) {
+    const byAr = list.find(d => normalize(d.name_ar) === nameArN || normalize(d.name) === nameArN);
+    if (byAr) return byAr;
+  }
+  // Priority 4: check if the input (nameEn) is actually Arabic text — match against name_ar
+  if (nameEnN && /[\u0600-\u06FF]/.test(nameEn)) {
+    const byArFallback = list.find(d => normalize(d.name_ar) === nameEnN || normalize(d.name) === nameEnN);
+    if (byArFallback) return byArFallback;
   }
   return null;
 }
@@ -63,7 +77,7 @@ export async function getDriversMissingArabic() {
 //   used by the clearance section
 // - Returns { id, ...driverData, changes: { truck_changed: {from,to}|null, phone_changed, ... } }
 export async function upsertTransportDriver(data) {
-  const existing = await findDriverByEnOrIqama(data.name_en, data.iqama);
+  const existing = await findDriverByEnOrIqama(data.name_en, data.iqama, data.name_ar);
 
   // Normalize incoming values (trim strings)
   const clean = (v) => (typeof v === 'string' ? v.trim() : v);
@@ -384,7 +398,7 @@ export async function createShipmentFromTransportRequest(req, driver) {
   let resolvedDriver = driver;
   if (!resolvedDriver?.name_ar || !resolvedDriver.name_ar.trim()) {
     try {
-      const looked = await findDriverByEnOrIqama(req.driver_name, req.driver_id_number);
+      const looked = await findDriverByEnOrIqama(req.driver_name, req.driver_id_number, req.driver_name);
       if (looked) resolvedDriver = { ...looked, ...(driver || {}) };
     } catch (e) {
       // best-effort — fall through with what we have
