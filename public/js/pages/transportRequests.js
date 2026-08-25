@@ -523,12 +523,45 @@ function showDriverDropdown(input) {
     });
   }
 
-  // Position dropdown below input
+  // Position dropdown, keeping within viewport bounds (mobile-safe)
+  positionDropdownWithinViewport(dd, input);
+}
+
+// Position dropdown below input, adjusting for viewport edges (mobile-safe)
+function positionDropdownWithinViewport(dd, input) {
   const rect = input.getBoundingClientRect();
+  const viewportWidth = window.innerWidth;
+  const viewportHeight = window.innerHeight;
+  const desiredWidth = Math.max(rect.width, Math.min(320, viewportWidth - 24));
+
+  // Horizontal: shift left if overflowing right edge
+  let leftPos = rect.left + window.scrollX;
+  const rightEdge = rect.left + desiredWidth;
+  if (rightEdge > viewportWidth - 8) {
+    leftPos = Math.max(8, viewportWidth - desiredWidth - 8) + window.scrollX;
+  }
+
+  // Vertical: show above input if not enough space below
+  const dropdownEstHeight = 400;
+  const spaceBelow = viewportHeight - rect.bottom;
+  const spaceAbove = rect.top;
+  let topPos;
+  if (spaceBelow >= dropdownEstHeight || spaceBelow >= spaceAbove) {
+    topPos = rect.bottom + window.scrollY + 2;
+    // Cap the dropdown height so it doesn't push off screen bottom
+    dd.style.maxHeight = `${Math.min(400, spaceBelow - 16)}px`;
+  } else {
+    // Show above input
+    const useHeight = Math.min(400, spaceAbove - 16);
+    topPos = rect.top + window.scrollY - useHeight - 2;
+    dd.style.maxHeight = `${useHeight}px`;
+  }
+
   dd.style.display = 'block';
-  dd.style.top = `${rect.bottom + window.scrollY + 2}px`;
-  dd.style.left = `${rect.left + window.scrollX}px`;
-  dd.style.width = `${Math.max(rect.width, 320)}px`;
+  dd.style.top = `${topPos}px`;
+  dd.style.left = `${leftPos}px`;
+  dd.style.width = `${desiredWidth}px`;
+  dd.style.maxWidth = `${viewportWidth - 16}px`;
 }
 
 function hideDriverDropdown() {
@@ -1852,11 +1885,7 @@ function showBatchDriverDropdown(input) {
     });
   }
 
-  const rect = input.getBoundingClientRect();
-  dd.style.display = 'block';
-  dd.style.top = `${rect.bottom + window.scrollY + 2}px`;
-  dd.style.left = `${rect.left + window.scrollX}px`;
-  dd.style.width = `${Math.max(rect.width, 320)}px`;
+  positionDropdownWithinViewport(dd, input);
 }
 
 function batchSelectDriver(driverId) {
