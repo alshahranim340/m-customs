@@ -19,6 +19,7 @@ import { renderTransportSettings } from './pages/transportSettings.js';
 import { renderTransportDashboard } from './pages/transportDashboard.js';
 import { renderIncomingBatches } from './pages/incomingBatches.js';
 import { renderUserAvatar, openAvatarPicker } from './avatars.js';
+import { startNotifications, stopNotifications } from './notifications.js';
 import { initCommandPalette, reloadCommandPaletteData } from './commandPalette.js';
 import { initDarkMode, showSplashScreen, playSound, celebrate, checkMilestone, renderAvatar } from './enhancements.js';
 import { getShipments } from '../../src/firebase/db.js';
@@ -1819,6 +1820,14 @@ function renderAppShell(profile) {
   }
 
   updateBadges();
+
+  // Start real-time notifications (sound + banner on new data)
+  startNotifications(profile, () => {
+    // Refresh callback: re-trigger current page's data load if possible
+    const currentPage = document.querySelector('.nav-item.active')?.dataset?.page;
+    if (currentPage) navigate(currentPage);
+  });
+
   // Transport users go straight to their dashboard
   if (profile?.role === 'transport') {
     navigate('transport-dashboard');
@@ -1831,6 +1840,7 @@ function renderAppShell(profile) {
 // LOGOUT
 // ─────────────────────────────────────────────
 async function doLogout() {
+  stopNotifications(); // Clean up listeners
   await logOut();
 }
 
