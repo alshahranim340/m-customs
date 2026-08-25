@@ -326,13 +326,17 @@ async function searchDriverFn(val) {
   _searchTimeout = setTimeout(async () => {
     const results = await searchDrivers(val);
     if (!results.length) { sugg.style.display = 'none'; return; }
-    sugg.innerHTML = results.map(d => {
+    sugg.innerHTML = results.slice(0, 12).map(d => {
       const v = d.vehicles?.[d.vehicles.length-1] || {};
+      const displayName = d.name_ar || d.name || d.name_en || '—';
+      const subName = d.name_en && d.name_ar ? d.name_en : '';
+      const plate = v.plate || d.truck_number || '';
       return `<div class="driver-suggestion-item" onclick="selectDriver('${d.id}')">
-        <div class="driver-avatar-sm">${d.name?.charAt(0)||'؟'}</div>
-        <div>
-          <div class="ds-name">${d.name}</div>
-          <div class="ds-detail">${d.nationality||''} · ${v.plate||''} · ${v.vehicle_type||''}</div>
+        <div class="driver-avatar-sm">${displayName.charAt(0)||'؟'}</div>
+        <div style="flex:1;min-width:0;">
+          <div class="ds-name">${displayName}</div>
+          ${subName ? `<div style="font-size:10px;color:#6B6659;direction:ltr;text-align:right;">${subName}</div>` : ''}
+          <div class="ds-detail">${d.nationality||''} · ${plate} · ${v.vehicle_type||d.vehicle_type||''}</div>
         </div>
         <span class="ds-new">✓ موجود</span>
       </div>`;
@@ -347,16 +351,18 @@ async function selectDriver(driverId) {
   if (!driver) return;
   _selectedDriver = driver;
   const v = driver.vehicles?.[driver.vehicles.length-1] || {};
-  document.getElementById('driver-name').value              = driver.name || '';
+  // Use Arabic name for clearance (customs docs need Arabic), fallback to English/legacy
+  const displayName = driver.name_ar || driver.name || driver.name_en || '';
+  document.getElementById('driver-name').value              = displayName;
   document.getElementById('driver-nationality').value       = driver.nationality || '';
   document.getElementById('driver-passport-country').value  = driver.passport_country || '';
-  document.getElementById('driver-carrier-type').value      = v.carrier_type || '';
-  document.getElementById('driver-vehicle-type').value      = v.vehicle_type || '';
-  document.getElementById('driver-plate-nationality').value = v.plate_nationality || '';
-  document.getElementById('driver-plate').value             = v.plate || '';
+  document.getElementById('driver-carrier-type').value      = v.carrier_type || driver.carrier_type || '';
+  document.getElementById('driver-vehicle-type').value      = v.vehicle_type || driver.vehicle_type || '';
+  document.getElementById('driver-plate-nationality').value = v.plate_nationality || driver.plate_nationality || '';
+  document.getElementById('driver-plate').value             = v.plate || driver.truck_number || '';
   document.getElementById('driver-suggestions').style.display = 'none';
   document.getElementById('driver-status').innerHTML =
-    `<span style="color:var(--green);">✓ سائق موجود</span>`;
+    `<span style="color:var(--green);">✓ سائق موجود — ${driver.name_en || driver.name_ar || ''}</span>`;
 }
 
 // ── FILE UPLOAD ──
