@@ -30,6 +30,9 @@ export async function renderDrivers(container) {
             <div class="modern-header-sub">DRIVER DATABASE · ARABIC NAME MANAGEMENT</div>
           </div>
           <div class="modern-header-actions">
+            <button class="modern-btn" onclick="_openAddDriverModal()" style="background:#0E1A2E;color:white;border-color:#0E1A2E;">
+              <i class="ti ti-user-plus"></i> إضافة سائق
+            </button>
             <button class="modern-btn" onclick="_exportDriversCSV()" style="background:#2E8B57;color:white;border-color:#2E8B57;">
               <i class="ti ti-file-spreadsheet"></i> تصدير CSV
             </button>
@@ -121,8 +124,13 @@ export async function renderDrivers(container) {
   window._deleteDriver = deleteDriver;
   window._closeDeleteModal = closeDeleteModal;
   window._confirmDeleteDriver = confirmDeleteDriver;
+  window._openAddDriverModal = openAddDriverModal;
 
   await loadData();
+}
+
+function openAddDriverModal() {
+  openDriverModal({}, 'add');
 }
 
 async function loadData() {
@@ -342,14 +350,29 @@ function openDriverModal(driver, mode) {
   const existing = document.getElementById('drv-modal');
   if (existing) existing.remove();
 
-  const displayNameEn = driver._displayNameEn || driver.name_en || '';
-  const displayNameAr = driver._displayNameAr || driver.name_ar || driver.name || '';
+  const isAdd = mode === 'add';
+  const displayNameEn = isAdd ? '' : (driver._displayNameEn || driver.name_en || '');
+  const displayNameAr = isAdd ? '' : (driver._displayNameAr || driver.name_ar || driver.name || '');
 
   // Get current plate
-  let currentPlate = driver.truck_number || '';
-  if (!currentPlate && driver.vehicles && driver.vehicles.length > 0) {
-    currentPlate = driver.vehicles[driver.vehicles.length - 1].plate || '';
+  let currentPlate = '';
+  if (!isAdd) {
+    currentPlate = driver.truck_number || '';
+    if (!currentPlate && driver.vehicles && driver.vehicles.length > 0) {
+      currentPlate = driver.vehicles[driver.vehicles.length - 1].plate || '';
+    }
   }
+
+  const titleMap = {
+    'ar-only': '✏ إضافة اسم عربي',
+    'full':    '✏ تعديل بيانات السائق',
+    'add':     '➕ إضافة سائق جديد',
+  };
+  const codeMap = {
+    'ar-only': 'SDS/DRIVER/EDIT',
+    'full':    'SDS/DRIVER/EDIT',
+    'add':     'SDS/DRIVER/NEW',
+  };
 
   const modal = document.createElement('div');
   modal.id = 'drv-modal';
@@ -360,9 +383,9 @@ function openDriverModal(driver, mode) {
       <!-- Header -->
       <div class="drv-modal-header">
         <div>
-          <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#8A8578;letter-spacing:2px;font-weight:700;">SDS/DRIVER/EDIT</div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#8A8578;letter-spacing:2px;font-weight:700;">${codeMap[mode] || 'SDS/DRIVER'}</div>
           <div style="font-size:20px;color:#0E1A2E;font-weight:800;margin-top:2px;">
-            ${mode === 'ar-only' ? '✏ إضافة اسم عربي' : '✏ تعديل بيانات السائق'}
+            ${titleMap[mode] || '✏ تعديل بيانات السائق'}
           </div>
           ${displayNameEn ? `<div style="font-family:'Inter',sans-serif;font-size:13px;color:#6B6659;margin-top:4px;direction:ltr;text-align:right;">${displayNameEn}</div>` : ''}
         </div>
@@ -386,7 +409,7 @@ function openDriverModal(driver, mode) {
             class="drv-input" style="direction:rtl;">
         </div>
 
-        ${mode === 'full' ? `
+        ${(mode === 'full' || mode === 'add') ? `
           <!-- English name -->
           <div class="drv-field">
             <label class="drv-label">
@@ -476,8 +499,8 @@ function openDriverModal(driver, mode) {
       <!-- Footer -->
       <div class="drv-modal-footer">
         <button class="drv-btn" onclick="_closeDriverModal(true)">إلغاء</button>
-        <button class="drv-btn drv-btn-primary" onclick="_saveDriverModal('${driver.id}', '${mode}')">
-          <i class="ti ti-device-floppy"></i> حفظ التعديلات
+        <button class="drv-btn drv-btn-primary" onclick="_saveDriverModal('${driver?.id || ''}', '${mode}')">
+          <i class="ti ti-device-floppy"></i> ${isAdd ? 'إضافة السائق' : 'حفظ التعديلات'}
         </button>
       </div>
 
@@ -601,6 +624,56 @@ async function saveDriverModal(id, mode) {
 
   if (!nameAr) {
     toast('اكتب الاسم العربي أولاً', 'error');
+    return;
+  }
+
+  const isAdd = mode === 'add';
+
+  // For add mode: build a full new-doc payload
+  if (isAdd) {
+    const nameEn = document.getElementById('drv-input-name-en')?.value.trim() || '';
+    const iqama = document.getElementById('drv-input-iqama')?.value.trim() || '';
+    const nationality = document.getElementById('drv-input-nationality')?.value.trim() || '';
+    const phone = document.getElementById('drv-input-phone')?.value.trim() || '';
+    const truck = document.getElementById('drv-input-truck')?.value.trim() || '';
+
+    // Duplicate detection: iqama takes precedence, then name_en
+    if (iqama) {
+      const dupIqama = _drivers.find(d => (d.iqama || '').trim() === iqama);
+      if (dupIqama) {
+        toast(`⚠ الإقامة ${iqama} مسجلة بالفعل للسائق: ${dupIqama.name_ar || dupIqama.name_en || dupIqama.name}`, 'error');
+        return;
+      }
+    }
+    if (nameEn) {
+      const dupEn = _drivers.find(d => (d.name_en || '').trim().toLowerCase() === nameEn.toLowerCase());
+      if (dupEn) {
+        toast(`⚠ الاسم الإنجليزي "${nameEn}" مسجل بالفعل`, 'error');
+        return;
+      }
+    }
+
+    const newDoc = {
+      name_ar: nameAr,
+      name_en: nameEn,
+      iqama, nationality, phone,
+      truck_number: truck,
+      vehicles: truck ? [{ plate: truck, added_at: new Date().toISOString() }] : [],
+      source: 'manual',
+      created_at: serverTimestamp(),
+      updated_at: serverTimestamp(),
+    };
+
+    try {
+      const { addDoc, collection } = await import('firebase/firestore');
+      const ref = await addDoc(collection(db, 'drivers'), newDoc);
+      closeDriverModal(true);
+      await loadData();
+      toast(`✓ أُضيف السائق: ${nameAr}`, 'success');
+    } catch (e) {
+      console.error(e);
+      toast('خطأ في إضافة السائق', 'error');
+    }
     return;
   }
 

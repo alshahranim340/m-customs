@@ -3,7 +3,7 @@ import { getUserProfile } from '../../../src/firebase/auth.js';
 import {
   getTransportRequests, createTransportRequest, updateTransportRequest,
   deleteTransportRequest, getTransportDropdowns, addDropdownValue,
-  linkRequestToShipment, createIncomingBatch
+  linkRequestToShipment, createIncomingBatch, cascadeDeleteIncomingBatchesByTransportBatch
 } from '../../../src/firebase/transportDb.js';
 import { getAllDrivers, upsertTransportDriver, createShipmentFromTransportRequest, findDriverByEnOrIqama } from '../../../src/firebase/db.js';
 import { toast } from '../app.js';
@@ -2682,12 +2682,13 @@ async function deleteBatchFull(batchKey) {
   let msg = `حذف الدفعة كاملة (${items.length} شاحنة) — ${first.customer || ''}؟`;
   if (convertedCount > 0) {
     msg = `⚠ تنبيه: ${convertedCount} شاحنة من هذه الدفعة أُرسلت للتخليص.\n` +
-          `الحذف من هنا لا يحذفها من قسم التخليص.\n\n` +
+          `الحذف من هنا لا يحذفها من قسم التخليص، لكن ستختفي من "الدفعات الواردة".\n\n` +
           `حذف الدفعة كاملة (${items.length} شاحنة)؟`;
   }
   if (!confirm(msg)) return;
 
   const nowIso = new Date().toISOString();
+  const deletedBy = _profile?.name || _profile?.email || 'مستخدم';
   const ids = items.map(r => r.id);
   let failed = 0;
   for (const id of ids) {
@@ -2695,7 +2696,7 @@ async function deleteBatchFull(batchKey) {
       await updateTransportRequest(id, {
         deleted: true,
         deleted_at: nowIso,
-        deleted_by: 'user',
+        deleted_by: deletedBy,
       });
     } catch (e) {
       console.error('soft delete failed', id, e);
@@ -2703,19 +2704,28 @@ async function deleteBatchFull(batchKey) {
     }
   }
 
+  // Cascade: hide the matching incoming_batch record from clearance
+  const actualBatchId = first.batch_id;
+  if (actualBatchId) {
+    try {
+      await cascadeDeleteIncomingBatchesByTransportBatch(actualBatchId, deletedBy);
+    } catch (e) { console.warn('cascade delete incoming_batches failed:', e); }
+  }
+
   closeBatchEditModal();
   await loadData();
 
   if (failed === 0) {
-    showUndoToast(`حُذفت الدفعة (${items.length} شاحنة)`, ids);
+    showUndoToast(`حُذفت الدفعة (${items.length} شاحنة)`, ids, actualBatchId);
   } else {
     toast(`حُذفت ${items.length - failed}، فشل ${failed}`, 'error');
   }
 }
 
 // Undo toast — sticky for 5 seconds with undo button
+// batchIdForCascade (optional): if provided, undo will also restore matching incoming_batches
 let _undoTimer = null;
-function showUndoToast(message, reqIds) {
+function showUndoToast(message, reqIds, batchIdForCascade = null) {
   const existing = document.getElementById('tr-undo-toast');
   if (existing) existing.remove();
   if (_undoTimer) clearTimeout(_undoTimer);
@@ -2753,7 +2763,19 @@ function showUndoToast(message, reqIds) {
         restored++;
       } catch (e) { console.error('restore failed', id, e); }
     }
+    // Also restore matching incoming_batches record if this was a full-batch delete
+    if (batchIdForCascade) {
+      try {
+        const { getDeletedIncomingBatches, restoreIncomingBatch } = await import('../../../src/firebase/transportDb.js');
+        const deletedBatches = await getDeletedIncomingBatches();
+        const matches = deletedBatches.filter(b => b.batch_id === batchIdForCascade && b.delete_reason === 'cascade_from_transport');
+        for (const b of matches) {
+          try { await restoreIncomingBatch(b.id); } catch (e) { console.warn('restore incoming batch failed:', e); }
+        }
+      } catch (e) { console.warn('cascade restore lookup failed:', e); }
+    }
     await loadData();
+    if (window.updateBadges) window.updateBadges();
     toast(`✓ استُعيدت ${restored} شاحنة`, 'success');
   };
   document.getElementById('undo-close').onclick = () => {

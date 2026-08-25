@@ -3,7 +3,7 @@
 // Each batch → downloadable Excel (SUNARA-style, matches transport export)
 // ══════════════════════════════════════════════════════════════
 
-import { getIncomingBatches, markBatchViewed } from '../../../src/firebase/transportDb.js';
+import { getIncomingBatches, markBatchViewed, softDeleteIncomingBatch, restoreIncomingBatch } from '../../../src/firebase/transportDb.js';
 import { getCurrentUser, getUserProfile } from '../../../src/firebase/auth.js';
 import { toast } from '../app.js';
 
@@ -149,6 +149,8 @@ function renderList() {
     if (excelBtn) excelBtn.onclick = () => downloadBatchExcel(b);
     const viewBtn = document.querySelector(`[data-view-btn="${b.id}"]`);
     if (viewBtn) viewBtn.onclick = () => markAsViewed(b);
+    const deleteBtn = document.querySelector(`[data-delete-btn="${b.id}"]`);
+    if (deleteBtn) deleteBtn.onclick = () => deleteBatch(b);
   });
 }
 
@@ -158,6 +160,7 @@ function renderBatchCard(b) {
   const timeAgo = dateStr ? formatTimeAgo(dateStr) : '';
   const destInfo = DEST_LABELS[b.destination] || { ar: b.destination, en: (b.destination || '').toUpperCase() };
   const isNew = b.status === 'new';
+  const canDelete = _profile?.role === 'admin' || _profile?.role === 'manager';
 
   return `
     <div style="background:white;border:1px solid ${isNew ? '#F0C040' : '#E8E5DC'};border-radius:10px;margin-bottom:12px;overflow:hidden;box-shadow:0 2px 8px rgba(14,26,46,0.04);${isNew ? 'box-shadow:0 4px 16px rgba(240,192,64,0.15);' : ''}">
@@ -187,6 +190,9 @@ function renderBatchCard(b) {
           <button data-excel-btn="${b.id}" style="background:#2E8B57;color:white;border:none;border-radius:5px;padding:8px 16px;font-family:Tajawal,sans-serif;font-size:12px;font-weight:800;cursor:pointer;">
             <i class="ti ti-file-spreadsheet"></i> تحميل Excel
           </button>
+          ${canDelete ? `<button data-delete-btn="${b.id}" title="حذف الدفعة" style="background:transparent;color:#CC2229;border:1px solid #FCA5A5;border-radius:5px;padding:8px 12px;font-family:Tajawal,sans-serif;font-size:12px;font-weight:700;cursor:pointer;">
+            <i class="ti ti-trash"></i>
+          </button>` : ''}
         </div>
       </div>
 
@@ -238,6 +244,69 @@ async function markAsViewed(b) {
     console.error(e);
     toast('فشل التحديث', 'error');
   }
+}
+
+// Soft-delete a batch. Shows undo toast for 5 seconds.
+let _undoTimer = null;
+async function deleteBatch(b) {
+  const trucksTxt = `${b.trucks_count || 0} شاحنة`;
+  const customerTxt = b.customer || 'بلا عميل';
+  if (!confirm(`حذف دفعة "${customerTxt}" (${trucksTxt})؟\nيمكن استرجاعها من زر التراجع خلال 5 ثوانٍ.`)) return;
+
+  try {
+    const by = _profile?.name || _profile?.email || 'مستخدم';
+    await softDeleteIncomingBatch(b.id, by, 'manual');
+    await loadData();
+    if (window.updateBadges) window.updateBadges();
+    showBatchUndoToast(`حُذفت دفعة ${customerTxt}`, b.id);
+  } catch (e) {
+    console.error(e);
+    toast('خطأ في الحذف', 'error');
+  }
+}
+
+function showBatchUndoToast(message, batchId) {
+  const existing = document.getElementById('ib-undo-toast');
+  if (existing) existing.remove();
+  if (_undoTimer) clearTimeout(_undoTimer);
+
+  const t = document.createElement('div');
+  t.id = 'ib-undo-toast';
+  t.style.cssText = `
+    position:fixed;bottom:24px;left:50%;transform:translateX(-50%);
+    background:#0E1A2E;color:white;padding:12px 18px;border-radius:8px;
+    box-shadow:0 8px 24px rgba(14,26,46,0.35);z-index:100000;
+    display:flex;align-items:center;gap:14px;font-family:'Tajawal',sans-serif;
+    font-size:13px;font-weight:700;min-width:280px;
+  `;
+  t.innerHTML = `
+    <span><i class="ti ti-trash" style="color:#F0C040;"></i> ${message}</span>
+    <button id="ib-undo-btn" style="background:#D4B266;color:#0E1A2E;border:none;border-radius:5px;padding:6px 14px;font-family:'Tajawal',sans-serif;font-size:12px;font-weight:800;cursor:pointer;">
+      <i class="ti ti-arrow-back-up"></i> تراجع
+    </button>
+    <button id="ib-undo-close" style="background:transparent;border:none;color:#B8B0A0;cursor:pointer;font-size:18px;padding:0 4px;">×</button>
+  `;
+  document.body.appendChild(t);
+
+  document.getElementById('ib-undo-btn').onclick = async () => {
+    clearTimeout(_undoTimer);
+    t.remove();
+    try {
+      await restoreIncomingBatch(batchId);
+      await loadData();
+      if (window.updateBadges) window.updateBadges();
+      toast('✓ استُعيدت الدفعة', 'success');
+    } catch (e) {
+      console.error(e);
+      toast('فشل الاستعادة', 'error');
+    }
+  };
+  document.getElementById('ib-undo-close').onclick = () => {
+    clearTimeout(_undoTimer);
+    t.remove();
+  };
+
+  _undoTimer = setTimeout(() => t.remove(), 5000);
 }
 
 // ══════════════════════════════════════════════════════════════
