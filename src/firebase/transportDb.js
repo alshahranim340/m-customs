@@ -202,17 +202,20 @@ export async function createIncomingBatch(requests, shipmentIds, sender) {
   return ref.id;
 }
 
-// Get incoming batches (most recent first), optionally filter by status
+// Get incoming batches (most recent first), optionally filter by status.
+// Uses simple collection read + JS sort to avoid Firestore composite index requirements
+// and to handle documents where serverTimestamp() hasn't propagated yet.
 export async function getIncomingBatches(limitCount = 200, statusFilter = null) {
-  let q = query(
-    collection(db, 'incoming_batches'),
-    orderBy('sent_at', 'desc'),
-    limit(limitCount)
-  );
-  const snap = await getDocs(q);
-  const batches = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-  if (statusFilter) return batches.filter(b => b.status === statusFilter);
-  return batches;
+  const snap = await getDocs(collection(db, 'incoming_batches'));
+  let batches = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  // Sort by sent_at descending; docs with pending serverTimestamp (null) come first
+  batches.sort((a, b) => {
+    const at = a.sent_at?.toMillis?.() ?? (a.sent_at ? new Date(a.sent_at).getTime() : Date.now());
+    const bt = b.sent_at?.toMillis?.() ?? (b.sent_at ? new Date(b.sent_at).getTime() : Date.now());
+    return bt - at;
+  });
+  if (statusFilter) batches = batches.filter(b => b.status === statusFilter);
+  return batches.slice(0, limitCount);
 }
 
 // Mark a batch as viewed by clearance (removes the "new" badge)
