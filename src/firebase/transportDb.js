@@ -207,7 +207,9 @@ export async function createIncomingBatch(requests, shipmentIds, sender) {
 // and to handle documents where serverTimestamp() hasn't propagated yet.
 export async function getIncomingBatches(limitCount = 200, statusFilter = null) {
   const snap = await getDocs(collection(db, 'incoming_batches'));
-  let batches = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  let batches = snap.docs
+    .map(d => ({ id: d.id, ...d.data() }))
+    .filter(b => !b.deleted); // hide soft-deleted from main list
   // Sort by sent_at descending; docs with pending serverTimestamp (null) come first
   batches.sort((a, b) => {
     const at = a.sent_at?.toMillis?.() ?? (a.sent_at ? new Date(a.sent_at).getTime() : Date.now());
@@ -230,5 +232,59 @@ export async function markBatchViewed(batchDocId, viewerName) {
 // Count of unviewed batches — for sidebar badge
 export async function getUnviewedBatchCount() {
   const snap = await getDocs(collection(db, 'incoming_batches'));
-  return snap.docs.filter(d => (d.data() || {}).status === 'new').length;
+  return snap.docs.filter(d => {
+    const data = d.data() || {};
+    return data.status === 'new' && !data.deleted;
+  }).length;
+}
+
+// ─────────────────────────────────────────────
+// INCOMING BATCH — SOFT DELETE / RESTORE / CASCADE
+// ─────────────────────────────────────────────
+
+// Soft-delete an incoming batch (records who + when for admin recovery)
+export async function softDeleteIncomingBatch(batchDocId, deletedByName, reason = '') {
+  await updateDoc(doc(db, 'incoming_batches', batchDocId), {
+    deleted: true,
+    deleted_at: new Date().toISOString(),
+    deleted_by: deletedByName || 'مستخدم',
+    delete_reason: reason || 'manual',
+  });
+}
+
+// Restore a soft-deleted incoming batch
+export async function restoreIncomingBatch(batchDocId) {
+  await updateDoc(doc(db, 'incoming_batches', batchDocId), {
+    deleted: false,
+    deleted_at: null,
+    deleted_by: null,
+    delete_reason: null,
+  });
+}
+
+// Find and soft-delete incoming batches whose transport batch_id matches.
+// Used for cascade: when transport requests are deleted, hide their incoming batch too.
+// Returns count of affected batches.
+export async function cascadeDeleteIncomingBatchesByTransportBatch(batchId, deletedByName) {
+  if (!batchId) return 0;
+  const snap = await getDocs(collection(db, 'incoming_batches'));
+  const matches = snap.docs.filter(d => {
+    const data = d.data() || {};
+    return data.batch_id === batchId && !data.deleted;
+  });
+  for (const d of matches) {
+    await updateDoc(doc(db, 'incoming_batches', d.id), {
+      deleted: true,
+      deleted_at: new Date().toISOString(),
+      deleted_by: deletedByName || 'مستخدم',
+      delete_reason: 'cascade_from_transport',
+    });
+  }
+  return matches.length;
+}
+
+// Get only soft-deleted batches — for admin recovery drawer (optional feature)
+export async function getDeletedIncomingBatches() {
+  const snap = await getDocs(collection(db, 'incoming_batches'));
+  return snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(b => b.deleted === true);
 }
