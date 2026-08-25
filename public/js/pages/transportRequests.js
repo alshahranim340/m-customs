@@ -1198,7 +1198,7 @@ async function bulkSendToClearance() {
 
     for (const r of selectedDrafts) {
       try {
-        const driver = await findDriverByEnOrIqama(r.driver_name, r.driver_id_number);
+        const driver = await findDriverByEnOrIqama(r.driver_name, r.driver_id_number, r.driver_name);
         const shipmentId = await createShipmentFromTransportRequest(r, driver);
         await linkRequestToShipment(r.id, shipmentId);
         await updateTransportRequest(r.id, { status: 'converted', shipment_id: shipmentId });
@@ -2008,7 +2008,7 @@ async function saveBatch(sendToClearance) {
           quantity: parseFloat(reqDoc.quantity) || 0,
           delivery_number: reqDoc.delivery_number || '',
         };
-        const driver = await findDriverByEnOrIqama(reqDoc.driver_name, reqDoc.driver_id_number);
+        const driver = await findDriverByEnOrIqama(reqDoc.driver_name, reqDoc.driver_id_number, reqDoc.driver_name);
         const shipmentId = await createShipmentFromTransportRequest(fullData, driver);
         await linkRequestToShipment(reqId, shipmentId);
         await updateTransportRequest(reqId, { status: 'converted', shipment_id: shipmentId });
