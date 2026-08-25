@@ -9,14 +9,21 @@ import { db } from "./config.js";
 // ─────────────────────────────────────────────
 
 /**
- * Search drivers by name (partial match via stored index)
+ * Search drivers by name (partial match across name, name_en, name_ar, iqama, truck)
  */
 export async function searchDrivers(nameQuery) {
   const snap = await getDocs(collection(db, "drivers"));
   const lower = nameQuery.toLowerCase();
   return snap.docs
     .map(d => ({ id: d.id, ...d.data() }))
-    .filter(d => d.name?.toLowerCase().includes(lower));
+    .filter(d => d.deleted !== true)
+    .filter(d =>
+      (d.name || '').toLowerCase().includes(lower) ||
+      (d.name_en || '').toLowerCase().includes(lower) ||
+      (d.name_ar || '').toLowerCase().includes(lower) ||
+      (d.iqama || '').toLowerCase().includes(lower) ||
+      (d.truck_number || '').toLowerCase().includes(lower)
+    );
 }
 
 // ─────────────────────────────────────────────
