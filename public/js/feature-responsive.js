@@ -105,11 +105,15 @@
       background: rgba(10,20,40,0.6);
       z-index: 1005;
       opacity: 0;
+      pointer-events: none;                /* ← لا يحجب النقرات عندما مغلق */
       transition: opacity 0.3s cubic-bezier(0.4,0,0.2,1);
       -webkit-backdrop-filter: blur(2px);
       backdrop-filter: blur(2px);
     }
-    .mob-ov.show { opacity: 1; }
+    .mob-ov.show {
+      opacity: 1;
+      pointer-events: all;                 /* ← يحجب فقط عندما مفتوح */
+    }
 
     /* ══════════════════════════════════
        Mobile ≤ 768px
@@ -191,18 +195,20 @@
         font-size: 16px !important; /* يمنع zoom على iOS */
       }
 
-      /* ── Modal (bottom sheet) ── */
+      /* ── Modal — يظهر فوق كل شيء بما فيه شريط الجوال ── */
       .modal-overlay:not(.hidden) {
         display: flex !important;
         align-items: flex-end !important;
         padding: 0 !important;
+        z-index: 1050 !important;          /* ← فوق mob-bar (1010) والـ sidebar (1008) */
       }
       #modal-box {
         width: 100% !important;
         max-width: 100% !important;
-        max-height: 90dvh !important;
+        max-height: 92dvh !important;
         border-radius: 20px 20px 0 0 !important;
         overflow-y: auto !important;
+        -webkit-overflow-scrolling: touch !important;
       }
       #modal-box::before {
         content: '';
@@ -211,6 +217,7 @@
         background: rgba(0,0,0,0.12);
         border-radius: 2px;
         margin: 10px auto 6px;
+        flex-shrink: 0;
       }
 
       /* ── إخفاء الـ CTRL+K FAB على الجوال ── */
