@@ -407,6 +407,21 @@
 </head>
 <body>
 
+<script>
+/* bypass PWA service worker so track.html renders as standalone page */
+(function(){
+  if (!('serviceWorker' in navigator)) return;
+  var done = sessionStorage.getItem('_trk_sw');
+  if (done) return;
+  navigator.serviceWorker.getRegistrations().then(function(regs){
+    if (!regs.length) return;
+    sessionStorage.setItem('_trk_sw','1');
+    Promise.all(regs.map(function(r){ return r.unregister(); }))
+      .then(function(){ location.reload(); });
+  });
+})();
+</script>
+
   <!-- HEADER -->
   <div class="trk-header">
     <div class="trk-brand">
