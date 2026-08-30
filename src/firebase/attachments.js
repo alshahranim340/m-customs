@@ -26,7 +26,7 @@ function joinChunks(chunks) {
 export async function saveAttachment(shipmentId, key, fileData) {
   const chunks = splitToChunks(fileData.base64);
 
-  // Save metadata doc
+  // Save metadata doc first
   await setDoc(doc(db, 'attachments', `${shipmentId}_${key}`), {
     shipment_id:  shipmentId,
     key,
@@ -36,12 +36,12 @@ export async function saveAttachment(shipmentId, key, fileData) {
     updated_at:   serverTimestamp()
   });
 
-  // Save each chunk as a separate doc
-  await Promise.all(chunks.map((chunk, i) =>
-    setDoc(doc(db, 'attachments', `${shipmentId}_${key}_chunk${i}`), {
-      data: chunk
-    })
-  ));
+  // Save chunks one by one (sequential) لتجنب حدود Firestore write rate
+  for (let i = 0; i < chunks.length; i++) {
+    await setDoc(doc(db, 'attachments', `${shipmentId}_${key}_chunk${i}`), {
+      data: chunks[i]
+    });
+  }
 }
 
 // ─────────────────────────────────────────────
@@ -51,15 +51,24 @@ export async function getAttachment(shipmentId, key) {
   const metaSnap = await getDoc(doc(db, 'attachments', `${shipmentId}_${key}`));
   if (!metaSnap.exists()) return null;
 
-  const meta   = metaSnap.data();
-  const count  = meta.chunk_count || 1;
+  const meta  = metaSnap.data();
+  const count = meta.chunk_count || 1;
 
-  // Fetch all chunks in parallel
+  // استرجاع الـ chunks بشكل متوازٍ
   const chunkSnaps = await Promise.all(
     Array.from({ length: count }, (_, i) =>
       getDoc(doc(db, 'attachments', `${shipmentId}_${key}_chunk${i}`))
     )
   );
+
+  // التحقق من اكتمال جميع الـ chunks
+  const missingChunks = chunkSnaps
+    .map((s, i) => (!s.exists() ? i : null))
+    .filter(i => i !== null);
+
+  if (missingChunks.length > 0) {
+    console.warn(`[attachments] ملف "${key}": chunks ناقصة:`, missingChunks);
+  }
 
   const base64 = joinChunks(
     chunkSnaps.map(s => s.exists() ? s.data().data : '')
@@ -69,13 +78,28 @@ export async function getAttachment(shipmentId, key) {
 }
 
 // ─────────────────────────────────────────────
+// قائمة مفاتيح المرفقات — مصدر واحد للحقيقة
+// أضف أي key جديد هنا فقط
+// ─────────────────────────────────────────────
+export const ATTACHMENT_KEYS = [
+  'invoice',
+  'packing_list',
+  'coo',
+  'analysis_cert',
+  'saudi_clearance',
+  'driver_docs',
+  'broker_reply',
+  'broker_reply_2',    // ← رد المخلص 2
+  'appointment',
+];
+
+// ─────────────────────────────────────────────
 // GET all attachments for a shipment
 // ─────────────────────────────────────────────
 export async function getAttachments(shipmentId) {
-  const keys = ['invoice','packing_list','coo','analysis_cert','saudi_clearance','driver_docs','broker_reply','appointment'];
   const result = {};
 
-  await Promise.all(keys.map(async key => {
+  await Promise.all(ATTACHMENT_KEYS.map(async key => {
     const data = await getAttachment(shipmentId, key);
     if (data) result[key] = data;
   }));
@@ -87,7 +111,7 @@ export async function getAttachments(shipmentId) {
 // SAVE multiple attachments
 // ─────────────────────────────────────────────
 export async function saveAttachments(shipmentId, filesObj) {
-  // Save one by one to avoid overwhelming Firestore
+  // حفظ واحداً تلو الآخر لتجنب ضغط Firestore
   for (const [key, fileData] of Object.entries(filesObj)) {
     await saveAttachment(shipmentId, key, fileData);
   }
@@ -97,21 +121,18 @@ export async function saveAttachments(shipmentId, filesObj) {
 // DELETE one attachment (metadata + all chunks)
 // ─────────────────────────────────────────────
 export async function deleteAttachment(shipmentId, key) {
-  const { deleteDoc, doc, getDoc } = await import('firebase/firestore');
-
-  // Get metadata to know chunk count
-  const metaRef = doc(db, 'attachments', `${shipmentId}_${key}`);
+  const metaRef  = doc(db, 'attachments', `${shipmentId}_${key}`);
   const metaSnap = await getDoc(metaRef);
 
   if (metaSnap.exists()) {
     const count = metaSnap.data().chunk_count || 1;
-    // Delete all chunks
+    // حذف جميع الـ chunks
     for (let i = 0; i < count; i++) {
       try {
         await deleteDoc(doc(db, 'attachments', `${shipmentId}_${key}_chunk${i}`));
       } catch(e) {}
     }
-    // Delete metadata
+    // حذف الـ metadata
     await deleteDoc(metaRef);
   }
 }
