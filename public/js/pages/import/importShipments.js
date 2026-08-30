@@ -419,16 +419,9 @@ function _buildCard(s) {
           <button class="imp-btn primary" onclick="editImportShipment('${s.id}')">
             <i class="ti ti-edit"></i> تعديل
           </button>
-          <button class="imp-btn ghost" id="trk-btn-${s.id}" onclick="generateTrackingLink('${s.id}',event)">
-            🔗 رابط التتبع
-          </button>
-          <button class="imp-btn ghost" onclick="shareWhatsApp('${s.id}',event)"
+          <button class="imp-btn ghost" id="wa-btn-${s.id}" onclick="sendWhatsApp('${s.id}',event)"
             style="background:#E7F9ED;color:#128C7E;border-color:#b2dfdb;">
-            🟢 واتساب عميل
-          </button>
-          <button class="imp-btn ghost" onclick="shareWhatsAppInternal('${s.id}',event)"
-            style="background:#EEF2FF;color:#1C4B8E;border-color:#c7d2fe;">
-            🔵 واتساب داخلي
+            واتساب
           </button>
           <button class="imp-btn ghost" onclick="event.stopPropagation();toggleDelivery('${s.id}')">
             ▲ طي
@@ -1020,63 +1013,66 @@ function _buildWAMessage(s, trackingUrl) {
   var ltr   = '\u200E';
   var today = new Date().toLocaleDateString('ar-SA',{year:'numeric',month:'long',day:'numeric'});
   var eta   = s.eta ? new Date(s.eta).toLocaleDateString('ar-SA',{year:'numeric',month:'long',day:'numeric'}) : '-';
-  var ST    = {waiting:'\u0642\u064a\u062f \u0627\u0644\u0627\u0646\u062a\u0638\u0627\u0631',clearance:'\u0642\u064a\u062f \u0627\u0644\u062a\u062e\u0644\u064a\u0635',customs:'\u0642\u064a\u062f \u0627\u0644\u062a\u062e\u0644\u064a\u0635',delivered:'\u062a\u0645 \u0627\u0644\u062a\u0633\u0644\u064a\u0645 ✅'};
+  var ST    = {
+    waiting  : '\u0642\u064a\u062f \u0627\u0644\u0627\u0646\u062a\u0638\u0627\u0631',
+    clearance: '\u0642\u064a\u062f \u0627\u0644\u062a\u062e\u0644\u064a\u0635 \u0627\u0644\u062c\u0645\u0631\u0643\u064a',
+    customs  : '\u0642\u064a\u062f \u0627\u0644\u062a\u062e\u0644\u064a\u0635 \u0627\u0644\u062c\u0645\u0631\u0643\u064a',
+    delivered: '\u062a\u0645 \u0627\u0644\u062a\u0633\u0644\u064a\u0645 \u2705'
+  };
   var m =
     '\u0627\u0644\u0633\u0644\u0627\u0645 \u0639\u0644\u064a\u0643\u0645 \u0648\u0631\u062d\u0645\u0629 \u0627\u0644\u0644\u0647 \u0648\u0628\u0631\u0643\u0627\u062a\u0647\n\n' +
     '*\u0634\u0631\u0643\u0629 \u0627\u0644\u0633\u062f\u064a\u0633 \u0644\u0644\u062e\u062f\u0645\u0627\u062a \u0627\u0644\u0644\u0648\u062c\u0633\u062a\u064a\u0629*\n' +
     '_\u0646\u0638\u0627\u0645 M-Customs \u0644\u0644\u062a\u062e\u0644\u064a\u0635 \u0627\u0644\u062c\u0645\u0631\u0643\u064a_\n\n' +
-    '📦 *\u062a\u062d\u062f\u064a\u062b \u062d\u0627\u0644\u0629 \u0634\u062d\u0646\u062a\u0643\u0645*\n\n' +
-    '🔢 \u0631\u0642\u0645 \u0627\u0644\u0628\u0648\u0644\u064a\u0635\u0629: *' + ltr + (s.bl_number||'-') + '*\n' +
-    '📍 \u0627\u0644\u0645\u0646\u0641\u0630: ' + (s.port||'-') + '  |  ' + ltr + (s.lcl_fcl||'') + '\n' +
-    '📅 \u0648\u0642\u062a \u0627\u0644\u0648\u0635\u0648\u0644: *' + eta + '*\n' +
-    '📌 \u0627\u0644\u062d\u0627\u0644\u0629: *' + (ST[s.status]||s.status) + '*';
-  if (s.customs_no) m += '\n🔖 \u0631\u0642\u0645 \u0627\u0644\u0628\u064a\u0627\u0646: *' + ltr + s.customs_no + '*';
+    '*\u062a\u062d\u062f\u064a\u062b \u062d\u0627\u0644\u0629 \u0634\u062d\u0646\u062a\u0643\u0645*\n\n' +
+    '\u0631\u0642\u0645 \u0627\u0644\u0628\u0648\u0644\u064a\u0635\u0629:\n' +
+    '*' + ltr + (s.bl_number||'-') + '*\n' +
+    '\uD83D\uDCCD \u0627\u0644\u0645\u0646\u0641\u0630: ' + (s.port||'-') + ' | ' + ltr + (s.lcl_fcl||'') + '\n' +
+    '\uD83D\uDCC5 \u0648\u0642\u062a \u0627\u0644\u0648\u0635\u0648\u0644: *' + eta + '*\n' +
+    '\u0627\u0644\u062d\u0627\u0644\u0629: *' + (ST[s.status]||s.status) + '*';
+  if (s.customs_no) m += '\n\u0631\u0642\u0645 \u0627\u0644\u0628\u064a\u0627\u0646: *' + ltr + s.customs_no + '*';
   if (s.terminal)   m += '\n\u0627\u0644\u0645\u062d\u0637\u0629: ' + s.terminal;
   if (trackingUrl) {
-    m += '\n\n🔗 *\u0631\u0627\u0628\u0637 \u062a\u062a\u0628\u0639 \u0634\u062d\u0646\u062a\u0643\u0645:*\n' + ltr + trackingUrl +
-         '\n_\u064a\u062a\u062d\u062f\u062b \u062a\u0644\u0642\u0627\u0626\u064a\u0627\u064b \u0645\u0639 \u0643\u0644 \u062a\u063a\u064a\u064a\u0631_';
+    m +=
+      '\n\n\uD83D\uDD17 *\u0631\u0627\u0628\u0637 \u062a\u062a\u0628\u0639 \u0634\u062d\u0646\u062a\u0643\u0645:*\n' +
+      ltr + trackingUrl +
+      '\n_\u064a\u062a\u062d\u062f\u062b \u062a\u0644\u0642\u0627\u0626\u064a\u0627\u064b \u0645\u0639 \u0643\u0644 \u062a\u063a\u064a\u064a\u0631_';
   }
-  m += '\n\n📆 \u0628\u062a\u0627\u0631\u064a\u062e: ' + today +
-       '\n\u0634\u0643\u0631\u0627\u064b \u0644\u062b\u0642\u062a\u0643\u0645 🤝\n_\u0641\u0631\u064a\u0642 \u0627\u0644\u0633\u062f\u064a\u0633 \u0644\u0644\u062e\u062f\u0645\u0627\u062a \u0627\u0644\u0644\u0648\u062c\u0633\u062a\u064a\u0629_';
+  m +=
+    '\n\n\uD83D\uDCC6 \u0628\u062a\u0627\u0631\u064a\u062e: ' + today +
+    '\n\u0634\u0643\u0631\u0627\u064b \u0644\u062b\u0642\u062a\u0643\u0645 \uD83E\uDD1D\n' +
+    '_\u0641\u0631\u064a\u0642 \u0627\u0644\u0633\u062f\u064a\u0633 \u0644\u0644\u062e\u062f\u0645\u0627\u062a \u0627\u0644\u0644\u0648\u062c\u0633\u062a\u064a\u0629_';
   return m;
 }
 
-function _buildInternalWAMessage(s) {
-  var ltr   = '\u200E';
-  var today = new Date().toLocaleDateString('ar-SA',{year:'numeric',month:'long',day:'numeric'});
-  var m = '*M-Customs - \u0645\u0631\u062c\u0639 \u062f\u0627\u062e\u0644\u064a* 🔒\n\n' +
-    '📦 *' + ltr + (s.bl_number||'-') + '*\n' +
-    '\u0627\u0644\u0639\u0645\u064a\u0644: ' + (s.customer_name||'-') + '\n' +
-    '📍 ' + (s.port||'-') + ' | ' + ltr + (s.lcl_fcl||'-') + '\n' +
-    '📅 ETA: ' + (s.eta||'-') + '\n' +
-    '\u0627\u0644\u062d\u0627\u0644\u0629: ' + (s.status||'-');
-  if (s.customs_no) m += '\n🔖 ' + ltr + s.customs_no;
-  m += '\n\n🌐 \u0627\u0644\u0646\u0638\u0627\u0645:\nhttps://m-customs.web.app' +
-       '\n\n📆 ' + today + '\n_M-Customs_';
-  return m;
-}
-
-async function shareWhatsApp(shipmentId, event) {
+/* ONE button: generates token + sends WhatsApp */
+async function sendWhatsApp(shipmentId, event) {
   event.stopPropagation();
-  const s = _shipments.find(x => x.id === shipmentId);
+  const s   = _shipments.find(x => x.id === shipmentId);
   if (!s) return;
-  const customer    = _customers.find(c => c.id === s.customer_id);
-  const phone       = _fmtWAPhone(customer?.phone || '');
-  const trackingUrl = s.tracking_token ? `${location.origin}/track.html?token=${s.tracking_token}` : null;
-  const msg = _buildWAMessage(s, trackingUrl);
-  const url = phone ? `https://wa.me/${phone}?text=${encodeURIComponent(msg)}` : `https://wa.me/?text=${encodeURIComponent(msg)}`;
-  window.open(url, '_blank');
+  const btn = document.getElementById('wa-btn-' + shipmentId);
+  if (btn) { btn.disabled = true; btn.textContent = '...'; }
+  try {
+    let token = s.tracking_token;
+    if (!token) {
+      token = await createTrackingLink(shipmentId, s);
+      await updateImportShipment(shipmentId, { tracking_token: token });
+      s.tracking_token = token;
+    }
+    const trackingUrl = location.origin + '/track.html?token=' + token;
+    const msg         = _buildWAMessage(s, trackingUrl);
+    const customer    = _customers.find(c => c.id === s.customer_id);
+    const phone       = _fmtWAPhone(customer?.phone || '');
+    const url = phone
+      ? 'https://wa.me/' + phone + '?text=' + encodeURIComponent(msg)
+      : 'https://wa.me/?text='             + encodeURIComponent(msg);
+    window.open(url, '_blank');
+    if (btn) { btn.textContent = '\u062a\u0645 \u2705'; }
+    setTimeout(() => { if (btn) { btn.disabled = false; btn.textContent = '\u0648\u0627\u062a\u0633\u0627\u0628'; } }, 2500);
+  } catch(e) {
+    if (btn) { btn.disabled = false; btn.textContent = '\u0648\u0627\u062a\u0633\u0627\u0628'; }
+    toast('\u062e\u0637\u0623', 'error');
+  }
 }
 
-async function shareWhatsAppInternal(shipmentId, event) {
-  event.stopPropagation();
-  const s = _shipments.find(x => x.id === shipmentId);
-  if (!s) return;
-  const msg = _buildInternalWAMessage(s);
-  window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
-}
-
-window.generateTrackingLink  = generateTrackingLink;
-window.shareWhatsApp         = shareWhatsApp;
-window.shareWhatsAppInternal = shareWhatsAppInternal;
+window.sendWhatsApp = sendWhatsApp;
 
