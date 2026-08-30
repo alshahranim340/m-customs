@@ -4,6 +4,7 @@ import {
 } from '../../../../src/firebase/importDb.js';
 import { toast } from '../../app.js';
 import { getCurrentProfile } from '../../app.js';
+import { createTrackingLink, updateTrackingStatus } from '../../../../src/firebase/tracking.js';
 
 let _shipments = [];
 let _customers = [];
@@ -418,6 +419,13 @@ function _buildCard(s) {
           <button class="imp-btn primary" onclick="editImportShipment('${s.id}')">
             <i class="ti ti-edit"></i> تعديل
           </button>
+          <button class="imp-btn ghost" id="trk-btn-${s.id}" onclick="generateTrackingLink('${s.id}',event)">
+            🔗 رابط التتبع
+          </button>
+          <button class="imp-btn ghost" onclick="shareWhatsApp('${s.id}',event)">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="#25D366"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.124.554 4.118 1.524 5.847L.057 23.93l6.244-1.44A11.944 11.944 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 22c-1.848 0-3.574-.474-5.073-1.306l-.363-.214-3.762.867.902-3.663-.237-.379A9.96 9.96 0 012 12C2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z"/></svg>
+            واتساب
+          </button>
           <button class="imp-btn ghost" onclick="event.stopPropagation();toggleDelivery('${s.id}')">
             ▲ طي
           </button>
@@ -710,7 +718,13 @@ async function changeImportStatus(id, status) {
   try {
     await updateImportShipment(id, { status });
     const s = _shipments.find(x => x.id === id);
-    if (s) s.status = status;
+    if (s) {
+      s.status = status;
+      // مزامنة رابط التتبع
+      if (s.tracking_token) {
+        await updateTrackingStatus(s.tracking_token, { status });
+      }
+    }
     toast(`✅ ${IMPORT_STATUS[status]?.ar}`, 'success');
     _updateStats();
   } catch(e) {
@@ -841,3 +855,236 @@ function closeImportReport() {
 function printImportReport() {
   window.print();
 }
+
+/* ══════════════════════════════════════════════
+   رابط التتبع — إنشاء ومشاركة
+══════════════════════════════════════════════ */
+
+async function generateTrackingLink(shipmentId, event) {
+  event.stopPropagation();
+  const s   = _shipments.find(x => x.id === shipmentId);
+  if (!s) return;
+
+  const btn = document.getElementById(`trk-btn-${shipmentId}`);
+  if (btn) { btn.disabled = true; btn.textContent = '⏳'; }
+
+  try {
+    let token = s.tracking_token;
+
+    /* إنشاء token جديد إذا لم يكن موجوداً */
+    if (!token) {
+      token = await createTrackingLink(shipmentId, s);
+      await updateImportShipment(shipmentId, { tracking_token: token });
+      s.tracking_token = token;
+    }
+
+    const url = `${location.origin}/track.html?token=${token}`;
+
+    /* نسخ الرابط */
+    await navigator.clipboard.writeText(url);
+
+    /* عرض Modal الرابط */
+    _showTrackingModal(url, token, s);
+
+    if (btn) { btn.textContent = '✅ نُسخ'; }
+    setTimeout(() => { if (btn) { btn.disabled = false; btn.textContent = '🔗 رابط التتبع'; } }, 2500);
+
+  } catch(e) {
+    console.error(e);
+    toast('❌ خطأ في إنشاء الرابط', 'error');
+    if (btn) { btn.disabled = false; btn.textContent = '🔗 رابط التتبع'; }
+  }
+}
+
+function _getWALink(shipment, trackingUrl) {
+  const customer = _customers.find(c => c.id === shipment.customer_id);
+  const phone    = _fmtWAPhone(customer?.phone || '');
+  const msg      = _buildWAMessage(shipment, trackingUrl);
+  return phone
+    ? `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`
+    : `https://wa.me/?text=${encodeURIComponent(msg)}`;
+}
+
+function _showTrackingModal(url, token, shipment) {
+  /* إزالة أي modal تتبع قديم */
+  document.getElementById('trk-share-modal')?.remove();
+
+  const modal = document.createElement('div');
+  modal.id = 'trk-share-modal';
+  modal.style.cssText = `
+    position:fixed;inset:0;background:rgba(10,20,40,.6);z-index:2000;
+    display:flex;align-items:center;justify-content:center;padding:20px;
+    backdrop-filter:blur(3px);font-family:'Tajawal',sans-serif;
+  `;
+  modal.innerHTML = `
+    <div style="background:white;border-radius:16px;width:100%;max-width:460px;
+                overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.25);">
+
+      <!-- Header -->
+      <div style="background:linear-gradient(135deg,#0E1A2E,#1C2B48);padding:20px 22px;
+                  display:flex;align-items:center;justify-content:space-between;">
+        <div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:9px;
+                      color:#D4B266;letter-spacing:2px;font-weight:800;">TRACKING LINK</div>
+          <div style="font-size:16px;font-weight:900;color:white;margin-top:3px;">رابط تتبع الشحنة</div>
+        </div>
+        <button onclick="document.getElementById('trk-share-modal').remove()"
+          style="background:rgba(255,255,255,.1);border:none;color:white;width:30px;height:30px;
+          border-radius:8px;cursor:pointer;font-size:14px;">✕</button>
+      </div>
+
+      <div style="padding:22px;">
+
+        <!-- BL Info -->
+        <div style="background:#F5F3EC;border-radius:10px;padding:12px 16px;margin-bottom:16px;">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:#8A8578;
+                      letter-spacing:1.5px;font-weight:800;margin-bottom:4px;">SHIPMENT</div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:15px;font-weight:900;
+                      color:#0E1A2E;">${shipment.bl_number || '—'}</div>
+          <div style="font-size:12px;color:#6B6659;margin-top:2px;">${shipment.customer_name || ''}</div>
+        </div>
+
+        <!-- URL Box -->
+        <div style="border:1.5px solid #E8E5DC;border-radius:10px;padding:11px 14px;
+                    margin-bottom:14px;background:#FAFAF7;word-break:break-all;">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#6B6659;
+                      letter-spacing:1px;font-weight:800;margin-bottom:5px;">🔗 TRACKING URL</div>
+          <div style="font-size:12px;color:#1C4B8E;font-family:'JetBrains Mono',monospace;
+                      font-weight:600;">${url}</div>
+        </div>
+
+        <!-- Token -->
+        <div style="text-align:center;margin-bottom:18px;">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#8A8578;
+                      letter-spacing:1.5px;margin-bottom:4px;">TOKEN</div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:20px;font-weight:900;
+                      color:#1C4B8E;letter-spacing:4px;">${token.replace(/(.{4})/g,'$1 ').trim()}</div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div style="display:flex;gap:10px;">
+          <button onclick="_copyTrackingUrl('${url}',this)"
+            style="flex:1;padding:11px;border:1.5px solid #E8E5DC;border-radius:9px;
+            background:white;font-family:'Tajawal',sans-serif;font-size:13px;
+            font-weight:700;cursor:pointer;transition:all .15s;">
+            📋 نسخ الرابط
+          </button>
+          <a href="${_getWALink(shipment, url)}" target="_blank"
+            style="flex:1;padding:11px;background:#25D366;color:white;border-radius:9px;
+            font-family:'Tajawal',sans-serif;font-size:13px;font-weight:700;
+            text-decoration:none;display:flex;align-items:center;justify-content:center;gap:7px;">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="white">
+              <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/>
+              <path d="M12 0C5.373 0 0 5.373 0 12c0 2.124.554 4.118 1.524 5.847L.057 23.93l6.244-1.44A11.944 11.944 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 22c-1.848 0-3.574-.474-5.073-1.306l-.363-.214-3.762.867.902-3.663-.237-.379A9.96 9.96 0 012 12C2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z"/>
+            </svg>
+            واتساب
+          </a>
+        </div>
+
+        <div style="text-align:center;margin-top:12px;font-size:11px;color:#8A8578;">
+          ✅ تم نسخ الرابط تلقائياً
+        </div>
+      </div>
+    </div>`;
+
+  document.body.appendChild(modal);
+  modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+}
+
+window._copyTrackingUrl = async function(url, btn) {
+  await navigator.clipboard.writeText(url);
+  btn.textContent = '✅ تم النسخ';
+  setTimeout(() => btn.textContent = '📋 نسخ الرابط', 2000);
+};
+
+/* ══════════════════════════════════════════════
+   مشاركة واتساب مباشرة
+══════════════════════════════════════════════ */
+/* ── تنسيق رقم الهاتف لـ WhatsApp ── */
+function _fmtWAPhone(phone) {
+  if (!phone) return '';
+  let d = phone.replace(/\D/g, '');
+  if (d.startsWith('00966')) d = d.slice(2);
+  else if (d.startsWith('966'))  d = d;
+  else if (d.startsWith('05'))   d = '966' + d.slice(1);
+  else if (d.startsWith('5'))    d = '966' + d;
+  return d;
+}
+
+/* ── الرسالة الاحترافية ── */
+function _buildWAMessage(s, trackingUrl) {
+  const STATUS = {
+    waiting:   '🕐 قيد الانتظار',
+    clearance: '📋 قيد التخليص الجمركي',
+    customs:   '📋 قيد التخليص الجمركي',
+    delivered: '✅ تم التسليم',
+  };
+
+  const today  = new Date().toLocaleDateString('ar-SA', { year:'numeric', month:'long', day:'numeric' });
+  const status = STATUS[s.status] || s.status;
+  const eta    = s.eta ? new Date(s.eta).toLocaleDateString('ar-SA', { year:'numeric', month:'long', day:'numeric' }) : '—';
+
+  let msg = `السلام عليكم ورحمة الله وبركاته 🌿
+
+*شركة السديس للخدمات اللوجستية*
+نظام M-Customs للتخليص الجمركي
+
+━━━━━━━━━━━━━━━━━━━━
+📦 *تحديث حالة شحنتكم*
+━━━━━━━━━━━━━━━━━━━━
+
+• رقم البوليصة: *${s.bl_number || '—'}*
+• نوع الشحن: ${(s.type || '').toUpperCase()} | ${s.lcl_fcl || '—'}
+• المنفذ: ${s.port || '—'}
+• وقت الوصول المتوقع: *${eta}*
+• الحالة الحالية: *${status}*`;
+
+  if (s.customs_no) msg += `
+• رقم البيان الجمركي: *${s.customs_no}*`;
+  if (s.terminal)   msg += `
+• المحطة: ${s.terminal}`;
+
+  if (trackingUrl) {
+    msg += `
+
+━━━━━━━━━━━━━━━━━━━━
+🔗 *رابط التتبع المباشر:*
+${trackingUrl}
+
+يمكنكم متابعة آخر تحديثات شحنتكم عبر الرابط أعلاه في أي وقت.`;
+  }
+
+  msg += `
+
+بتاريخ: ${today}
+
+شكراً لثقتكم 🤝
+_فريق شركة السديس للخدمات اللوجستية_`;
+
+  return msg;
+}
+
+async function shareWhatsApp(shipmentId, event) {
+  event.stopPropagation();
+  const s = _shipments.find(x => x.id === shipmentId);
+  if (!s) return;
+
+  /* رقم العميل من قاعدة البيانات */
+  const customer   = _customers.find(c => c.id === s.customer_id);
+  const phone      = _fmtWAPhone(customer?.phone || '');
+
+  /* رابط التتبع إذا كان موجوداً */
+  const trackingUrl = s.tracking_token
+    ? `${location.origin}/track.html?token=${s.tracking_token}`
+    : null;
+
+  const msg = _buildWAMessage(s, trackingUrl);
+  const url = phone
+    ? `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`
+    : `https://wa.me/?text=${encodeURIComponent(msg)}`;
+
+  window.open(url, '_blank');
+}
+
+window.generateTrackingLink = generateTrackingLink;
+window.shareWhatsApp        = shareWhatsApp;
