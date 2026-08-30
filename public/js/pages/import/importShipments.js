@@ -422,9 +422,13 @@ function _buildCard(s) {
           <button class="imp-btn ghost" id="trk-btn-${s.id}" onclick="generateTrackingLink('${s.id}',event)">
             🔗 رابط التتبع
           </button>
-          <button class="imp-btn ghost" onclick="shareWhatsApp('${s.id}',event)">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="#25D366"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.124.554 4.118 1.524 5.847L.057 23.93l6.244-1.44A11.944 11.944 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 22c-1.848 0-3.574-.474-5.073-1.306l-.363-.214-3.762.867.902-3.663-.237-.379A9.96 9.96 0 012 12C2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z"/></svg>
-            واتساب
+          <button class="imp-btn ghost" onclick="shareWhatsApp('${s.id}',event)"
+            style="background:#E7F9ED;color:#128C7E;border-color:#b2dfdb;">
+            🟢 واتساب عميل
+          </button>
+          <button class="imp-btn ghost" onclick="shareWhatsAppInternal('${s.id}',event)"
+            style="background:#EEF2FF;color:#1C4B8E;border-color:#c7d2fe;">
+            🔵 واتساب داخلي
           </button>
           <button class="imp-btn ghost" onclick="event.stopPropagation();toggleDelivery('${s.id}')">
             ▲ طي
@@ -1013,78 +1017,66 @@ function _fmtWAPhone(phone) {
 
 /* ── الرسالة الاحترافية ── */
 function _buildWAMessage(s, trackingUrl) {
-  const STATUS = {
-    waiting:   '🕐 قيد الانتظار',
-    clearance: '📋 قيد التخليص الجمركي',
-    customs:   '📋 قيد التخليص الجمركي',
-    delivered: '✅ تم التسليم',
-  };
-
-  const today  = new Date().toLocaleDateString('ar-SA', { year:'numeric', month:'long', day:'numeric' });
-  const status = STATUS[s.status] || s.status;
-  const eta    = s.eta ? new Date(s.eta).toLocaleDateString('ar-SA', { year:'numeric', month:'long', day:'numeric' }) : '—';
-
-  let msg = `السلام عليكم ورحمة الله وبركاته 🌿
-
-*شركة السديس للخدمات اللوجستية*
-نظام M-Customs للتخليص الجمركي
-
-━━━━━━━━━━━━━━━━━━━━
-📦 *تحديث حالة شحنتكم*
-━━━━━━━━━━━━━━━━━━━━
-
-• رقم البوليصة: *${s.bl_number || '—'}*
-• نوع الشحن: ${(s.type || '').toUpperCase()} | ${s.lcl_fcl || '—'}
-• المنفذ: ${s.port || '—'}
-• وقت الوصول المتوقع: *${eta}*
-• الحالة الحالية: *${status}*`;
-
-  if (s.customs_no) msg += `
-• رقم البيان الجمركي: *${s.customs_no}*`;
-  if (s.terminal)   msg += `
-• المحطة: ${s.terminal}`;
-
+  var ltr   = '\u200E';
+  var today = new Date().toLocaleDateString('ar-SA',{year:'numeric',month:'long',day:'numeric'});
+  var eta   = s.eta ? new Date(s.eta).toLocaleDateString('ar-SA',{year:'numeric',month:'long',day:'numeric'}) : '-';
+  var ST    = {waiting:'\u0642\u064a\u062f \u0627\u0644\u0627\u0646\u062a\u0638\u0627\u0631',clearance:'\u0642\u064a\u062f \u0627\u0644\u062a\u062e\u0644\u064a\u0635',customs:'\u0642\u064a\u062f \u0627\u0644\u062a\u062e\u0644\u064a\u0635',delivered:'\u062a\u0645 \u0627\u0644\u062a\u0633\u0644\u064a\u0645 ✅'};
+  var m =
+    '\u0627\u0644\u0633\u0644\u0627\u0645 \u0639\u0644\u064a\u0643\u0645 \u0648\u0631\u062d\u0645\u0629 \u0627\u0644\u0644\u0647 \u0648\u0628\u0631\u0643\u0627\u062a\u0647\n\n' +
+    '*\u0634\u0631\u0643\u0629 \u0627\u0644\u0633\u062f\u064a\u0633 \u0644\u0644\u062e\u062f\u0645\u0627\u062a \u0627\u0644\u0644\u0648\u062c\u0633\u062a\u064a\u0629*\n' +
+    '_\u0646\u0638\u0627\u0645 M-Customs \u0644\u0644\u062a\u062e\u0644\u064a\u0635 \u0627\u0644\u062c\u0645\u0631\u0643\u064a_\n\n' +
+    '📦 *\u062a\u062d\u062f\u064a\u062b \u062d\u0627\u0644\u0629 \u0634\u062d\u0646\u062a\u0643\u0645*\n\n' +
+    '🔢 \u0631\u0642\u0645 \u0627\u0644\u0628\u0648\u0644\u064a\u0635\u0629: *' + ltr + (s.bl_number||'-') + '*\n' +
+    '📍 \u0627\u0644\u0645\u0646\u0641\u0630: ' + (s.port||'-') + '  |  ' + ltr + (s.lcl_fcl||'') + '\n' +
+    '📅 \u0648\u0642\u062a \u0627\u0644\u0648\u0635\u0648\u0644: *' + eta + '*\n' +
+    '📌 \u0627\u0644\u062d\u0627\u0644\u0629: *' + (ST[s.status]||s.status) + '*';
+  if (s.customs_no) m += '\n🔖 \u0631\u0642\u0645 \u0627\u0644\u0628\u064a\u0627\u0646: *' + ltr + s.customs_no + '*';
+  if (s.terminal)   m += '\n\u0627\u0644\u0645\u062d\u0637\u0629: ' + s.terminal;
   if (trackingUrl) {
-    msg += `
-
-━━━━━━━━━━━━━━━━━━━━
-🔗 *رابط التتبع المباشر:*
-${trackingUrl}
-
-يمكنكم متابعة آخر تحديثات شحنتكم عبر الرابط أعلاه في أي وقت.`;
+    m += '\n\n🔗 *\u0631\u0627\u0628\u0637 \u062a\u062a\u0628\u0639 \u0634\u062d\u0646\u062a\u0643\u0645:*\n' + ltr + trackingUrl +
+         '\n_\u064a\u062a\u062d\u062f\u062b \u062a\u0644\u0642\u0627\u0626\u064a\u0627\u064b \u0645\u0639 \u0643\u0644 \u062a\u063a\u064a\u064a\u0631_';
   }
+  m += '\n\n📆 \u0628\u062a\u0627\u0631\u064a\u062e: ' + today +
+       '\n\u0634\u0643\u0631\u0627\u064b \u0644\u062b\u0642\u062a\u0643\u0645 🤝\n_\u0641\u0631\u064a\u0642 \u0627\u0644\u0633\u062f\u064a\u0633 \u0644\u0644\u062e\u062f\u0645\u0627\u062a \u0627\u0644\u0644\u0648\u062c\u0633\u062a\u064a\u0629_';
+  return m;
+}
 
-  msg += `
-
-بتاريخ: ${today}
-
-شكراً لثقتكم 🤝
-_فريق شركة السديس للخدمات اللوجستية_`;
-
-  return msg;
+function _buildInternalWAMessage(s) {
+  var ltr   = '\u200E';
+  var today = new Date().toLocaleDateString('ar-SA',{year:'numeric',month:'long',day:'numeric'});
+  var m = '*M-Customs - \u0645\u0631\u062c\u0639 \u062f\u0627\u062e\u0644\u064a* 🔒\n\n' +
+    '📦 *' + ltr + (s.bl_number||'-') + '*\n' +
+    '\u0627\u0644\u0639\u0645\u064a\u0644: ' + (s.customer_name||'-') + '\n' +
+    '📍 ' + (s.port||'-') + ' | ' + ltr + (s.lcl_fcl||'-') + '\n' +
+    '📅 ETA: ' + (s.eta||'-') + '\n' +
+    '\u0627\u0644\u062d\u0627\u0644\u0629: ' + (s.status||'-');
+  if (s.customs_no) m += '\n🔖 ' + ltr + s.customs_no;
+  m += '\n\n🌐 \u0627\u0644\u0646\u0638\u0627\u0645:\nhttps://m-customs.web.app' +
+       '\n\n📆 ' + today + '\n_M-Customs_';
+  return m;
 }
 
 async function shareWhatsApp(shipmentId, event) {
   event.stopPropagation();
   const s = _shipments.find(x => x.id === shipmentId);
   if (!s) return;
-
-  /* رقم العميل من قاعدة البيانات */
-  const customer   = _customers.find(c => c.id === s.customer_id);
-  const phone      = _fmtWAPhone(customer?.phone || '');
-
-  /* رابط التتبع إذا كان موجوداً */
-  const trackingUrl = s.tracking_token
-    ? `${location.origin}/track.html?token=${s.tracking_token}`
-    : null;
-
+  const customer    = _customers.find(c => c.id === s.customer_id);
+  const phone       = _fmtWAPhone(customer?.phone || '');
+  const trackingUrl = s.tracking_token ? `${location.origin}/track.html?token=${s.tracking_token}` : null;
   const msg = _buildWAMessage(s, trackingUrl);
-  const url = phone
-    ? `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`
-    : `https://wa.me/?text=${encodeURIComponent(msg)}`;
-
+  const url = phone ? `https://wa.me/${phone}?text=${encodeURIComponent(msg)}` : `https://wa.me/?text=${encodeURIComponent(msg)}`;
   window.open(url, '_blank');
 }
 
-window.generateTrackingLink = generateTrackingLink;
-window.shareWhatsApp        = shareWhatsApp;
+async function shareWhatsAppInternal(shipmentId, event) {
+  event.stopPropagation();
+  const s = _shipments.find(x => x.id === shipmentId);
+  if (!s) return;
+  const msg = _buildInternalWAMessage(s);
+  window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
+}
+
+window.generateTrackingLink  = generateTrackingLink;
+window.shareWhatsApp         = shareWhatsApp;
+window.shareWhatsAppInternal = shareWhatsAppInternal;
+
