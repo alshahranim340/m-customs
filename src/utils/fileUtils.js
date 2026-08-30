@@ -17,9 +17,12 @@ export function fileToBase64(file) {
 
 /**
  * Convert Base64 string back to Uint8Array for pdf-lib
+ * يدعم الملفات الكبيرة ويتجاهل المسافات الزائدة
  */
 export function base64ToUint8Array(base64) {
-  const binary = atob(base64);
+  const clean  = base64.replace(/[\s\r\n]/g, '');
+  const padded = clean + '='.repeat((4 - clean.length % 4) % 4);
+  const binary = atob(padded);
   const bytes  = new Uint8Array(binary.length);
   for (let i = 0; i < binary.length; i++) {
     bytes[i] = binary.charCodeAt(i);
@@ -95,7 +98,10 @@ export async function mergePDFs(pdfSources) {
   const { PDFDocument } = window.PDFLib;
   const merged = await PDFDocument.create();
 
-  for (const source of pdfSources) {
+  let totalPages = 0;
+
+  for (let i = 0; i < pdfSources.length; i++) {
+    const source = pdfSources[i];
     if (!source?.data) continue;
     try {
       let bytes;
@@ -104,14 +110,25 @@ export async function mergePDFs(pdfSources) {
       } else {
         bytes = new Uint8Array(source.data);
       }
-      const pdf  = await PDFDocument.load(bytes, { ignoreEncryption: true });
-      const pages = await merged.copyPages(pdf, pdf.getPageIndices());
+
+      // تحميل PDF مع تجاهل التشفير وإزالة XFA
+      const pdf = await PDFDocument.load(bytes, {
+        ignoreEncryption: true,
+        throwOnInvalidObject: false,
+      });
+
+      const indices = pdf.getPageIndices(); // جميع الصفحات بلا حد
+      const pages   = await merged.copyPages(pdf, indices);
       pages.forEach(p => merged.addPage(p));
+      totalPages += indices.length;
+
+      console.log(`[mergePDFs] ملف ${i + 1}: ${indices.length} صفحة (الإجمالي: ${totalPages})`);
     } catch(e) {
-      console.warn('Skipped a PDF due to error:', e.message);
+      console.warn(`[mergePDFs] تخطّي ملف ${i + 1} بسبب:`, e.message);
     }
   }
 
+  console.log(`[mergePDFs] ✔ تم دمج ${totalPages} صفحة بدون حد`);
   return await merged.save();
 }
 

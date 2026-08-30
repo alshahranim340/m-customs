@@ -18,6 +18,7 @@ export const ATTACHMENTS_ORDER = [
   { key: 'analysis_cert',  ar: 'شهادة تحليل العينة',          required: false },
   { key: 'saudi_clearance',ar: 'بيان فسح سعودي',              required: true  },
   { key: 'driver_docs',    ar: 'بيانات السائق',                required: true  },
-  { key: 'broker_reply',   ar: 'رد المخلص',                   required: false },
+  { key: 'broker_reply',   ar: 'رد المخلص 1',                  required: false },
+  { key: 'broker_reply_2', ar: 'رد المخلص 2',                  required: false },
   { key: 'appointment',    ar: 'وثيقة الموعد',                 required: false },
 ];
