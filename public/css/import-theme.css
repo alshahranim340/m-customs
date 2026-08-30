@@ -1,0 +1,533 @@
+/*
+ * import-theme.css — M-Customs
+ * تصميم احترافي لجميع صفحات قسم الوارد
+ * المسار: public/css/import-theme.css
+ *
+ * مُقيَّد بـ .imp-page حتى لا يؤثر على باقي الأقسام
+ */
+
+/* ══════════════════════════════════════════════
+   1. الهيدر الرئيسي
+══════════════════════════════════════════════ */
+.imp-page .modern-page {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+}
+
+.imp-page .modern-header {
+  background: linear-gradient(135deg, #0E1A2E 0%, #1C2B48 60%, #0E1A2E 100%) !important;
+  border-radius: 14px !important;
+  padding: 22px 28px !important;
+  margin-bottom: 16px !important;
+  border: none !important;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.2) !important;
+  position: relative;
+  overflow: hidden;
+}
+
+/* تأثير الضوء خلف الهيدر */
+.imp-page .modern-header::before {
+  content: '';
+  position: absolute;
+  top: -40px; right: -40px;
+  width: 180px; height: 180px;
+  background: radial-gradient(circle, rgba(212,178,102,0.12) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.imp-page .modern-header-code {
+  font-family: 'JetBrains Mono', monospace !important;
+  font-size: 9px !important;
+  letter-spacing: 2.5px !important;
+  color: #D4B266 !important;
+  font-weight: 800 !important;
+}
+
+.imp-page .modern-header-dots {
+  display: inline-flex;
+  gap: 5px;
+  align-items: center;
+  margin-left: 10px;
+}
+
+.imp-page .modern-header-title {
+  font-size: 22px !important;
+  font-weight: 900 !important;
+  color: #FFFFFF !important;
+  margin-top: 5px !important;
+  letter-spacing: 0.3px !important;
+}
+
+.imp-page .modern-header-sub {
+  font-family: 'JetBrains Mono', monospace !important;
+  font-size: 10px !important;
+  color: rgba(255,255,255,0.45) !important;
+  margin-top: 4px !important;
+  letter-spacing: 0.8px !important;
+}
+
+/* ══════════════════════════════════════════════
+   2. أزرار الهيدر
+══════════════════════════════════════════════ */
+.imp-page .modern-btn {
+  background: rgba(255,255,255,0.08) !important;
+  color: rgba(255,255,255,0.85) !important;
+  border: 1px solid rgba(255,255,255,0.15) !important;
+  padding: 9px 18px !important;
+  border-radius: 9px !important;
+  font-family: 'Tajawal', sans-serif !important;
+  font-size: 12px !important;
+  font-weight: 700 !important;
+  cursor: pointer !important;
+  transition: all 0.2s !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 7px !important;
+}
+.imp-page .modern-btn:hover {
+  background: rgba(255,255,255,0.16) !important;
+  border-color: rgba(255,255,255,0.3) !important;
+}
+
+.imp-page .modern-btn-primary {
+  background: #D4B266 !important;
+  color: #0E1A2E !important;
+  border-color: #D4B266 !important;
+}
+.imp-page .modern-btn-primary:hover {
+  background: #C8A84E !important;
+}
+
+/* ══════════════════════════════════════════════
+   3. KPI / Stats Cards
+══════════════════════════════════════════════ */
+.imp-page .modern-stats,
+.imp-page .modern-stats-4,
+.imp-page .modern-stats-3 {
+  display: grid !important;
+  gap: 12px !important;
+  margin-bottom: 14px !important;
+  border: none !important;
+}
+
+.imp-page .modern-stats-4 { grid-template-columns: repeat(4, 1fr) !important; }
+.imp-page .modern-stats-3 { grid-template-columns: repeat(3, 1fr) !important; }
+
+.imp-page .modern-stat {
+  background: white !important;
+  border: 1px solid #E8E5DC !important;
+  border-radius: 12px !important;
+  padding: 18px 20px !important;
+  transition: transform 0.2s, box-shadow 0.2s !important;
+  position: relative !important;
+  overflow: hidden !important;
+}
+.imp-page .modern-stat:hover {
+  transform: translateY(-2px) !important;
+  box-shadow: 0 6px 20px rgba(28,75,142,0.10) !important;
+}
+
+.imp-page .modern-stat-lbl {
+  font-family: 'JetBrains Mono', monospace !important;
+  font-size: 9px !important;
+  color: #8A8578 !important;
+  letter-spacing: 1.5px !important;
+  font-weight: 800 !important;
+  margin-bottom: 8px !important;
+}
+
+.imp-page .modern-stat-val {
+  font-family: 'JetBrains Mono', monospace !important;
+  font-size: 36px !important;
+  font-weight: 900 !important;
+  color: #0E1A2E !important;
+  line-height: 1 !important;
+}
+.imp-page .modern-stat-val.amber { color: #C8943A !important; }
+.imp-page .modern-stat-val.blue  { color: #1C4B8E !important; }
+.imp-page .modern-stat-val.green { color: #2E8B57 !important; }
+.imp-page .modern-stat-val.danger { color: #CC2229 !important; }
+
+.imp-page .modern-stat-hint {
+  font-size: 11px !important;
+  color: #8A8578 !important;
+  margin-top: 6px !important;
+  font-weight: 600 !important;
+}
+
+/* ══════════════════════════════════════════════
+   4. شريط البحث
+══════════════════════════════════════════════ */
+.imp-page .modern-search-bar {
+  background: white !important;
+  border: 1px solid #E8E5DC !important;
+  border-radius: 10px !important;
+  padding: 10px 16px !important;
+  margin: 0 0 12px !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 12px !important;
+  transition: box-shadow 0.2s !important;
+}
+.imp-page .modern-search-bar:focus-within {
+  box-shadow: 0 0 0 3px rgba(28,75,142,0.1) !important;
+  border-color: #1C4B8E !important;
+}
+
+.imp-page .modern-search-input {
+  border: none !important;
+  outline: none !important;
+  background: transparent !important;
+  font-family: 'Tajawal', sans-serif !important;
+  font-size: 13px !important;
+  color: #0E1A2E !important;
+  width: 100% !important;
+}
+
+.imp-page .modern-search-icon {
+  color: #8A8578 !important;
+  font-size: 16px !important;
+}
+
+/* ══════════════════════════════════════════════
+   5. صفوف القوائم (modern-row)
+══════════════════════════════════════════════ */
+.imp-page .modern-list-box {
+  background: white !important;
+  border: 1px solid #E8E5DC !important;
+  border-radius: 12px !important;
+  overflow: hidden !important;
+}
+
+.imp-page .modern-row {
+  display: grid !important;
+  align-items: center !important;
+  padding: 12px 16px !important;
+  border-bottom: 1px solid #F5F3EC !important;
+  transition: background 0.15s !important;
+  gap: 12px !important;
+}
+.imp-page .modern-row:last-child { border-bottom: none !important; }
+.imp-page .modern-row:hover { background: #FAFAF7 !important; }
+
+.imp-page .modern-row-stripe {
+  width: 3px !important;
+  height: 36px !important;
+  border-radius: 3px !important;
+  flex-shrink: 0 !important;
+}
+.imp-page .modern-row-stripe.blue   { background: #1C4B8E !important; }
+.imp-page .modern-row-stripe.green  { background: #2E8B57 !important; }
+.imp-page .modern-row-stripe.amber  { background: #C8943A !important; }
+.imp-page .modern-row-stripe.gray   { background: #9CA3AF !important; }
+.imp-page .modern-row-stripe.red    { background: #CC2229 !important; }
+
+.imp-page .modern-row-code {
+  font-family: 'JetBrains Mono', monospace !important;
+  font-size: 11px !important;
+  font-weight: 900 !important;
+  color: #1C4B8E !important;
+  letter-spacing: 0.3px !important;
+}
+
+.imp-page .modern-row-title {
+  font-size: 13px !important;
+  font-weight: 700 !important;
+  color: #0E1A2E !important;
+}
+
+.imp-page .modern-row-sub {
+  font-size: 11px !important;
+  color: #8A8578 !important;
+  margin-top: 2px !important;
+}
+
+.imp-page .modern-row-date {
+  font-family: 'JetBrains Mono', monospace !important;
+  font-size: 10px !important;
+  color: #6B6659 !important;
+  white-space: nowrap !important;
+}
+
+/* ══════════════════════════════════════════════
+   6. Badges
+══════════════════════════════════════════════ */
+.imp-page .modern-badge {
+  padding: 4px 10px !important;
+  border-radius: 20px !important;
+  font-size: 10px !important;
+  font-weight: 800 !important;
+  font-family: 'JetBrains Mono', monospace !important;
+  white-space: nowrap !important;
+  letter-spacing: 0.3px !important;
+}
+.imp-page .modern-badge.green { background: #E7F5EE !important; color: #1a7a50 !important; }
+.imp-page .modern-badge.blue  { background: #EEF2FF !important; color: #1C4B8E !important; }
+.imp-page .modern-badge.amber { background: #FEF3E2 !important; color: #C8943A !important; }
+.imp-page .modern-badge.gray  { background: #F3F4F6 !important; color: #4B5563 !important; }
+.imp-page .modern-badge.red   { background: #FEEBEB !important; color: #CC2229 !important; }
+
+/* ══════════════════════════════════════════════
+   7. أزرار الأيقونات
+══════════════════════════════════════════════ */
+.imp-page .modern-icon-btn {
+  width: 32px !important;
+  height: 32px !important;
+  border-radius: 8px !important;
+  border: 1px solid #E8E5DC !important;
+  background: white !important;
+  color: #4A4540 !important;
+  cursor: pointer !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-size: 14px !important;
+  transition: all 0.15s !important;
+}
+.imp-page .modern-icon-btn:hover {
+  background: #F5F3EC !important;
+  border-color: #1C4B8E !important;
+  color: #1C4B8E !important;
+}
+.imp-page .modern-icon-btn.danger:hover {
+  background: #FEEBEB !important;
+  border-color: #CC2229 !important;
+  color: #CC2229 !important;
+}
+
+/* ══════════════════════════════════════════════
+   8. عناوين الأقسام
+══════════════════════════════════════════════ */
+.imp-page .modern-section-title {
+  font-family: 'JetBrains Mono', monospace !important;
+  font-size: 10px !important;
+  font-weight: 900 !important;
+  color: #4A4540 !important;
+  letter-spacing: 1.5px !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+  padding: 6px 0 !important;
+  margin-bottom: 8px !important;
+}
+.imp-page .modern-section-title .divider {
+  flex: 1 !important;
+  height: 1px !important;
+  background: #E8E5DC !important;
+}
+.imp-page .modern-section-title .count {
+  font-size: 10px !important;
+  font-weight: 900 !important;
+  color: #8A8578 !important;
+}
+
+/* ══════════════════════════════════════════════
+   9. حالة فارغة
+══════════════════════════════════════════════ */
+.imp-page .modern-empty {
+  text-align: center !important;
+  padding: 48px 24px !important;
+  color: #8A8578 !important;
+}
+.imp-page .modern-empty-icon { font-size: 36px !important; margin-bottom: 12px !important; }
+.imp-page .modern-empty-title { font-weight: 700 !important; font-size: 15px !important; }
+.imp-page .modern-empty-sub {
+  font-family: 'JetBrains Mono', monospace !important;
+  font-size: 10px !important;
+  letter-spacing: 1px !important;
+  margin-top: 4px !important;
+}
+
+/* ══════════════════════════════════════════════
+   10. Calendar
+══════════════════════════════════════════════ */
+.imp-page .cal-grid {
+  display: grid !important;
+  grid-template-columns: repeat(7, 1fr) !important;
+  gap: 2px !important;
+}
+.imp-page .cal-grid-head {
+  display: grid !important;
+  grid-template-columns: repeat(7, 1fr) !important;
+  gap: 2px !important;
+  margin-bottom: 4px !important;
+}
+.imp-page .cal-head-cell {
+  text-align: center !important;
+  font-family: 'JetBrains Mono', monospace !important;
+  font-size: 9px !important;
+  font-weight: 800 !important;
+  color: #8A8578 !important;
+  letter-spacing: 0.5px !important;
+  padding: 6px 0 !important;
+}
+.imp-page .cal-cell {
+  min-height: 72px !important;
+  padding: 4px !important;
+  border-radius: 6px !important;
+  border: 1px solid transparent !important;
+  transition: background 0.15s !important;
+}
+.imp-page .cal-cell:hover { background: #F5F3EC !important; }
+.imp-page .cal-today { background: #EEF2FF !important; border-color: #1C4B8E !important; }
+.imp-page .cal-past-ships { background: #FFF9F0 !important; }
+.imp-page .cal-day-num {
+  font-family: 'JetBrains Mono', monospace !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  color: #4A4540 !important;
+  margin-bottom: 3px !important;
+}
+.imp-page .cal-today-num { color: #1C4B8E !important; font-weight: 900 !important; }
+.imp-page .cal-ship-chip {
+  font-family: 'JetBrains Mono', monospace !important;
+  font-size: 8px !important;
+  font-weight: 800 !important;
+  padding: 2px 5px !important;
+  border-radius: 3px !important;
+  margin-top: 2px !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  max-width: 100% !important;
+  display: block !important;
+}
+.imp-page .cal-chip-active { background: #EEF2FF; color: #1C4B8E !important; }
+.imp-page .cal-chip-late   { background: #FEEBEB; color: #CC2229 !important; }
+.imp-page .cal-chip-done   { background: #E7F5EE; color: #2E8B57 !important; }
+
+/* ══════════════════════════════════════════════
+   11. Modal
+══════════════════════════════════════════════ */
+.modal-overlay .modal-box {
+  border-radius: 16px !important;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.2) !important;
+}
+.modal-overlay .modal-title {
+  font-size: 16px !important;
+  font-weight: 900 !important;
+  color: #0E1A2E !important;
+  padding: 20px 22px 14px !important;
+  border-bottom: 1.5px solid #F0EDE4 !important;
+  margin: 0 !important;
+  font-family: 'Tajawal', sans-serif !important;
+}
+.modal-overlay .modal-actions {
+  padding: 14px 22px 20px !important;
+  border-top: 1px solid #F0EDE4 !important;
+  display: flex !important;
+  gap: 10px !important;
+  justify-content: flex-end !important;
+  margin-top: 4px !important;
+}
+.modal-overlay .field {
+  padding: 0 22px !important;
+  margin-bottom: 12px !important;
+}
+.modal-overlay .field label {
+  display: block !important;
+  font-size: 11px !important;
+  font-weight: 800 !important;
+  color: #1C4B8E !important;
+  letter-spacing: 0.5px !important;
+  font-family: 'JetBrains Mono', monospace !important;
+  margin-bottom: 5px !important;
+}
+.modal-overlay .field input,
+.modal-overlay .field select,
+.modal-overlay .field textarea {
+  width: 100% !important;
+  padding: 9px 12px !important;
+  border: 1.5px solid #E8E5DC !important;
+  border-radius: 8px !important;
+  font-family: 'Tajawal', sans-serif !important;
+  font-size: 13px !important;
+  outline: none !important;
+  background: #FAFAF7 !important;
+  transition: border-color 0.2s !important;
+  box-sizing: border-box !important;
+}
+.modal-overlay .field input:focus,
+.modal-overlay .field select:focus,
+.modal-overlay .field textarea:focus {
+  border-color: #1C4B8E !important;
+  background: white !important;
+}
+
+/* ══════════════════════════════════════════════
+   12. Buttons
+══════════════════════════════════════════════ */
+.modal-overlay .btn {
+  padding: 9px 20px !important;
+  border-radius: 9px !important;
+  font-family: 'Tajawal', sans-serif !important;
+  font-size: 13px !important;
+  font-weight: 700 !important;
+  cursor: pointer !important;
+  border: none !important;
+  transition: all 0.18s !important;
+}
+.modal-overlay .btn-primary {
+  background: #1C4B8E !important;
+  color: white !important;
+}
+.modal-overlay .btn-primary:hover { background: #163B6E !important; }
+.modal-overlay .btn-ghost {
+  background: #F5F3EC !important;
+  color: #4A4540 !important;
+  border: 1px solid #E8E5DC !important;
+}
+.modal-overlay .btn-ghost:hover { background: #E8E5DC !important; }
+
+/* ══════════════════════════════════════════════
+   13. Spinner تحميل
+══════════════════════════════════════════════ */
+.imp-page .loader {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 60px !important;
+}
+.imp-page .spinner {
+  width: 32px !important;
+  height: 32px !important;
+  border: 3px solid rgba(28,75,142,0.12) !important;
+  border-top-color: #1C4B8E !important;
+  border-radius: 50% !important;
+  animation: impSpin 0.7s linear infinite !important;
+}
+@keyframes impSpin { to { transform: rotate(360deg); } }
+
+/* ══════════════════════════════════════════════
+   14. مجلدات الشحن (للصادر)
+══════════════════════════════════════════════ */
+.imp-page .modern-folder-card {
+  border-radius: 10px !important;
+  border: 1px solid #E8E5DC !important;
+  padding: 16px !important;
+  transition: all 0.2s !important;
+}
+.imp-page .modern-folder-card:hover {
+  box-shadow: 0 4px 14px rgba(28,75,142,0.1) !important;
+  border-color: #1C4B8E !important;
+}
+
+/* ══════════════════════════════════════════════
+   15. Responsive
+══════════════════════════════════════════════ */
+@media (max-width: 768px) {
+  .imp-page .modern-stats-4 { grid-template-columns: repeat(2, 1fr) !important; }
+  .imp-page .modern-stats-3 { grid-template-columns: repeat(2, 1fr) !important; }
+  .imp-page .modern-stat-val { font-size: 28px !important; }
+  .imp-page .modern-header { padding: 16px 18px !important; }
+  .imp-page .modern-header-title { font-size: 18px !important; }
+  .imp-page .cal-grid,
+  .imp-page .cal-grid-head { gap: 1px !important; }
+  .imp-page .cal-cell { min-height: 50px !important; }
+}
+
+@media (max-width: 480px) {
+  .imp-page .modern-stats-4,
+  .imp-page .modern-stats-3 { grid-template-columns: 1fr 1fr !important; }
+}
