@@ -266,6 +266,203 @@
     }
   `;
 
+  /* CSS إضافي — كروت الشحنات على الجوال */
+  const CSS_CARDS = `
+    @media (max-width: 768px) {
+
+      /* ── الصندوق الخارجي ── */
+      .modern-list-box {
+        padding: 8px !important;
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 8px !important;
+      }
+
+      /* ── كل صف يصبح كرت ── */
+      .modern-row {
+        display: grid !important;
+        grid-template-columns: 4px 1fr !important;
+        grid-template-rows: auto auto auto auto !important;
+        grid-template-areas:
+          "stripe top"
+          "stripe info"
+          "stripe dest"
+          "stripe actions" !important;
+        padding: 0 !important;
+        border-radius: 12px !important;
+        border: 1px solid #E8E5DC !important;
+        background: white !important;
+        overflow: hidden !important;
+        gap: 0 !important;
+        box-shadow: 0 1px 4px rgba(0,0,0,0.05) !important;
+      }
+
+      /* ── checkbox ── */
+      .modern-row-check {
+        display: none !important;
+      }
+
+      /* ── الشريط الجانبي ── */
+      .modern-row-stripe {
+        grid-area: stripe !important;
+        width: 4px !important;
+        min-height: 100% !important;
+        border-radius: 0 !important;
+        margin: 0 !important;
+      }
+      .modern-row-stripe.green  { background: #2E8B57 !important; }
+      .modern-row-stripe.blue   { background: #1C4B8E !important; }
+      .modern-row-stripe.amber  { background: #C8943A !important; }
+      .modern-row-stripe.gray   { background: #9CA3AF !important; }
+      .modern-row-stripe.red    { background: #CC2229 !important; }
+
+      /* ── السطر الأول: رقم البيان + الحالة ── */
+      .modern-row-code {
+        grid-area: top !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: space-between !important;
+        padding: 10px 12px 4px !important;
+        font-family: 'JetBrains Mono', monospace !important;
+        font-size: 12px !important;
+        font-weight: 900 !important;
+        color: #0E1A2E !important;
+        letter-spacing: 0.3px !important;
+      }
+
+      /* نقل الـ badge بجانب الكود */
+      .modern-row-code + .modern-row-body + .modern-badge,
+      .modern-row .modern-badge {
+        display: inline-flex !important;
+        position: static !important;
+        margin: 0 !important;
+      }
+
+      /* ── الجسم: الاسم واللوحة ── */
+      .modern-row-body {
+        grid-area: info !important;
+        padding: 2px 12px 4px !important;
+      }
+      .modern-row-title {
+        font-size: 14px !important;
+        font-weight: 800 !important;
+        color: #0E1A2E !important;
+        display: flex !important;
+        flex-wrap: wrap !important;
+        align-items: center !important;
+        gap: 6px !important;
+        line-height: 1.4 !important;
+      }
+      .modern-row-title .muted {
+        font-size: 12px !important;
+        font-weight: 500 !important;
+        color: #6B6659 !important;
+        white-space: nowrap !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+        max-width: 160px !important;
+      }
+      .modern-row-plate {
+        background: #F0EDE4 !important;
+        color: #0E1A2E !important;
+        font-family: 'JetBrains Mono', monospace !important;
+        font-size: 10px !important;
+        font-weight: 900 !important;
+        padding: 2px 7px !important;
+        border-radius: 4px !important;
+        letter-spacing: 0.5px !important;
+        white-space: nowrap !important;
+      }
+      .modern-row-sub {
+        font-size: 11px !important;
+        color: #8A8578 !important;
+        margin-top: 3px !important;
+        white-space: nowrap !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+      }
+
+      /* ── التاريخ يظهر في نفس سطر الوجهة ── */
+      .modern-row-date {
+        grid-area: dest !important;
+        padding: 0 12px 8px !important;
+        font-size: 10px !important;
+        font-family: 'JetBrains Mono', monospace !important;
+        color: #8A8578 !important;
+        font-weight: 700 !important;
+      }
+
+      /* ── الإجراءات ── */
+      .modern-row-actions {
+        grid-area: actions !important;
+        display: flex !important;
+        gap: 6px !important;
+        padding: 8px 12px !important;
+        border-top: 1px solid #F5F3EC !important;
+        background: #FAFAF7 !important;
+        flex-wrap: wrap !important;
+        align-items: center !important;
+      }
+      .modern-icon-btn {
+        width: 34px !important;
+        height: 34px !important;
+        border-radius: 8px !important;
+        font-size: 14px !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+      }
+
+      /* رابط فسح — أصغر على الجوال */
+      .modern-row-actions a[href*="fasah"] {
+        font-size: 10px !important;
+        padding: 6px 10px !important;
+        border-radius: 6px !important;
+      }
+
+      /* ── كروت المجلدات ── */
+      .modern-folders-grid {
+        display: grid !important;
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 8px !important;
+        padding: 8px !important;
+      }
+      .modern-folder-card {
+        border-radius: 10px !important;
+        padding: 12px !important;
+      }
+      .modern-folder-name {
+        font-size: 13px !important;
+      }
+
+      /* ── عنوان القسم ── */
+      .modern-section-title {
+        font-size: 10px !important;
+        padding: 8px 12px !important;
+      }
+
+      /* ── الـ badge تُوضع مع الـ code في نفس السطر ── */
+      .modern-row {
+        position: relative !important;
+      }
+      .modern-row .modern-badge {
+        position: absolute !important;
+        top: 10px !important;
+        left: 12px !important;
+        right: auto !important;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .modern-row-title .muted {
+        max-width: 120px !important;
+      }
+      .modern-folders-grid {
+        grid-template-columns: 1fr !important;
+      }
+    }
+  `;
+
   /* ══════════════════════════════════════════════════════
      حقن CSS في <head>
   ══════════════════════════════════════════════════════ */
@@ -273,7 +470,7 @@
     if (document.getElementById('mcr-style')) return;
     const s = document.createElement('style');
     s.id = 'mcr-style';
-    s.textContent = CSS;
+    s.textContent = CSS + CSS_CARDS;
     document.head.appendChild(s);
   }
 
