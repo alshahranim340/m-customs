@@ -1069,109 +1069,131 @@ ${cards}
    EXCEL EXPORT — Full data table using SheetJS
 ══════════════════════════════════════════════════════ */
 function _generateExcelReport() {
-  function doExport() {
-    const XLSX = window.XLSX;
-    const d = s => { if(!s) return ''; try{ return new Date(s).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}); }catch{return s||''; } };
+  async function doExport() {
+    const ExcelJS = window.ExcelJS;
+    const d = s => { if(!s) return ''; try{ return new Date(s).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}); }catch{return '';} };
     const rows = [..._shipments].sort((a,b)=>(a.job_no||a.internal_no||'')>(b.job_no||b.internal_no||'')?1:-1);
     const now  = new Date().toLocaleDateString('en-GB',{day:'2-digit',month:'long',year:'numeric'});
-    const nc   = 29; // total columns
-
-    /* ── Styles ── */
-    const mk = (v, s) => ({ v: v||'', t: 's', s });
-
-    const S = {
-      co:   { font:{sz:13,bold:true,color:{rgb:'D4B266'}}, fill:{patternType:'solid',fgColor:{rgb:'0E1A2E'}}, alignment:{horizontal:'center',vertical:'center'} },
-      sub:  { font:{sz:9,color:{rgb:'AAAAAA'}},            fill:{patternType:'solid',fgColor:{rgb:'1C2B48'}}, alignment:{horizontal:'center',vertical:'center'} },
-      gs:   { font:{sz:10,bold:true,color:{rgb:'FFFFFF'}}, fill:{patternType:'solid',fgColor:{rgb:'1C4B8E'}}, alignment:{horizontal:'center',vertical:'center'} },
-      gd:   { font:{sz:10,bold:true,color:{rgb:'FFFFFF'}}, fill:{patternType:'solid',fgColor:{rgb:'2E8B57'}}, alignment:{horizontal:'center',vertical:'center'} },
-      hs:   { font:{sz:8,bold:true,color:{rgb:'FFFFFF'}},  fill:{patternType:'solid',fgColor:{rgb:'2E5FA8'}}, alignment:{horizontal:'center',wrapText:true,vertical:'center'} },
-      hd:   { font:{sz:8,bold:true,color:{rgb:'FFFFFF'}},  fill:{patternType:'solid',fgColor:{rgb:'3A9E6A'}}, alignment:{horizontal:'center',wrapText:true,vertical:'center'} },
-      c0:   { font:{sz:9}, alignment:{vertical:'center'} },
-      c1:   { font:{sz:9}, fill:{patternType:'solid',fgColor:{rgb:'EEF2FF'}}, alignment:{vertical:'center'} },
-      mono: { font:{sz:8,name:'Courier New'}, alignment:{vertical:'center'} },
-      done: { font:{sz:9,bold:true,color:{rgb:'2E8B57'}}, alignment:{vertical:'center'} },
-    };
 
     const SH = ['JOB','DATE','PORT','TYPE','AW-B/L','CUSTOMER','CONSIGNEE','ETA','LCL/FCL','QTY','CONTAINER NO','WEIGHT','DRAFT NO','REMARKS'];
-    const DH = ['BAYAN','BYN DATE','TERMINAL','D/O DATE','MWANI DATE','PORT DUES','DUTY','ERI FREE','DEL REMARKS','INVOICE NO','LOADING','TRANSPORTER','LOCATION','DELIVERED','REMARKS2'];
+    const DH = ['BAYAN','BYN DATE','TERMINAL','D/O DATE','MWANI DATE','PORT DUES','CUSTOM DUTY','ERI FREE','DEL REMARKS','INVOICE NO','LOADING DATE','TRANSPORTER','LOCATION','DELIVERED','REMARKS2'];
+    const nc = SH.length + DH.length; // 29 cols → A to AC
 
-    const fill = (s) => Array(nc-1).fill(mk('', s));
+    const colLetter = n => {
+      let s = '';
+      while (n > 0) { s = String.fromCharCode(65 + (n-1)%26) + s; n = Math.floor((n-1)/26); }
+      return s;
+    };
+    const lastCol = colLetter(nc); // 'AC'
 
-    const aoa = [
-      /* R1 Company */ [mk('\u0634\u0631\u0643\u0629 \u0627\u0644\u0633\u062f\u064a\u0633 \u0644\u0644\u062e\u062f\u0645\u0627\u062a \u0627\u0644\u0644\u0648\u062c\u0633\u062a\u064a\u0629    |    Import Shipments Report', S.co),  ...fill(S.co)],
-      /* R2 Sub     */ [mk('Generated: '+now+'    |    Total Shipments: '+rows.length, S.sub), ...fill(S.sub)],
-      /* R3 Groups  */ [...SH.map((_,i)=>mk(i===0?'SHIPMENT DATA':'', S.gs)), ...DH.map((_,i)=>mk(i===0?'DELIVERY DATA':'', S.gd))],
-      /* R4 Headers */ [...SH.map(h=>mk(h, S.hs)), ...DH.map(h=>mk(h, S.hd))],
-      /* Data rows  */ ...rows.map((s,i) => {
-        const c = i%2===0 ? S.c0 : S.c1;
-        const delivered = s.status==='delivered';
-        return [
-          mk(s.job_no||s.internal_no||'', c),
-          mk(d(s.date), c),
-          mk(s.port||'', c),
-          mk((s.type||'').toUpperCase(), c),
-          mk(s.bl_number||'', S.mono),
-          mk(s.customer_name||'', c),
-          mk(s.consignee||'', c),
-          mk(d(s.eta), c),
-          mk(s.lcl_fcl||'', c),
-          mk(s.qty||'', c),
-          mk(s.container_no||'', S.mono),
-          mk(s.weight||'', c),
-          mk(s.draft_no||'', c),
-          mk(s.remarks||'', c),
-          mk(s.customs_no||'', c),
-          mk(d(s.bayan_date), c),
-          mk(s.terminal||'', c),
-          mk(d(s.do_date), c),
-          mk(d(s.mwani_date), c),
-          mk(d(s.port_dues_date), c),
-          mk(s.custom_duty||'', c),
-          mk(d(s.eri_free_date), c),
-          mk(s.del_remarks||'', c),
-          mk(s.invoice_no||'', c),
-          mk(d(s.loading_date), c),
-          mk(s.transporter||'', c),
-          mk(s.location||'', c),
-          mk(d(s.delivered_date), delivered ? S.done : c),
-          mk(s.remarks2||'', c),
-        ];
-      })
-    ];
+    const wb = new ExcelJS.Workbook();
+    wb.creator = 'M-Customs · Al-Sudais Logistics';
+    wb.created = new Date();
 
-    const ws = XLSX.utils.aoa_to_sheet(aoa);
+    const ws = wb.addWorksheet('Import Shipments', {
+      views: [{ state:'frozen', ySplit:4, xSplit:0 }],
+      pageSetup: { orientation:'landscape', fitToPage:true, fitToWidth:1 }
+    });
 
-    ws['!merges'] = [
-      {s:{r:0,c:0}, e:{r:0,c:nc-1}},
-      {s:{r:1,c:0}, e:{r:1,c:nc-1}},
-      {s:{r:2,c:0}, e:{r:2,c:SH.length-1}},
-      {s:{r:2,c:SH.length}, e:{r:2,c:nc-1}},
-    ];
+    /* ── Column widths ── */
+    const colWidths = [8,12,11,6,20,20,20,12,8,5,28,9,13,18,14,12,12,12,12,13,10,12,20,13,13,15,13,12,18];
+    ws.columns = colWidths.map((w,i) => ({ key:'c'+i, width:w }));
 
-    ws['!rows'] = [{hpt:28},{hpt:18},{hpt:20},{hpt:28}];
+    /* ── Helper: style a cell ── */
+    const sc = (cell, font, fill, align) => {
+      if (font)  cell.font      = font;
+      if (fill)  cell.fill      = { type:'pattern', pattern:'solid', fgColor:{ argb: fill } };
+      if (align) cell.alignment = align;
+    };
+    const border = { style:'thin', color:{ argb:'FFD0D5DD' } };
+    const allBorder = { top:border, left:border, bottom:border, right:border };
 
-    ws['!cols'] = [
-      {wch:7},{wch:11},{wch:11},{wch:6},{wch:20},
-      {wch:20},{wch:20},{wch:12},{wch:8},{wch:5},
-      {wch:28},{wch:9},{wch:13},{wch:20},
-      {wch:14},{wch:12},{wch:12},{wch:12},{wch:12},
-      {wch:13},{wch:10},{wch:12},{wch:20},{wch:13},
-      {wch:12},{wch:15},{wch:13},{wch:12},{wch:18}
-    ];
+    /* ── R1: Company Header ── */
+    ws.mergeCells('A1:'+lastCol+'1');
+    const r1 = ws.getCell('A1');
+    r1.value = '\u0634\u0631\u0643\u0629 \u0627\u0644\u0633\u062f\u064a\u0633 \u0644\u0644\u062e\u062f\u0645\u0627\u062a \u0627\u0644\u0644\u0648\u062c\u0633\u062a\u064a\u0629    \u2014    Import Shipments Report';
+    sc(r1, { name:'Calibri', size:14, bold:true, color:{argb:'FFD4B266'} }, 'FF0E1A2E', { horizontal:'center', vertical:'middle' });
+    ws.getRow(1).height = 30;
 
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Import Shipments');
+    /* ── R2: Subtitle ── */
+    ws.mergeCells('A2:'+lastCol+'2');
+    const r2 = ws.getCell('A2');
+    r2.value = 'Generated: ' + now + '    |    Total Shipments: ' + rows.length;
+    sc(r2, { name:'Calibri', size:9, color:{argb:'FFCCCCCC'} }, 'FF1C2B48', { horizontal:'center', vertical:'middle' });
+    ws.getRow(2).height = 18;
 
-    const fn = new Date().toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}).replace(/ /g,'-');
-    XLSX.writeFile(wb, 'import-shipments-'+fn+'.xlsx');
+    /* ── R3: Group Headers ── */
+    ws.mergeCells('A3:'+colLetter(SH.length)+'3');
+    const gShip = ws.getCell('A3');
+    gShip.value = 'SHIPMENT DATA';
+    sc(gShip, { name:'JetBrains Mono', size:10, bold:true, color:{argb:'FFFFFFFF'} }, 'FF1C4B8E', { horizontal:'center', vertical:'middle' });
+
+    ws.mergeCells(colLetter(SH.length+1)+'3:'+lastCol+'3');
+    const gDel = ws.getCell(colLetter(SH.length+1)+'3');
+    gDel.value = 'DELIVERY DATA';
+    sc(gDel, { name:'JetBrains Mono', size:10, bold:true, color:{argb:'FFFFFFFF'} }, 'FF2E8B57', { horizontal:'center', vertical:'middle' });
+    ws.getRow(3).height = 20;
+
+    /* ── R4: Column Headers ── */
+    const headerRow = ws.addRow([...SH, ...DH]);
+    headerRow.height = 26;
+    headerRow.eachCell((cell, col) => {
+      const isShip = col <= SH.length;
+      sc(cell,
+        { name:'Calibri', size:8, bold:true, color:{argb:'FFFFFFFF'} },
+        isShip ? 'FF2E5FA8' : 'FF3A9E6A',
+        { horizontal:'center', vertical:'middle', wrapText:true }
+      );
+      cell.border = allBorder;
+    });
+
+    /* ── Data Rows ── */
+    rows.forEach((s, i) => {
+      const bg   = i%2===0 ? 'FFFFFFFF' : 'FFEFF4FF';
+      const mono = { name:'Courier New', size:8 };
+      const row  = ws.addRow([
+        s.job_no||s.internal_no||'', d(s.date), s.port||'', (s.type||'').toUpperCase(),
+        s.bl_number||'', s.customer_name||'', s.consignee||'', d(s.eta),
+        s.lcl_fcl||'', s.qty||'', s.container_no||'', s.weight||'',
+        s.draft_no||'', s.remarks||'',
+        s.customs_no||'', d(s.bayan_date), s.terminal||'', d(s.do_date),
+        d(s.mwani_date), d(s.port_dues_date), s.custom_duty||'', d(s.eri_free_date),
+        s.del_remarks||'', s.invoice_no||'', d(s.loading_date), s.transporter||'',
+        s.location||'', d(s.delivered_date), s.remarks2||''
+      ]);
+
+      row.height = 17;
+      row.eachCell({ includeEmpty:true }, (cell, col) => {
+        cell.fill      = { type:'pattern', pattern:'solid', fgColor:{ argb:bg } };
+        cell.alignment = { vertical:'middle' };
+        cell.border    = allBorder;
+        cell.font      = { name:'Calibri', size:9 };
+
+        if (col===5 || col===11) cell.font = mono;           // BL / Container
+        if (col===28 && s.delivered_date)
+          cell.font = { name:'Calibri', size:9, bold:true, color:{ argb:'FF2E8B57' } };
+        if (col>=1 && col<=SH.length && i%2===0)
+          cell.fill = { type:'pattern', pattern:'solid', fgColor:{ argb:'FFFFFFFF' } };
+      });
+    });
+
+    /* ── Download ── */
+    const buf  = await wb.xlsx.writeBuffer();
+    const blob = new Blob([buf], { type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href = url;
+    a.download = 'import-shipments-' + new Date().toLocaleDateString('en-GB').replace(/\//g,'-') + '.xlsx';
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
     toast('Excel file downloaded', 'success');
   }
 
-  if (window.XLSX) { doExport(); return; }
+  if (window.ExcelJS) { doExport(); return; }
   toast('Loading Excel library...', 'success');
   const s = document.createElement('script');
-  s.src = 'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js';
-  s.onload = doExport;
+  s.src = 'https://cdn.jsdelivr.net/npm/exceljs@4.3.0/dist/exceljs.min.js';
+  s.onload  = doExport;
   s.onerror = () => toast('Failed to load Excel library', 'error');
   document.head.appendChild(s);
 }
