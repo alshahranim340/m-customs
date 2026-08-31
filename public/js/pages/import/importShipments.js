@@ -733,125 +733,408 @@ async function changeImportStatus(id, status) {
    REPORT — SHIPMENT & DELIVERY DATA
 ══════════════════════════════════════════════════════ */
 function exportImportReport() {
-  const overlay = document.getElementById('imp-report-overlay');
-  const content = document.getElementById('imp-report-content');
+  /* عرض خيارات التصدير */
+  document.getElementById('imp-rep-choice')?.remove();
 
+  const modal = document.createElement('div');
+  modal.id = 'imp-rep-choice';
+  modal.style.cssText = [
+    'position:fixed','inset:0','z-index:3000','display:flex',
+    'align-items:center','justify-content:center',
+    'background:rgba(10,20,40,.65)','backdrop-filter:blur(3px)',
+    'font-family:Tajawal,sans-serif'
+  ].join(';');
+
+  modal.innerHTML = `
+    <div style="background:white;border-radius:16px;width:100%;max-width:400px;
+                overflow:hidden;box-shadow:0 24px 64px rgba(0,0,0,.3);">
+
+      <div style="background:linear-gradient(135deg,#0E1A2E,#1C2B48);
+                  padding:20px 22px;display:flex;align-items:center;justify-content:space-between;">
+        <div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:9px;
+                      color:#D4B266;letter-spacing:2px;font-weight:800;">EXPORT REPORT</div>
+          <div style="font-size:16px;font-weight:900;color:white;margin-top:3px;">تصدير التقرير</div>
+        </div>
+        <button onclick="document.getElementById('imp-rep-choice').remove()"
+          style="background:rgba(255,255,255,.1);border:none;color:white;
+          width:30px;height:30px;border-radius:8px;cursor:pointer;font-size:14px;">✕</button>
+      </div>
+
+      <div style="padding:22px;display:flex;flex-direction:column;gap:12px;">
+
+        <button onclick="_generatePDFReport();document.getElementById('imp-rep-choice').remove();"
+          style="display:flex;align-items:center;gap:14px;padding:16px 18px;
+          border:2px solid #E8E5DC;border-radius:12px;background:white;
+          cursor:pointer;text-align:right;width:100%;transition:all .18s;"
+          onmouseover="this.style.borderColor='#CC2229';this.style.background='#FFF5F5'"
+          onmouseout="this.style.borderColor='#E8E5DC';this.style.background='white'">
+          <div style="width:44px;height:44px;background:#FEF0F0;border-radius:10px;
+                      display:flex;align-items:center;justify-content:center;
+                      font-size:22px;flex-shrink:0;">PDF</div>
+          <div style="text-align:right;">
+            <div style="font-weight:800;font-size:14px;color:#0E1A2E;">تقرير PDF احترافي</div>
+            <div style="font-size:11px;color:#6B6659;margin-top:2px;">
+              بطاقة لكل شحنة · ملخص · جاهز للطباعة
+            </div>
+          </div>
+        </button>
+
+        <button onclick="_generateExcelReport();document.getElementById('imp-rep-choice').remove();"
+          style="display:flex;align-items:center;gap:14px;padding:16px 18px;
+          border:2px solid #E8E5DC;border-radius:12px;background:white;
+          cursor:pointer;text-align:right;width:100%;transition:all .18s;"
+          onmouseover="this.style.borderColor='#2E8B57';this.style.background='#F0FFF4'"
+          onmouseout="this.style.borderColor='#E8E5DC';this.style.background='white'">
+          <div style="width:44px;height:44px;background:#E7F5EE;border-radius:10px;
+                      display:flex;align-items:center;justify-content:center;
+                      font-size:22px;flex-shrink:0;">XLS</div>
+          <div style="text-align:right;">
+            <div style="font-weight:800;font-size:14px;color:#0E1A2E;">تصدير Excel</div>
+            <div style="font-size:11px;color:#6B6659;margin-top:2px;">
+              جدول كامل · SHIPMENT & DELIVERY DATA
+            </div>
+          </div>
+        </button>
+
+      </div>
+    </div>`;
+
+  document.body.appendChild(modal);
+  modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+}
+
+/* ══════════════════════════════════════════════════════
+   PDF REPORT — Professional card-per-shipment layout
+══════════════════════════════════════════════════════ */
+function _generatePDFReport() {
   const rows = [..._shipments].sort((a,b) =>
     (a.job_no||a.internal_no||'') > (b.job_no||b.internal_no||'') ? 1 : -1
   );
 
-  content.innerHTML = `
-    <div style="position:sticky;top:0;background:#0E1A2E;color:white;
-                padding:14px 20px;display:flex;align-items:center;
-                justify-content:space-between;z-index:10;gap:12px;flex-wrap:wrap;">
-      <div>
-        <div style="font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:2px;color:#D4B266;">
-          SHIPMENT DATA & DELIVERY SHEET
-        </div>
-        <div style="font-size:15px;font-weight:800;margin-top:2px;">
-          تقرير شحنات الوارد — ${rows.length} شحنة
-        </div>
-      </div>
-      <div style="display:flex;gap:8px;">
-        <button onclick="printImportReport()"
-          style="background:#D4B266;color:#0E1A2E;border:none;padding:8px 16px;
-          border-radius:7px;font-family:'Tajawal',sans-serif;font-size:12px;font-weight:800;cursor:pointer;">
-          🖨️ طباعة
-        </button>
-        <button onclick="closeImportReport()"
-          style="background:rgba(255,255,255,0.1);color:white;border:1px solid rgba(255,255,255,0.2);
-          padding:8px 16px;border-radius:7px;font-family:'Tajawal',sans-serif;font-size:12px;font-weight:700;cursor:pointer;">
-          ✕ إغلاق
-        </button>
-      </div>
-    </div>
+  const now  = new Date().toLocaleDateString('en-GB',{day:'2-digit',month:'long',year:'numeric'});
+  const d    = s => { if(!s) return '\u2014'; try{ return new Date(s).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}); }catch{return s;} };
+  const total     = rows.length;
+  const waiting   = rows.filter(s=>s.status==='waiting').length;
+  const clearance = rows.filter(s=>s.status==='clearance'||s.status==='customs').length;
+  const delivered = rows.filter(s=>s.status==='delivered').length;
 
-    <div style="padding:16px;overflow-x:auto;">
-      <table>
-        <thead>
-          <tr>
-            <th class="group-h" colspan="14">SHIPMENT DATA</th>
-            <th class="group-h" colspan="15" style="background:#1a4a2e;">DELIVERY DATA</th>
-          </tr>
-          <tr>
-            <th>JOB</th>
-            <th>DATE</th>
-            <th>PORT TYP</th>
-            <th>C / TYP</th>
-            <th>AW-B/L</th>
-            <th>CUSTOMER</th>
-            <th>ETA</th>
-            <th>CONSIGNEE</th>
-            <th>LCL/FCL</th>
-            <th>QTY</th>
-            <th>CONT NO</th>
-            <th>WEIGHT</th>
-            <th>DRAFT NO</th>
-            <th>REMARKS</th>
-            <th class="delivery-h">BAYAN</th>
-            <th class="delivery-h">BYN/DATE</th>
-            <th class="delivery-h">TERMINAL</th>
-            <th class="delivery-h">D/O DATE</th>
-            <th class="delivery-h">MWANI DATE</th>
-            <th class="delivery-h">PORT DUES</th>
-            <th class="delivery-h">CUSTOM DUTY</th>
-            <th class="delivery-h">ERI FREE DATE</th>
-            <th class="delivery-h">REMARKS</th>
-            <th class="delivery-h">INVOICE NO</th>
-            <th class="delivery-h">LOADING DATE</th>
-            <th class="delivery-h">TRANSPORTER</th>
-            <th class="delivery-h">LOCATION</th>
-            <th class="delivery-h">DELIVERD</th>
-            <th class="delivery-h">REMARKS2</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${rows.map(s => `
-            <tr>
-              <td><b>${s.job_no||s.internal_no||'—'}</b></td>
-              <td>${s.date||'—'}</td>
-              <td>${s.port||'—'}</td>
-              <td>${(s.type||'').toUpperCase()}</td>
-              <td style="font-family:'JetBrains Mono',monospace;font-weight:700;">${s.bl_number||'—'}</td>
-              <td>${s.customer_name||'—'}</td>
-              <td>${s.eta||'—'}</td>
-              <td>${s.consignee||'—'}</td>
-              <td><b>${s.lcl_fcl||'—'}</b></td>
-              <td>${s.qty||'—'}</td>
-              <td style="font-family:'JetBrains Mono',monospace;font-size:10px;">${s.container_no||'—'}</td>
-              <td>${s.weight||'—'}</td>
-              <td>${s.draft_no||'—'}</td>
-              <td>${s.remarks||'—'}</td>
-              <td style="background:#F0FFF4;"><b>${s.customs_no||'—'}</b></td>
-              <td style="background:#F0FFF4;">${s.bayan_date||'—'}</td>
-              <td style="background:#F0FFF4;">${s.terminal||'—'}</td>
-              <td style="background:#F0FFF4;">${s.do_date||'—'}</td>
-              <td style="background:#F0FFF4;">${s.mwani_date||'—'}</td>
-              <td style="background:#F0FFF4;">${s.port_dues_date||'—'}</td>
-              <td style="background:#F0FFF4;">${s.custom_duty||'—'}</td>
-              <td style="background:#F0FFF4;">${s.eri_free_date||'—'}</td>
-              <td style="background:#F0FFF4;">${s.del_remarks||'—'}</td>
-              <td style="background:#F0FFF4;">${s.invoice_no||'—'}</td>
-              <td style="background:#F0FFF4;">${s.loading_date||'—'}</td>
-              <td style="background:#F0FFF4;">${s.transporter||'—'}</td>
-              <td style="background:#F0FFF4;">${s.location||'—'}</td>
-              <td style="background:#F0FFF4;${s.delivered_date?'color:#2E8B57;font-weight:700;':''}">${s.delivered_date||'—'}</td>
-              <td style="background:#F0FFF4;">${s.remarks2||'—'}</td>
-            </tr>`).join('')}
-        </tbody>
-      </table>
+  const ST = {waiting:'WAITING',clearance:'CLEARANCE',customs:'CLEARANCE',delivered:'DELIVERED'};
+  const stColor = {WAITING:'#C8943A',CLEARANCE:'#1C4B8E',DELIVERED:'#2E8B57'};
+
+  const cards = rows.map((s,i) => {
+    const stKey   = ST[s.status] || 'WAITING';
+    const stClr   = stColor[stKey] || '#8A8578';
+    const stAr    = {WAITING:'\u0642\u064a\u062f \u0627\u0644\u0627\u0646\u062a\u0638\u0627\u0631',
+                     CLEARANCE:'\u0642\u064a\u062f \u0627\u0644\u062a\u062e\u0644\u064a\u0635',
+                     DELIVERED:'\u062a\u0645 \u0627\u0644\u062a\u0633\u0644\u064a\u0645'}[stKey]||'';
+    const job = s.job_no||s.internal_no||String(i+1).padStart(3,'0');
+    const hasDelivery = s.customs_no||s.terminal||s.do_date||s.bayan_date||s.delivered_date;
+
+    return `
+    <div class="card" style="page-break-inside:avoid;">
+      <!-- Card Header -->
+      <div class="card-head">
+        <div style="display:flex;align-items:center;gap:12px;">
+          <div class="job-badge">JOB #${job}</div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:15px;font-weight:900;color:#0E1A2E;">
+            ${s.bl_number||'\u2014'}
+          </div>
+        </div>
+        <div class="status-pill" style="background:${stClr}15;color:${stClr};border:1.5px solid ${stClr}40;">
+          ${stKey} &middot; ${stAr}
+        </div>
+      </div>
+
+      <!-- Shipment Data -->
+      <div class="section-label">SHIPMENT DATA</div>
+      <div class="grid-4">
+        <div class="field"><div class="fl">CUSTOMER</div><div class="fv">${s.customer_name||'\u2014'}</div></div>
+        <div class="field"><div class="fl">CONSIGNEE</div><div class="fv">${s.consignee||'\u2014'}</div></div>
+        <div class="field"><div class="fl">ETA</div><div class="fv mono">${d(s.eta)}</div></div>
+        <div class="field"><div class="fl">PORT</div><div class="fv mono">${s.port||'\u2014'}</div></div>
+        <div class="field"><div class="fl">TYPE</div><div class="fv mono">${(s.type||'').toUpperCase()} / ${s.lcl_fcl||'\u2014'}</div></div>
+        <div class="field"><div class="fl">QTY</div><div class="fv">${s.qty||'\u2014'}</div></div>
+        <div class="field"><div class="fl">WEIGHT</div><div class="fv">${s.weight||'\u2014'}</div></div>
+        <div class="field"><div class="fl">DRAFT NO</div><div class="fv mono">${s.draft_no||'\u2014'}</div></div>
+      </div>
+      ${s.container_no ? `
+        <div class="field" style="margin-top:6px;">
+          <div class="fl">CONTAINER(S)</div>
+          <div class="fv mono">${s.container_no}</div>
+        </div>` : ''}
+      ${s.remarks ? `
+        <div class="field" style="margin-top:4px;">
+          <div class="fl">REMARKS</div>
+          <div class="fv">${s.remarks}</div>
+        </div>` : ''}
+
+      <!-- Delivery Data -->
+      ${hasDelivery ? `
+      <div class="section-label" style="margin-top:12px;color:#2E8B57;border-color:#2E8B57;">
+        DELIVERY DATA
+      </div>
+      <div class="grid-4">
+        <div class="field"><div class="fl">BAYAN</div><div class="fv mono">${s.customs_no||'\u2014'}</div></div>
+        <div class="field"><div class="fl">BYN DATE</div><div class="fv mono">${d(s.bayan_date)}</div></div>
+        <div class="field"><div class="fl">TERMINAL</div><div class="fv">${s.terminal||'\u2014'}</div></div>
+        <div class="field"><div class="fl">D/O DATE</div><div class="fv mono">${d(s.do_date)}</div></div>
+        <div class="field"><div class="fl">MWANI</div><div class="fv mono">${d(s.mwani_date)}</div></div>
+        <div class="field"><div class="fl">PORT DUES</div><div class="fv mono">${d(s.port_dues_date)}</div></div>
+        <div class="field"><div class="fl">CUSTOM DUTY</div><div class="fv">${s.custom_duty||'\u2014'}</div></div>
+        <div class="field"><div class="fl">ERI FREE</div><div class="fv mono">${d(s.eri_free_date)}</div></div>
+        <div class="field"><div class="fl">INVOICE NO</div><div class="fv mono">${s.invoice_no||'\u2014'}</div></div>
+        <div class="field"><div class="fl">LOADING</div><div class="fv mono">${d(s.loading_date)}</div></div>
+        <div class="field"><div class="fl">TRANSPORTER</div><div class="fv">${s.transporter||'\u2014'}</div></div>
+        <div class="field"><div class="fl">LOCATION</div><div class="fv">${s.location||'\u2014'}</div></div>
+        ${s.delivered_date ? `
+        <div class="field" style="grid-column:1/-1;">
+          <div class="fl">DELIVERED</div>
+          <div class="fv" style="color:#2E8B57;font-weight:700;">${d(s.delivered_date)}</div>
+        </div>` : ''}
+      </div>` : `
+      <div style="margin-top:10px;padding:8px 12px;background:#F9FBF9;border-radius:6px;
+                  font-size:10px;color:#8A8578;font-family:'JetBrains Mono',monospace;letter-spacing:1px;">
+        NO DELIVERY DATA YET
+      </div>`}
     </div>`;
+  }).join('');
 
-  overlay.style.display = 'block';
+  const html = `<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="UTF-8">
+<title>Import Report - ${now}</title>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;600;700;800;900&family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:'Tajawal',sans-serif; color:#0E1A2E; background:#F5F3EC; padding:20px; }
+
+  /* Letterhead */
+  .letterhead {
+    background:linear-gradient(135deg,#0E1A2E 0%,#1C2B48 100%);
+    color:white; border-radius:12px; padding:24px 28px;
+    margin-bottom:16px; display:flex; justify-content:space-between; align-items:flex-end;
+  }
+  .lh-left .code {
+    font-family:'JetBrains Mono',monospace; font-size:9px;
+    letter-spacing:2.5px; color:#D4B266; font-weight:800; margin-bottom:5px;
+  }
+  .lh-left h1 { font-size:22px; font-weight:900; }
+  .lh-left p  { font-size:11px; color:rgba(255,255,255,.5); margin-top:3px;
+                font-family:'JetBrains Mono',monospace; letter-spacing:.5px; }
+  .lh-right   { text-align:right; }
+  .lh-right .gen { font-family:'JetBrains Mono',monospace; font-size:9px; color:rgba(255,255,255,.45); }
+  .lh-right .total{ font-size:28px; font-weight:900; color:#D4B266; line-height:1; }
+  .lh-right .tlbl { font-size:10px; color:rgba(255,255,255,.5); margin-top:2px; }
+
+  /* Summary */
+  .summary {
+    display:grid; grid-template-columns:repeat(4,1fr);
+    gap:10px; margin-bottom:16px;
+  }
+  .sum-cell {
+    background:white; border-radius:10px; border:1px solid #E8E5DC;
+    padding:14px 16px;
+  }
+  .sum-label { font-family:'JetBrains Mono',monospace; font-size:9px; font-weight:800;
+               letter-spacing:1.5px; color:#8A8578; margin-bottom:5px; }
+  .sum-value { font-family:'JetBrains Mono',monospace; font-size:28px; font-weight:900; }
+  .sum-value.amber  { color:#C8943A; }
+  .sum-value.blue   { color:#1C4B8E; }
+  .sum-value.green  { color:#2E8B57; }
+
+  /* Cards */
+  .card {
+    background:white; border-radius:12px; border:1px solid #E8E5DC;
+    margin-bottom:14px; overflow:hidden;
+    box-shadow:0 2px 8px rgba(0,0,0,.05);
+  }
+  .card-head {
+    display:flex; align-items:center; justify-content:space-between;
+    padding:14px 18px; border-bottom:1px solid #F0EDE4;
+    background:#FAFAF7;
+  }
+  .job-badge {
+    background:#0E1A2E; color:white;
+    font-family:'JetBrains Mono',monospace; font-size:11px; font-weight:800;
+    padding:4px 10px; border-radius:6px; letter-spacing:0.5px;
+  }
+  .status-pill {
+    font-family:'JetBrains Mono',monospace; font-size:9px; font-weight:800;
+    padding:5px 12px; border-radius:12px; letter-spacing:.5px;
+  }
+
+  .section-label {
+    font-family:'JetBrains Mono',monospace; font-size:9px; font-weight:800;
+    letter-spacing:2px; color:#1C4B8E;
+    padding:10px 18px 6px;
+    border-bottom:1.5px solid #EEF2FF;
+  }
+
+  .grid-4 {
+    display:grid; grid-template-columns:repeat(4,1fr);
+    gap:0; padding:10px 18px 14px;
+  }
+  .field { padding:4px 8px 4px 0; }
+  .fl {
+    font-family:'JetBrains Mono',monospace; font-size:8px; font-weight:800;
+    letter-spacing:1px; color:#8A8578; margin-bottom:3px;
+  }
+  .fv { font-size:12px; font-weight:600; color:#0E1A2E; }
+  .fv.mono { font-family:'JetBrains Mono',monospace; font-size:11px; }
+
+  /* Print */
+  @page { margin:15mm; size:A4; }
+  @media print {
+    body { background:white; padding:0; }
+    .no-print { display:none !important; }
+    .card { box-shadow:none; }
+    .letterhead { -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+  }
+
+  .print-bar {
+    position:fixed; top:0; left:0; right:0;
+    background:#0E1A2E; padding:12px 20px;
+    display:flex; gap:10px; align-items:center; z-index:999;
+  }
+  .pb-title { color:rgba(255,255,255,.6); font-size:12px; flex:1;
+              font-family:'JetBrains Mono',monospace; letter-spacing:.5px; }
+  .pb-btn {
+    padding:8px 18px; border-radius:8px; border:none; cursor:pointer;
+    font-family:'Tajawal',sans-serif; font-size:13px; font-weight:700;
+  }
+  .pb-pdf { background:#D4B266; color:#0E1A2E; }
+  .pb-close { background:rgba(255,255,255,.1); color:white;
+              border:1px solid rgba(255,255,255,.2) !important; }
+  body { padding-top: 52px; }
+</style>
+</head>
+<body>
+
+<div class="print-bar no-print">
+  <span class="pb-title">IMPORT SHIPMENTS REPORT · ${rows.length} shipment${rows.length!==1?'s':''}</span>
+  <button class="pb-btn pb-pdf" onclick="window.print()">Print / Save as PDF</button>
+  <button class="pb-btn pb-close" onclick="window.close()">Close</button>
+</div>
+
+<!-- Letterhead -->
+<div class="letterhead">
+  <div class="lh-left">
+    <div class="code">SDS / IMPORT / REPORT / 2026</div>
+    <h1>Import Shipments Report</h1>
+    <p>${now}</p>
+  </div>
+  <div class="lh-right">
+    <div class="gen">TOTAL SHIPMENTS</div>
+    <div class="total">${String(rows.length).padStart(2,'0')}</div>
+    <div class="tlbl">شركة السديس للخدمات اللوجستية</div>
+  </div>
+</div>
+
+<!-- Summary -->
+<div class="summary">
+  <div class="sum-cell">
+    <div class="sum-label">01 · TOTAL</div>
+    <div class="sum-value">${String(total).padStart(2,'0')}</div>
+  </div>
+  <div class="sum-cell">
+    <div class="sum-label">02 · WAITING</div>
+    <div class="sum-value amber">${String(waiting).padStart(2,'0')}</div>
+  </div>
+  <div class="sum-cell">
+    <div class="sum-label">03 · CLEARANCE</div>
+    <div class="sum-value blue">${String(clearance).padStart(2,'0')}</div>
+  </div>
+  <div class="sum-cell">
+    <div class="sum-label">04 · DELIVERED</div>
+    <div class="sum-value green">${String(delivered).padStart(2,'0')}</div>
+  </div>
+</div>
+
+<!-- Shipment Cards -->
+${cards}
+
+</body></html>`;
+
+  const win = window.open('', '_blank');
+  if (!win) { toast('Please allow popups for this site', 'error'); return; }
+  win.document.write(html);
+  win.document.close();
+}
+
+/* ══════════════════════════════════════════════════════
+   EXCEL EXPORT — Full data table using SheetJS
+══════════════════════════════════════════════════════ */
+function _generateExcelReport() {
+  function doExport() {
+    const XLSX = window.XLSX;
+    const d = s => { if(!s) return ''; try{ return new Date(s).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}); }catch{return s||'';} };
+
+    const rows = [..._shipments].sort((a,b)=>
+      (a.job_no||a.internal_no||'') > (b.job_no||b.internal_no||'') ? 1 : -1
+    );
+
+    const headers = [
+      'JOB','DATE','PORT','TYPE','AW-B/L','CUSTOMER','CONSIGNEE','ETA',
+      'LCL/FCL','QTY','CONTAINER NO','WEIGHT','DRAFT NO','REMARKS',
+      'BAYAN','BYN DATE','TERMINAL','D/O DATE','MWANI DATE',
+      'PORT DUES DATE','CUSTOM DUTY','ERI FREE DATE','DEL REMARKS',
+      'INVOICE NO','LOADING DATE','TRANSPORTER','LOCATION','DELIVERED','REMARKS2'
+    ];
+
+    const data = [headers, ...rows.map(s => [
+      s.job_no||s.internal_no||'',  s.date||'',
+      s.port||'',                    (s.type||'').toUpperCase(),
+      s.bl_number||'',               s.customer_name||'',
+      s.consignee||'',               d(s.eta),
+      s.lcl_fcl||'',                 s.qty||'',
+      s.container_no||'',            s.weight||'',
+      s.draft_no||'',                s.remarks||'',
+      s.customs_no||'',              d(s.bayan_date),
+      s.terminal||'',                d(s.do_date),
+      d(s.mwani_date),               d(s.port_dues_date),
+      s.custom_duty||'',             d(s.eri_free_date),
+      s.del_remarks||'',             s.invoice_no||'',
+      d(s.loading_date),             s.transporter||'',
+      s.location||'',                d(s.delivered_date),
+      s.remarks2||''
+    ])];
+
+    const ws = XLSX.utils.aoa_to_sheet(data);
+
+    /* Column widths */
+    ws['!cols'] = [
+      {wch:8},{wch:12},{wch:12},{wch:6},{wch:20},{wch:20},{wch:20},{wch:12},
+      {wch:8},{wch:6},{wch:30},{wch:10},{wch:14},{wch:20},
+      {wch:14},{wch:12},{wch:12},{wch:12},{wch:12},{wch:14},{wch:12},{wch:12},
+      {wch:20},{wch:14},{wch:12},{wch:16},{wch:14},{wch:12},{wch:20}
+    ];
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Import Shipments');
+
+    const now = new Date().toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}).replace(/ /g,'-');
+    XLSX.writeFile(wb, `import-shipments-${now}.xlsx`);
+    toast('Excel file downloaded', 'success');
+  }
+
+  if (window.XLSX) { doExport(); return; }
+
+  toast('Loading Excel library...', 'success');
+  const s = document.createElement('script');
+  s.src = 'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js';
+  s.onload = doExport;
+  s.onerror = () => toast('Failed to load Excel library', 'error');
+  document.head.appendChild(s);
 }
 
 function closeImportReport() {
-  document.getElementById('imp-report-overlay').style.display = 'none';
+  document.getElementById('imp-report-overlay')?.remove();
 }
 
-function printImportReport() {
-  window.print();
-}
+function printImportReport() { window.print(); }
+
 
 /* ══════════════════════════════════════════════
    رابط التتبع — إنشاء ومشاركة
