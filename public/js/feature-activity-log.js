@@ -153,25 +153,25 @@ async function loadLogs(reset = true) {
 
   try {
     const col = collection(db, 'activity_logs');
-    let q;
 
-    if (_currentFilter !== 'all') {
-      q = query(col,
-        where('section', '==', _currentFilter),
-        orderBy('created_at', 'desc'),
-        limit(PAGE_SIZE)
-      );
-    } else {
-      q = query(col, orderBy('created_at', 'desc'), limit(PAGE_SIZE));
-    }
-
-    if (_lastDoc) q = query(q, startAfter(_lastDoc));
+    // Simple query — no composite index needed
+    // Filter by section client-side to avoid Firestore index requirement
+    const fetchLimit = _currentFilter !== 'all' ? PAGE_SIZE * 3 : PAGE_SIZE;
+    let q = query(col, orderBy('created_at', 'desc'), limit(fetchLimit));
+    if (_lastDoc) q = query(col, orderBy('created_at', 'desc'), startAfter(_lastDoc), limit(fetchLimit));
 
     const snap = await getDocs(q);
 
+    // Client-side filter
+    let docs = snap.docs;
+    if (_currentFilter !== 'all') {
+      docs = docs.filter(d => (d.data().section || 'system') === _currentFilter);
+    }
+    docs = docs.slice(0, PAGE_SIZE);
+
     if (reset) list.innerHTML = '';
 
-    if (snap.empty && reset) {
+    if (docs.length === 0 && reset) {
       list.innerHTML = `<div class="mc-log-empty">
         <div class="mc-log-empty-icon">📭</div>
         <div style="font-weight:700;margin-bottom:6px;">لا توجد نشاطات بعد</div>
@@ -180,7 +180,7 @@ async function loadLogs(reset = true) {
       return;
     }
 
-    snap.docs.forEach(doc => {
+    docs.forEach(doc => {
       const d = doc.data();
       list.insertAdjacentHTML('beforeend', buildEntry(d));
     });
@@ -188,7 +188,7 @@ async function loadLogs(reset = true) {
     const oldMore = document.getElementById('mc-log-more-btn');
     if (oldMore) oldMore.remove();
 
-    if (snap.docs.length === PAGE_SIZE) {
+    if (snap.docs.length === fetchLimit) {
       _lastDoc = snap.docs[snap.docs.length - 1];
       list.insertAdjacentHTML('beforeend', `
         <button class="mc-log-load-more" id="mc-log-more-btn"
