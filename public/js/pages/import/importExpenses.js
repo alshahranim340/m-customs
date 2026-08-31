@@ -13,7 +13,7 @@ let _feeTypes   = [];
 
 export async function renderImportExpenses(container) {
   container.innerHTML = `
-    <div class="page-body imp-page" style="padding:20px 24px;background:#F5F3EC;">
+    <div class="page-body" style="padding:20px 24px;background:#F5F3EC;">
       <div class="modern-page">
         <div class="modern-header">
           <div class="modern-header-brand">
@@ -95,7 +95,7 @@ function _renderStats() {
   const total   = _expenses.reduce((s, e) => s + _totalOf(e), 0);
   const paid    = _expenses.filter(e => e.paid).reduce((s, e) => s + _totalOf(e), 0);
   const unpaid  = total - paid;
-  const fmt = n => n.toLocaleString('ar-SA', { minimumFractionDigits: 2 });
+  const fmt = n => n.toLocaleString('en-US', { minimumFractionDigits: 2 });
 
   document.getElementById('exp-stats').innerHTML = `
     <div class="modern-stats modern-stats-3">
@@ -141,7 +141,7 @@ function _renderList(search = '') {
   const subEl = document.getElementById('exp-sub');
   if (subEl) subEl.textContent = `EXPENSES · ${String(_expenses.length).padStart(2,'0')} INVOICES`;
 
-  const fmt = n => parseFloat(n || 0).toLocaleString('ar-SA', { minimumFractionDigits: 2 });
+  const fmt = n => parseFloat(n || 0).toLocaleString('en-US', { minimumFractionDigits: 2 });
 
   el.innerHTML = list.map(e => {
     const total = _totalOf(e);
@@ -256,8 +256,8 @@ function openExpenseModal(expense = null) {
     <div id="exp-error" style="display:none;background:var(--red-light);color:var(--red);border-radius:8px;padding:9px 12px;font-size:12px;margin-top:8px;"></div>
 
     <div class="modal-actions">
-      <button class="btn btn-ghost" onclick="closeExpenseModal()">إلغاء</button>
-      <button class="btn btn-primary" id="exp-save-btn" onclick="saveExpense()">💾 حفظ الفاتورة</button>
+      <button class="btn btn-ghost" onclick="closeExpenseModal()">Cancel / إلغاء</button>
+      <button class="btn btn-primary" id="exp-save-btn" onclick="saveExpense()">Save / حفظ</button>
     </div>`;
 
   document.getElementById('exp-modal').classList.remove('hidden');
@@ -374,7 +374,7 @@ async function saveExpense() {
     errEl.style.display = 'block';
   } finally {
     btn.disabled = false;
-    btn.textContent = '💾 حفظ الفاتورة';
+    btn.textContent = 'Save / حفظ';
   }
 }
 
@@ -414,7 +414,7 @@ async function exportExpensePdf(id) {
   if (!e) return;
   toast('⏳ جاري تحضير PDF...', 'success');
 
-  const fmt = n => parseFloat(n||0).toLocaleString('ar-SA', { minimumFractionDigits: 2 });
+  const fmt = n => parseFloat(n||0).toLocaleString('en-US', { minimumFractionDigits: 2 });
   const total = _totalOf(e);
 
   const html = `
@@ -460,7 +460,7 @@ async function exportExpensePdf(id) {
 
 function _fmtDate(d) {
   if (!d) return '—';
-  return new Date(d).toLocaleDateString('ar-SA', { year:'numeric', month:'short', day:'numeric' });
+  return new Date(d).toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric' });
 }
 
 // ─────────────────────────────────────────────
@@ -507,7 +507,7 @@ function openExpensesReportModal() {
         </div>
 
         <div class="modal-actions">
-          <button class="btn btn-ghost" onclick="document.getElementById('exp-report-modal').classList.add('hidden')">إلغاء</button>
+          <button class="btn btn-ghost" onclick="document.getElementById('exp-report-modal').classList.add('hidden')">Cancel / إلغاء</button>
           <button class="btn btn-primary" onclick="printExpensesReport()">
             <i class="ti ti-printer"></i> طباعة
           </button>
@@ -539,8 +539,8 @@ function printExpensesReport() {
 
   document.getElementById('exp-report-modal').classList.add('hidden');
 
-  const now        = new Date().toLocaleDateString('ar-SA', { year:'numeric', month:'long', day:'numeric' });
-  const fmt        = n => parseFloat(n||0).toLocaleString('ar-SA', { minimumFractionDigits: 2 });
+  const now        = new Date().toLocaleDateString('en-GB', { day:'2-digit', month:'long', year:'numeric' });
+  const fmt        = n => parseFloat(n||0).toLocaleString('en-US', { minimumFractionDigits: 2 });
   const totalAll   = list.reduce((s, e) => s + _totalOf(e), 0);
   const totalPaid  = list.filter(e => e.paid).reduce((s, e) => s + _totalOf(e), 0);
   const totalUnpaid = totalAll - totalPaid;

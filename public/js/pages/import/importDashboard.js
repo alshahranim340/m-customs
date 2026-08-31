@@ -82,7 +82,7 @@ function _render(shipments, expenses) {
   const totalAmount  = expenses.reduce((sum, e) => sum + _expTotal(e), 0);
   const paidAmount   = expenses.filter(e => e.paid).reduce((sum, e) => sum + _expTotal(e), 0);
   const unpaidAmount = totalAmount - paidAmount;
-  const fmt = n => n.toLocaleString('ar-SA', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const fmt = n => n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   const paidPct = totalAmount > 0 ? Math.round(paidAmount / totalAmount * 100) : 0;
 
   // Update subtitle
@@ -268,7 +268,7 @@ function _render(shipments, expenses) {
 // PRINT REPORT (unchanged from original)
 // ─────────────────────────────────────────────
 function printImportReport() {
-  const now       = new Date().toLocaleDateString('ar-SA', { year:'numeric', month:'long', day:'numeric' });
+  const now       = new Date().toLocaleDateString('en-GB', { day:'2-digit', month:'long', year:'numeric' });
   const total     = _shipments.length;
   const waiting   = _shipments.filter(s => s.status === 'waiting').length;
   const clearance = _shipments.filter(s => s.status === 'clearance' || s.status === 'customs').length;
@@ -278,7 +278,7 @@ function printImportReport() {
   const totalAmount  = _expenses.reduce((sum, e) => sum + _expTotal(e), 0);
   const paidAmount   = _expenses.filter(e => e.paid).reduce((sum, e) => sum + _expTotal(e), 0);
   const unpaidAmount = totalAmount - paidAmount;
-  const fmt = n => n.toLocaleString('ar-SA', { minimumFractionDigits: 2 });
+  const fmt = n => n.toLocaleString('en-US', { minimumFractionDigits: 2 });
 
   const byType = { sea:0, air:0, land:0 };
   _shipments.forEach(s => { if (byType[s.type] !== undefined) byType[s.type]++; });
@@ -371,5 +371,5 @@ function printImportReport() {
 /* ── Helpers ── */
 function _pad(n)     { return String(n).padStart(2, '0'); }
 function _expTotal(e){ return (e.fees||[]).reduce((s,f)=>s+(parseFloat(f.amount)||0),0); }
-function _fmt(d)     { if(!d)return'—'; return new Date(d).toLocaleDateString('ar-SA',{year:'numeric',month:'long',day:'numeric'}); }
-function _fmtShort(d){ if(!d)return'—'; return new Date(d).toLocaleDateString('ar-SA',{month:'short',day:'numeric'}); }
+function _fmt(d)     { if(!d)return'—'; return new Date(d).toLocaleDateString('en-GB', { day:'2-digit', month:'long', year:'numeric' }); }
+function _fmtShort(d){ if(!d)return'—'; return new Date(d).toLocaleDateString('en-GB',{month:'short',day:'numeric'}); }

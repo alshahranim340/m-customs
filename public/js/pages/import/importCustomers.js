@@ -5,7 +5,7 @@ let _customers = [];
 
 export async function renderImportCustomers(container) {
   container.innerHTML = `
-    <div class="page-body imp-page" style="padding:20px 24px;background:#F5F3EC;">
+    <div class="page-body" style="padding:20px 24px;background:#F5F3EC;">
       <div class="modern-page">
         <div class="modern-header">
           <div class="modern-header-brand">
@@ -196,8 +196,8 @@ function openCustomerModal(customer = null) {
     <div id="cust-error" style="display:none;background:var(--red-light);color:var(--red);border-radius:8px;padding:9px 12px;font-size:12px;"></div>
 
     <div class="modal-actions">
-      <button class="btn btn-ghost" onclick="closeCustomerModal()">إلغاء</button>
-      <button class="btn btn-primary" id="cust-save-btn" onclick="saveCustomer()">💾 حفظ العميل</button>
+      <button class="btn btn-ghost" onclick="closeCustomerModal()">Cancel / إلغاء</button>
+      <button class="btn btn-primary" id="cust-save-btn" onclick="saveCustomer()">Save / حفظ</button>
     </div>`;
 
   document.getElementById('cust-modal').classList.remove('hidden');
@@ -252,7 +252,7 @@ async function saveCustomer() {
     errEl.style.display = 'block';
   } finally {
     btn.disabled = false;
-    btn.textContent = '💾 حفظ العميل';
+    btn.textContent = 'Save / حفظ';
   }
 }
 

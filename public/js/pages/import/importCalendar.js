@@ -11,7 +11,7 @@ const LAST_ALERT_KEY = 'mcustoms_last_alert_date';
 
 export async function renderImportCalendar(container) {
   container.innerHTML = `
-    <div class="page-body imp-page" style="padding:20px 24px;background:#F5F3EC;">
+    <div class="page-body" style="padding:20px 24px;background:#F5F3EC;">
       <div class="modern-page">
         <div class="modern-header">
           <div class="modern-header-brand">
@@ -107,7 +107,7 @@ function _renderCalendar() {
   const today = new Date(); today.setHours(0,0,0,0);
   const year  = _viewDate.getFullYear();
   const month = _viewDate.getMonth();
-  const monthName = _viewDate.toLocaleDateString('ar-SA', { month:'long', year:'numeric' });
+  const monthName = _viewDate.toLocaleDateString('en-GB', { month:'long', year:'numeric' });
   const alertShips = getAlertShipments(_shipments);
 
   const byDate = {};
@@ -232,5 +232,5 @@ function _renderCalendar() {
 
 function _fmtShort(d) {
   if (!d) return '—';
-  return new Date(d).toLocaleDateString('ar-SA', { month:'short', day:'numeric' });
+  return new Date(d).toLocaleDateString('en-GB', { month:'short', day:'numeric' });
 }

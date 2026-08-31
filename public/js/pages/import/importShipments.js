@@ -268,16 +268,16 @@ function _updateStats() {
   const pad = n => String(n).padStart(2,'0');
   const cards = [
     { n: pad(total),     label: 'إجمالي الشحنات', color: '#1C4B8E', bg: '#EEF2FF' },
-    { n: pad(waiting),   label: 'قيد الانتظار',   color: '#C8943A', bg: '#FEF3E2' },
+    { n: pad(waiting),   label: 'WAITING · قيد الانتظار',   color: '#C8943A', bg: '#FEF3E2' },
     { n: pad(customs),   label: 'التخليص الجمركي', color: '#6B4EAA', bg: '#EDE8F5' },
-    { n: pad(delivered), label: 'تم التسليم',      color: '#2E8B57', bg: '#E7F5EE' },
+    { n: pad(delivered), label: 'DELIVERED · تم التسليم',      color: '#2E8B57', bg: '#E7F5EE' },
   ];
   document.getElementById('imp-stats').innerHTML = cards.map(c=>`
     <div style="background:white;border-radius:10px;border:1px solid #E8E5DC;padding:16px;text-align:right;">
       <div style="font-family:'JetBrains Mono',monospace;font-size:28px;font-weight:900;
                   color:${c.color};line-height:1;">${c.n}</div>
       <div style="font-size:11px;color:#6B6659;margin-top:4px;font-weight:600;">${c.label}</div>
-      ${late>0 && c.label==='قيد الانتظار' ? `<div style="font-size:10px;color:#CC2229;margin-top:2px;font-weight:700;">⚠ ${late} متأخرة</div>`:''}
+      ${late>0 && c.label==='WAITING · قيد الانتظار' ? `<div style="font-size:10px;color:#CC2229;margin-top:2px;font-weight:700;">⚠ ${late} متأخرة</div>`:''}
     </div>`).join('');
 
   const sub = document.getElementById('imp-sub');
@@ -342,7 +342,7 @@ function _buildCard(s) {
 
   const job  = s.job_no || s.internal_no || '—';
   const bl   = s.bl_number || '—';
-  const eta  = s.eta ? new Date(s.eta).toLocaleDateString('ar-SA',{day:'numeric',month:'short',year:'numeric'}) : '—';
+  const eta  = s.eta ? new Date(s.eta).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}) : '—';
 
   // Build delivery indicators
   const hasDelivery = s.customs_no || s.do_date || s.terminal || s.invoice_no;
@@ -443,7 +443,7 @@ function _delItem(label, val) {
 
 function _fmt(d) {
   if (!d) return '';
-  try { return new Date(d).toLocaleDateString('ar-SA',{day:'numeric',month:'short',year:'numeric'}); }
+  try { return new Date(d).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}); }
   catch { return d; }
 }
 
@@ -568,7 +568,7 @@ function openImportModal(shipment = null) {
       <!-- ACTIONS -->
       <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px;
                   padding-top:14px;border-top:1px solid #F0EDE4;">
-        <button class="imp-btn ghost" onclick="closeImportModal()">إلغاء</button>
+        <button class="imp-btn ghost" onclick="closeImportModal()">Cancel / إلغاء</button>
         <button class="imp-btn gold" id="ims-save" onclick="saveImportShipment()">
           💾 ${isEdit ? 'حفظ التعديلات' : 'إنشاء الشحنة'}
         </button>
@@ -689,7 +689,7 @@ async function saveImportShipment() {
     errEl.style.display = 'block';
   } finally {
     btn.disabled = false;
-    btn.textContent = '💾 حفظ';
+    btn.textContent = 'Save / حفظ';
   }
 }
 
@@ -1011,8 +1011,8 @@ function _fmtWAPhone(phone) {
 /* ── الرسالة الاحترافية ── */
 function _buildWAMessage(s, trackingUrl) {
   var ltr   = '\u200E';
-  var today = new Date().toLocaleDateString('ar-SA',{year:'numeric',month:'long',day:'numeric'});
-  var eta   = s.eta ? new Date(s.eta).toLocaleDateString('ar-SA',{year:'numeric',month:'long',day:'numeric'}) : '-';
+  var today = new Date().toLocaleDateString('en-GB', { day:'2-digit', month:'long', year:'numeric' });
+  var eta   = s.eta ? new Date(s.eta).toLocaleDateString('en-GB', { day:'2-digit', month:'long', year:'numeric' }) : '-';
   var ST    = {
     waiting  :'\u0642\u064a\u062f \u0627\u0644\u0627\u0646\u062a\u0638\u0627\u0631',
     clearance:'\u0642\u064a\u062f \u0627\u0644\u062a\u062e\u0644\u064a\u0635 \u0627\u0644\u062c\u0645\u0631\u0643\u064a',

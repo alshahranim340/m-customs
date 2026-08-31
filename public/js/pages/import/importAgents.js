@@ -5,7 +5,7 @@ let _agents = [];
 
 export async function renderImportAgents(container) {
   container.innerHTML = `
-    <div class="page-body imp-page" style="padding:20px 24px;background:#F5F3EC;">
+    <div class="page-body" style="padding:20px 24px;background:#F5F3EC;">
       <div class="modern-page">
         <div class="modern-header">
           <div class="modern-header-brand">
@@ -51,8 +51,8 @@ export async function renderImportAgents(container) {
         </div>
         <div id="agent-error" style="display:none;background:var(--red-light);color:var(--red);border-radius:8px;padding:9px 12px;font-size:12px;"></div>
         <div class="modal-actions">
-          <button class="btn btn-ghost" onclick="closeAgentModal()">إلغاء</button>
-          <button class="btn btn-primary" id="agent-save-btn" onclick="saveAgent()">💾 حفظ الوكيل</button>
+          <button class="btn btn-ghost" onclick="closeAgentModal()">Cancel / إلغاء</button>
+          <button class="btn btn-primary" id="agent-save-btn" onclick="saveAgent()">Save / حفظ</button>
         </div>
       </div>
     </div>`;
@@ -158,7 +158,7 @@ async function saveAgent() {
     errEl.style.display = 'block';
   } finally {
     btn.disabled = false;
-    btn.textContent = '💾 حفظ الوكيل';
+    btn.textContent = 'Save / حفظ';
   }
 }
 
