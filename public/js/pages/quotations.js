@@ -312,7 +312,7 @@ async function openQuotModal(quotation = null) {
       border-radius:8px;padding:9px 12px;font-size:12px;margin-top:4px;"></div>
 
     <div class="modal-actions">
-      <button class="btn btn-ghost" onclick="closeQuotModal()">إلغاء</button>
+      <button class="btn btn-ghost" onclick="closeQuotModal()">Cancel / إلغاء</button>
       <button class="btn btn-primary" id="quot-save-btn" onclick="saveQuotation()">
         💾 ${isEdit ? 'حفظ التعديلات' : 'إنشاء العرض'}
       </button>
@@ -439,7 +439,7 @@ async function saveQuotation() {
     errEl.style.display = 'block';
   } finally {
     btn.disabled = false;
-    btn.textContent = '💾 حفظ';
+    btn.textContent = 'Save / حفظ';
   }
 }
 
@@ -844,7 +844,7 @@ function openQuotReport() {
       </div>
 
       <div class="modal-actions">
-        <button class="btn btn-ghost" onclick="document.getElementById('quot-report-modal').remove()">إلغاء</button>
+        <button class="btn btn-ghost" onclick="document.getElementById('quot-report-modal').remove()">Cancel / إلغاء</button>
         <button class="btn btn-primary" onclick="printQuotReport()">
           <i class="ti ti-printer"></i> طباعة التقرير
         </button>
@@ -943,7 +943,7 @@ function printQuotReport() {
       </div>`;
   }
 
-  const now = new Date().toLocaleDateString('ar-SA', { year:'numeric', month:'long', day:'numeric' });
+  const now = new Date().toLocaleDateString('en-GB', { day:'2-digit', month:'long', year:'numeric' });
 
   const win = window.open('', '_blank');
   win.document.write(`
