@@ -1071,58 +1071,103 @@ ${cards}
 function _generateExcelReport() {
   function doExport() {
     const XLSX = window.XLSX;
-    const d = s => { if(!s) return ''; try{ return new Date(s).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}); }catch{return s||'';} };
+    const d = s => { if(!s) return ''; try{ return new Date(s).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}); }catch{return s||''; } };
+    const rows = [..._shipments].sort((a,b)=>(a.job_no||a.internal_no||'')>(b.job_no||b.internal_no||'')?1:-1);
+    const now  = new Date().toLocaleDateString('en-GB',{day:'2-digit',month:'long',year:'numeric'});
+    const nc   = 29; // total columns
 
-    const rows = [..._shipments].sort((a,b)=>
-      (a.job_no||a.internal_no||'') > (b.job_no||b.internal_no||'') ? 1 : -1
-    );
+    /* ── Styles ── */
+    const mk = (v, s) => ({ v: v||'', t: 's', s });
 
-    const headers = [
-      'JOB','DATE','PORT','TYPE','AW-B/L','CUSTOMER','CONSIGNEE','ETA',
-      'LCL/FCL','QTY','CONTAINER NO','WEIGHT','DRAFT NO','REMARKS',
-      'BAYAN','BYN DATE','TERMINAL','D/O DATE','MWANI DATE',
-      'PORT DUES DATE','CUSTOM DUTY','ERI FREE DATE','DEL REMARKS',
-      'INVOICE NO','LOADING DATE','TRANSPORTER','LOCATION','DELIVERED','REMARKS2'
+    const S = {
+      co:   { font:{sz:13,bold:true,color:{rgb:'D4B266'}}, fill:{patternType:'solid',fgColor:{rgb:'0E1A2E'}}, alignment:{horizontal:'center',vertical:'center'} },
+      sub:  { font:{sz:9,color:{rgb:'AAAAAA'}},            fill:{patternType:'solid',fgColor:{rgb:'1C2B48'}}, alignment:{horizontal:'center',vertical:'center'} },
+      gs:   { font:{sz:10,bold:true,color:{rgb:'FFFFFF'}}, fill:{patternType:'solid',fgColor:{rgb:'1C4B8E'}}, alignment:{horizontal:'center',vertical:'center'} },
+      gd:   { font:{sz:10,bold:true,color:{rgb:'FFFFFF'}}, fill:{patternType:'solid',fgColor:{rgb:'2E8B57'}}, alignment:{horizontal:'center',vertical:'center'} },
+      hs:   { font:{sz:8,bold:true,color:{rgb:'FFFFFF'}},  fill:{patternType:'solid',fgColor:{rgb:'2E5FA8'}}, alignment:{horizontal:'center',wrapText:true,vertical:'center'} },
+      hd:   { font:{sz:8,bold:true,color:{rgb:'FFFFFF'}},  fill:{patternType:'solid',fgColor:{rgb:'3A9E6A'}}, alignment:{horizontal:'center',wrapText:true,vertical:'center'} },
+      c0:   { font:{sz:9}, alignment:{vertical:'center'} },
+      c1:   { font:{sz:9}, fill:{patternType:'solid',fgColor:{rgb:'EEF2FF'}}, alignment:{vertical:'center'} },
+      mono: { font:{sz:8,name:'Courier New'}, alignment:{vertical:'center'} },
+      done: { font:{sz:9,bold:true,color:{rgb:'2E8B57'}}, alignment:{vertical:'center'} },
+    };
+
+    const SH = ['JOB','DATE','PORT','TYPE','AW-B/L','CUSTOMER','CONSIGNEE','ETA','LCL/FCL','QTY','CONTAINER NO','WEIGHT','DRAFT NO','REMARKS'];
+    const DH = ['BAYAN','BYN DATE','TERMINAL','D/O DATE','MWANI DATE','PORT DUES','DUTY','ERI FREE','DEL REMARKS','INVOICE NO','LOADING','TRANSPORTER','LOCATION','DELIVERED','REMARKS2'];
+
+    const fill = (s) => Array(nc-1).fill(mk('', s));
+
+    const aoa = [
+      /* R1 Company */ [mk('\u0634\u0631\u0643\u0629 \u0627\u0644\u0633\u062f\u064a\u0633 \u0644\u0644\u062e\u062f\u0645\u0627\u062a \u0627\u0644\u0644\u0648\u062c\u0633\u062a\u064a\u0629    |    Import Shipments Report', S.co),  ...fill(S.co)],
+      /* R2 Sub     */ [mk('Generated: '+now+'    |    Total Shipments: '+rows.length, S.sub), ...fill(S.sub)],
+      /* R3 Groups  */ [...SH.map((_,i)=>mk(i===0?'SHIPMENT DATA':'', S.gs)), ...DH.map((_,i)=>mk(i===0?'DELIVERY DATA':'', S.gd))],
+      /* R4 Headers */ [...SH.map(h=>mk(h, S.hs)), ...DH.map(h=>mk(h, S.hd))],
+      /* Data rows  */ ...rows.map((s,i) => {
+        const c = i%2===0 ? S.c0 : S.c1;
+        const delivered = s.status==='delivered';
+        return [
+          mk(s.job_no||s.internal_no||'', c),
+          mk(d(s.date), c),
+          mk(s.port||'', c),
+          mk((s.type||'').toUpperCase(), c),
+          mk(s.bl_number||'', S.mono),
+          mk(s.customer_name||'', c),
+          mk(s.consignee||'', c),
+          mk(d(s.eta), c),
+          mk(s.lcl_fcl||'', c),
+          mk(s.qty||'', c),
+          mk(s.container_no||'', S.mono),
+          mk(s.weight||'', c),
+          mk(s.draft_no||'', c),
+          mk(s.remarks||'', c),
+          mk(s.customs_no||'', c),
+          mk(d(s.bayan_date), c),
+          mk(s.terminal||'', c),
+          mk(d(s.do_date), c),
+          mk(d(s.mwani_date), c),
+          mk(d(s.port_dues_date), c),
+          mk(s.custom_duty||'', c),
+          mk(d(s.eri_free_date), c),
+          mk(s.del_remarks||'', c),
+          mk(s.invoice_no||'', c),
+          mk(d(s.loading_date), c),
+          mk(s.transporter||'', c),
+          mk(s.location||'', c),
+          mk(d(s.delivered_date), delivered ? S.done : c),
+          mk(s.remarks2||'', c),
+        ];
+      })
     ];
 
-    const data = [headers, ...rows.map(s => [
-      s.job_no||s.internal_no||'',  s.date||'',
-      s.port||'',                    (s.type||'').toUpperCase(),
-      s.bl_number||'',               s.customer_name||'',
-      s.consignee||'',               d(s.eta),
-      s.lcl_fcl||'',                 s.qty||'',
-      s.container_no||'',            s.weight||'',
-      s.draft_no||'',                s.remarks||'',
-      s.customs_no||'',              d(s.bayan_date),
-      s.terminal||'',                d(s.do_date),
-      d(s.mwani_date),               d(s.port_dues_date),
-      s.custom_duty||'',             d(s.eri_free_date),
-      s.del_remarks||'',             s.invoice_no||'',
-      d(s.loading_date),             s.transporter||'',
-      s.location||'',                d(s.delivered_date),
-      s.remarks2||''
-    ])];
+    const ws = XLSX.utils.aoa_to_sheet(aoa);
 
-    const ws = XLSX.utils.aoa_to_sheet(data);
+    ws['!merges'] = [
+      {s:{r:0,c:0}, e:{r:0,c:nc-1}},
+      {s:{r:1,c:0}, e:{r:1,c:nc-1}},
+      {s:{r:2,c:0}, e:{r:2,c:SH.length-1}},
+      {s:{r:2,c:SH.length}, e:{r:2,c:nc-1}},
+    ];
 
-    /* Column widths */
+    ws['!rows'] = [{hpt:28},{hpt:18},{hpt:20},{hpt:28}];
+
     ws['!cols'] = [
-      {wch:8},{wch:12},{wch:12},{wch:6},{wch:20},{wch:20},{wch:20},{wch:12},
-      {wch:8},{wch:6},{wch:30},{wch:10},{wch:14},{wch:20},
-      {wch:14},{wch:12},{wch:12},{wch:12},{wch:12},{wch:14},{wch:12},{wch:12},
-      {wch:20},{wch:14},{wch:12},{wch:16},{wch:14},{wch:12},{wch:20}
+      {wch:7},{wch:11},{wch:11},{wch:6},{wch:20},
+      {wch:20},{wch:20},{wch:12},{wch:8},{wch:5},
+      {wch:28},{wch:9},{wch:13},{wch:20},
+      {wch:14},{wch:12},{wch:12},{wch:12},{wch:12},
+      {wch:13},{wch:10},{wch:12},{wch:20},{wch:13},
+      {wch:12},{wch:15},{wch:13},{wch:12},{wch:18}
     ];
 
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Import Shipments');
 
-    const now = new Date().toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}).replace(/ /g,'-');
-    XLSX.writeFile(wb, `import-shipments-${now}.xlsx`);
+    const fn = new Date().toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}).replace(/ /g,'-');
+    XLSX.writeFile(wb, 'import-shipments-'+fn+'.xlsx');
     toast('Excel file downloaded', 'success');
   }
 
   if (window.XLSX) { doExport(); return; }
-
   toast('Loading Excel library...', 'success');
   const s = document.createElement('script');
   s.src = 'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js';
