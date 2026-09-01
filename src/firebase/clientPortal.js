@@ -16,8 +16,8 @@ const COL = 'client_portals';
 const COMPANY = {
   name      : 'شركة السديس للخدمات اللوجستية',
   name_en   : 'Al-Sudais Logistics',
-  phone     : '+966500000000',     // ← رقم الاتصال
-  whatsapp  : '+966500000000',     // ← رقم واتساب
+  phone     : '+966536118708',
+  whatsapp  : '+966536118708',
   city      : 'جدة، المملكة العربية السعودية',
 };
 
