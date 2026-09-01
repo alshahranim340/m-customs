@@ -19,9 +19,10 @@ const DEST_LABELS = {
 };
 
 const STATUS_LABELS = {
-  draft: { ar: 'مسودة', en: 'DRAFT', class: 'gray' },
-  sent: { ar: 'مرسلة', en: 'SENT', class: 'blue' },
-  done: { ar: 'مكتملة', en: 'DONE', class: 'green' },
+  draft:          { ar: 'مسودة',      en: 'DRAFT',         class: 'gray'  },
+  sent:           { ar: 'مرسلة',      en: 'SENT',          class: 'blue'  },
+  broker_replied: { ar: 'رد المخلص',  en: 'BROKER REPLIED',class: 'amber' },
+  done:           { ar: 'مكتملة',     en: 'DONE',          class: 'green' },
 };
 
 export async function renderExportReport(container) {
@@ -343,7 +344,7 @@ function render() {
   _filtered.forEach(s => { if (byDest[s.destination] !== undefined) byDest[s.destination]++; });
 
   // Status breakdown
-  const byStatus = { draft: 0, sent: 0, done: 0 };
+  const byStatus = { draft: 0, sent: 0, broker_replied: 0, done: 0 };
   _filtered.forEach(s => { if (byStatus[s.status] !== undefined) byStatus[s.status]++; });
 
   // Avg per day
