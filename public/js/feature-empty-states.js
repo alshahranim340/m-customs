@@ -400,6 +400,33 @@
   }
 
   /* ══════════════════════════════════════════════════════
+     Local context — reads nearest section title
+  ══════════════════════════════════════════════════════ */
+  function getLocalContext(el) {
+    // Walk up to find the nearest section container
+    let node = el.parentElement;
+    for (let i = 0; i < 6 && node; i++) {
+      const titleEl = node.querySelector('.modern-section-title, [class*="section-title"]');
+      if (titleEl) {
+        const t = titleEl.textContent.toUpperCase();
+        if (t.includes('OVERDUE'))     return STATES.calendar.overdue;
+        if (t.includes('THIS WEEK'))   return {
+          icon:'📅', iconColor:'blue',
+          title:'CLEAR THIS WEEK',
+          sub:'لا وصولات هذا الأسبوع',
+          desc:'No shipments arriving in the next 7 days.',
+          hint:'ETA ALERTS WILL APPEAR HERE'
+        };
+        if (t.includes('RECENT'))      return null; // skip — has real data
+        if (t.includes('ALERT'))       return STATES.calendar.alerts;
+        if (t.includes('5-DAY'))       return STATES.calendar.alerts;
+      }
+      node = node.parentElement;
+    }
+    return undefined; // no local context found → use page context
+  }
+
+  /* ══════════════════════════════════════════════════════
      Enhance existing empty state elements
   ══════════════════════════════════════════════════════ */
   function enhanceEmptyStates(root) {
@@ -415,9 +442,16 @@
         if (el.dataset.mcEs) return; // already enhanced
         el.dataset.mcEs = '1';
 
-        const cfg = detectContext(el);
-        el.innerHTML  = buildEmptyState(cfg);
-        el.className  = ''; // remove old styling
+        // 1. Check local section context first
+        const localCtx = getLocalContext(el);
+        if (localCtx === null) return; // explicitly skip (e.g. RECENT section)
+
+        // 2. Fall back to page-level context
+        const cfg = localCtx || detectContext(el);
+        if (!cfg) return;
+
+        el.innerHTML     = buildEmptyState(cfg);
+        el.className     = '';
         el.classList.add('mc-es-wrapper');
         el.style.cssText = '';
       });
