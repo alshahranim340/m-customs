@@ -18,41 +18,46 @@ export function toHijri(date = new Date()) {
 }
 
 /**
- * Convert Hijri string (YYYY-MM-DD) to approximate Gregorian Date
+ * Convert Hijri string (YYYY-MM-DD) to Gregorian Date
+ *
+ * FIX: الكود القديم يتأرجح بين تاريخين ولا يتقارب.
+ * الحل: بحث ±90 يوم حول التقدير — مضمون الوصول للتاريخ الصحيح.
  */
 export function hijriToGregorian(hijriStr) {
   if (!hijriStr) return new Date();
-  // Parse hijri
-  let parts;
-  if (hijriStr.includes('-')) parts = hijriStr.split('-').map(Number);
-  else if (hijriStr.includes('/')) parts = hijriStr.split('/').reverse().map(Number);
-  else return new Date();
+
+  const parts = hijriStr.includes('-')
+    ? hijriStr.split('-').map(Number)
+    : hijriStr.split('/').map(Number);
 
   const [hy, hm, hd] = parts;
   if (!hy || !hm || !hd) return new Date();
 
-  // Search for matching gregorian date (binary-ish search around estimate)
-  // Estimate: Hijri year * 354.367 days from epoch
-  // Islamic epoch: July 16, 622 CE
-  const estimateDays = Math.floor((hy - 1) * 354.367 + (hm - 1) * 29.53 + hd);
-  let guess = new Date(622, 6, 16);
-  guess.setDate(guess.getDate() + estimateDays);
-
-  // Refine: adjust until toHijri matches
   const target = `${hy}-${String(hm).padStart(2,'0')}-${String(hd).padStart(2,'0')}`;
-  for (let i = 0; i < 15; i++) {
-    const current = toHijri(guess);
-    if (current === target) break;
-    // Compare and adjust by 1 day
-    const [cy, cm, cd] = current.split('-').map(Number);
-    const diff = (hy - cy) * 354 + (hm - cm) * 29.5 + (hd - cd);
-    if (Math.abs(diff) < 1) {
-      guess.setDate(guess.getDate() + (diff > 0 ? 1 : -1));
-    } else {
-      guess.setDate(guess.getDate() + Math.round(diff));
+
+  // نقطة البداية: حساب تقديري من الحقبة الإسلامية
+  // Epoch: July 19, 622 CE (proleptic Gregorian) = 1 Muharram 1 AH
+  const epochMs   = new Date(622, 6, 19).getTime();
+  const approxMs  = ((hy - 1) * 354.367 + (hm - 1) * 29.53 + hd) * 86400000;
+  const estimate  = new Date(epochMs + approxMs);
+  const DAY_MS    = 86400000;
+
+  // بحث ±90 يوم حول التقدير (يتعامل مع أي انزياح في الحساب)
+  for (let delta = 0; delta <= 90; delta++) {
+    // بحث للأمام
+    const fwd = new Date(estimate.getTime() + delta * DAY_MS);
+    if (toHijri(fwd) === target) return fwd;
+
+    // بحث للخلف
+    if (delta > 0) {
+      const bwd = new Date(estimate.getTime() - delta * DAY_MS);
+      if (toHijri(bwd) === target) return bwd;
     }
   }
-  return guess;
+
+  // fallback: إرجاع التقدير إذا لم يُوجد تطابق
+  console.warn('[hijriToGregorian] No exact match for', hijriStr);
+  return estimate;
 }
 
 export function todayHijri() {
