@@ -531,3 +531,59 @@
   .imp-page .modern-stats-4,
   .imp-page .modern-stats-3 { grid-template-columns: 1fr 1fr !important; }
 }
+
+/* ══════════════════════════════════════════════
+   16. Enhanced Empty States
+   يُحسّن كل .modern-empty في قسم الوارد تلقائياً
+══════════════════════════════════════════════ */
+.imp-page .modern-empty {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 56px 32px !important;
+  text-align: center !important;
+  font-family: 'Tajawal', sans-serif !important;
+}
+
+.imp-page .modern-empty-icon {
+  width: 80px !important;
+  height: 80px !important;
+  background: linear-gradient(135deg, #F0EDE4, #E8E5DC) !important;
+  border-radius: 20px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-size: 36px !important;
+  margin-bottom: 20px !important;
+  box-shadow: 0 4px 20px rgba(0,0,0,.07) !important;
+  transition: transform .25s cubic-bezier(.22,1,.36,1) !important;
+}
+.imp-page .modern-empty:hover .modern-empty-icon {
+  transform: translateY(-4px) scale(1.04) !important;
+}
+
+.imp-page .modern-empty-title {
+  font-family: 'JetBrains Mono', monospace !important;
+  font-size: 14px !important;
+  font-weight: 900 !important;
+  color: #0E1A2E !important;
+  letter-spacing: 1.5px !important;
+  margin-bottom: 4px !important;
+  text-transform: uppercase !important;
+}
+
+.imp-page .modern-empty-sub {
+  font-size: 15px !important;
+  font-weight: 700 !important;
+  color: #4A4540 !important;
+  margin-bottom: 6px !important;
+  font-family: 'Tajawal', sans-serif !important;
+  letter-spacing: 0 !important;
+}
+
+/* mc-log-empty  (سجل النشاطات) */
+.imp-page .mc-log-empty .mc-log-empty-icon {
+  font-size: 36px !important;
+  margin-bottom: 14px !important;
+}
