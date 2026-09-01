@@ -18,11 +18,25 @@ const DEST_LABELS = {
   oman: { ar: 'عمان', en: 'OM / OMAN', color: '#2E8B57' },
 };
 
+/* للعرض في الجدول — يشمل كل الحالات القديمة والجديدة */
 const STATUS_LABELS = {
-  draft:          { ar: 'مسودة',      en: 'DRAFT',         class: 'gray'  },
-  sent:           { ar: 'مرسلة',      en: 'SENT',          class: 'blue'  },
-  broker_replied: { ar: 'رد المخلص',  en: 'BROKER REPLIED',class: 'amber' },
-  done:           { ar: 'مكتملة',     en: 'DONE',          class: 'green' },
+  draft:          { ar: 'مسودة',              en: 'DRAFT',        class: 'gray'   },
+  waiting_broker: { ar: 'انتظار رد المخلص',   en: 'WAITING',      class: 'amber'  },
+  appointment:    { ar: 'تحديد موعد',          en: 'APPOINTMENT',  class: 'blue'   },
+  done:           { ar: 'مكتمل',               en: 'DONE',         class: 'green'  },
+  // حالات قديمة — backward compat للعرض في الجدول
+  sent:           { ar: 'انتظار رد المخلص',   en: 'WAITING',      class: 'amber'  },
+  sent_broker:    { ar: 'انتظار رد المخلص',   en: 'WAITING',      class: 'amber'  },
+  broker_replied: { ar: 'انتظار رد المخلص',   en: 'WAITING',      class: 'amber'  },
+  sent_driver:    { ar: 'تحديد موعد',          en: 'APPOINTMENT',  class: 'blue'   },
+};
+
+/* للعرض في قسم BY STATUS — 4 مجموعات فقط */
+const STATUS_COUNTS_LABELS = {
+  draft          : STATUS_LABELS.draft,
+  waiting_broker : STATUS_LABELS.waiting_broker,
+  appointment    : STATUS_LABELS.appointment,
+  done           : STATUS_LABELS.done,
 };
 
 export async function renderExportReport(container) {
@@ -441,8 +455,8 @@ function render() {
     <div style="background:white;border:1px solid #E8E5DC;border-radius:6px;padding:20px;margin-bottom:16px;">
       <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#0E1A2E;letter-spacing:2px;font-weight:800;margin-bottom:14px;">→ BY STATUS / حسب الحالة</div>
       <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;">
-        ${Object.entries(STATUS_LABELS).map(([key, label]) => {
-          const count = byStatus[key];
+        ${Object.entries(STATUS_COUNTS_LABELS).map(([key, label]) => {
+          const count = byStatus[key] || 0;  // null-safe
           const pct = total > 0 ? Math.round((count / total) * 100) : 0;
           return `
             <div style="background:#FAFAF7;border:1px solid #F0EDE4;border-radius:6px;padding:12px;text-align:center;">
