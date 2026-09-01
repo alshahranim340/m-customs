@@ -347,9 +347,6 @@ function render() {
   }).length;
 
   const pending = total - done;
-
-  // تحديث byStatus للمكتمل بنفس الحساب
-  byStatus.done = done;
   const uniqueDrivers = new Set(_filtered.map(s => s.driver_snapshot?.plate).filter(Boolean)).size;
 
   // Destinations breakdown
@@ -374,6 +371,7 @@ function render() {
     const group = STATUS_GROUP[s.status];
     if (group && group !== 'done') byStatus[group]++;
   });
+  byStatus.done = done; // ← بعد التعريف مباشرة ✓
 
   // Avg per day
   let days = 1;
