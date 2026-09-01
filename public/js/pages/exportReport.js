@@ -334,9 +334,22 @@ function render() {
   const el = document.getElementById('report-body');
   if (!el) return;
 
-  const total = _filtered.length;
-  const done = _filtered.filter(s => s.status === 'done').length;
-  const pending = _filtered.filter(s => s.status !== 'done').length;
+  const total   = _filtered.length;
+  const { from, to } = getPeriodRange();
+
+  // DONE = حالتها "مكتمل" وتاريخ الإكمال ضمن نفس الفترة
+  const done = _filtered.filter(s => {
+    if (s.status !== 'done') return false;
+    // استخدم completed_at إذا موجود، وإلا ارجع للتاريخ الميلادي للشحنة
+    const completionDate = s.completed_at || s._gregDate || '';
+    if (!completionDate || !from || !to) return true; // fallback: احسبها
+    return completionDate >= from && completionDate <= to;
+  }).length;
+
+  const pending = total - done;
+
+  // تحديث byStatus للمكتمل بنفس الحساب
+  byStatus.done = done;
   const uniqueDrivers = new Set(_filtered.map(s => s.driver_snapshot?.plate).filter(Boolean)).size;
 
   // Destinations breakdown
@@ -344,11 +357,25 @@ function render() {
   _filtered.forEach(s => { if (byDest[s.destination] !== undefined) byDest[s.destination]++; });
 
   // Status breakdown
-  const byStatus = { draft: 0, sent: 0, broker_replied: 0, done: 0 };
-  _filtered.forEach(s => { if (byStatus[s.status] !== undefined) byStatus[s.status]++; });
+  /* STATUS_GROUP: الحالات القديمة → الجديدة */
+  const STATUS_GROUP = {
+    draft          : 'draft',
+    waiting_broker : 'waiting_broker',
+    sent_broker    : 'waiting_broker',   // قديم
+    broker_replied : 'waiting_broker',   // قديم
+    appointment    : 'appointment',
+    sent_driver    : 'appointment',      // قديم
+    sent           : 'appointment',      // قديم
+    done           : 'done',
+  };
+
+  const byStatus = { draft: 0, waiting_broker: 0, appointment: 0, done: 0 };
+  _filtered.forEach(s => {
+    const group = STATUS_GROUP[s.status];
+    if (group && group !== 'done') byStatus[group]++;
+  });
 
   // Avg per day
-  const { from, to } = getPeriodRange();
   let days = 1;
   if (from && to) {
     days = Math.max(1, Math.round((new Date(to) - new Date(from)) / 86400000) + 1);

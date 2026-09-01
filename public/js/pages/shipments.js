@@ -9,13 +9,29 @@ import { fileToBase64, mergePDFs, htmlToPdfBytes, downloadBytes } from '../../..
 import { ATTACHMENTS_ORDER, PORTS } from '../../../src/utils/constants.js';
 import { toast } from '../app.js';
 
+/* ── الحالات الجديدة (4) + توافق مع القديمة ── */
 const STATUS = {
-  draft:          { ar: 'مسودة',        class: 'pill-draft' },
-  sent_broker:    { ar: 'أُرسل للمخلص', class: 'pill-sent' },
-  broker_replied: { ar: 'رد المخلص',     class: 'pill-replied' },
-  sent_driver:    { ar: 'أُرسل للسائق',  class: 'pill-done' },
-  done:           { ar: 'مكتمل ✓',       class: 'pill-done' },
+  // الحالات الجديدة
+  draft:          { ar: 'مسودة',                class: 'pill-draft'    },
+  waiting_broker: { ar: 'انتظار رد المخلص',     class: 'pill-replied'  },
+  appointment:    { ar: 'تحديد موعد',            class: 'pill-sent'     },
+  done:           { ar: 'مكتمل ✓',           class: 'pill-done'     },
+  // توافق مع البيانات القديمة
+  sent_broker:    { ar: 'انتظار رد المخلص',     class: 'pill-replied'  },
+  broker_replied: { ar: 'انتظار رد المخلص',     class: 'pill-replied'  },
+  sent_driver:    { ar: 'تحديد موعد',            class: 'pill-sent'     },
 };
+
+/* خريطة الحالات القديمة → الجديدة (للـ dropdown) */
+const STATUS_LEGACY_MAP = {
+  sent_broker:    'waiting_broker',
+  broker_replied: 'waiting_broker',
+  sent_driver:    'appointment',
+};
+
+/* الحالات التي تظهر في قائمة الاختيار */
+// 'done' لا يُختار يدوياً — يُضبط تلقائياً عند رفع وثيقة الموعد
+const STATUS_OPTS = ['draft', 'waiting_broker', 'appointment'];
 
 const DEST  = { uae: '🇦🇪 إمارات', bahrain: '🇧🇭 بحرين', oman: '🇴🇲 عُمان' };
 const PMAPS = { uae: 'جمرك البطحاء', bahrain: 'جمرك جسر الملك فهد' };
@@ -519,8 +535,10 @@ async function openEditModal(id) {
   const destOpts   = ['uae','bahrain','oman'].map(d =>
     `<option value="${d}" ${s.destination===d?'selected':''}>${DEST[d]}</option>`
   ).join('');
-  const statusOpts = Object.entries(STATUS).map(([k,v]) =>
-    `<option value="${k}" ${s.status===k?'selected':''}>${v.ar}</option>`
+  // الـ dropdown يعرض 4 حالات فقط، مع تحديد الأقرب للحالة الحالية
+  const currentMapped = STATUS_LEGACY_MAP[s.status] || s.status;
+  const statusOpts = STATUS_OPTS.map(k =>
+    `<option value="${k}" ${currentMapped===k?'selected':''}>${STATUS[k].ar}</option>`
   ).join('');
 
   const attachHTML = ATTACHMENTS_ORDER.map(a => {
@@ -652,6 +670,29 @@ async function editFileSelected(key, input) {
     item.querySelector('.u-icon').textContent = '✅';
     state.textContent = file.name.length > 22 ? file.name.substring(0,22)+'…' : file.name;
     toast(`✅ ${file.name}`, 'success');
+
+    /* ── وثيقة الموعد = إكمال تلقائي ── */
+    if (key === 'appointment' && _editingId) {
+      const todayGreg = new Date().toLocaleDateString('en-GB',
+        { day:'2-digit', month:'2-digit', year:'numeric' }
+      ).split('/').reverse().join('-');
+
+      await updateShipment(_editingId, {
+        status       : 'done',
+        completed_at : todayGreg,
+      });
+
+      // تحديث الـ UI
+      if (_editingShipment) {
+        _editingShipment.status       = 'done';
+        _editingShipment.completed_at = todayGreg;
+      }
+      // تحديث قائمة الحالة في الـ modal
+      const sel = document.getElementById('e-status');
+      if (sel) sel.value = 'done';
+
+      toast('✅ وثيقة الموعد تم رفعها — الشحنة مكتملة', 'success');
+    }
   } catch(e) { state.textContent = 'خطأ في الرفع'; }
 }
 
@@ -702,6 +743,16 @@ async function saveEdit() {
       plate_nationality: document.getElementById('e-drv-pnat').value.trim(),
     };
 
+    const newStatus  = document.getElementById('e-status').value;
+    const oldStatus  = _editingShipment?.status || '';
+    const todayGreg  = new Date().toLocaleDateString('en-GB', {day:'2-digit',month:'2-digit',year:'numeric'})
+                                 .split('/').reverse().join('-'); // YYYY-MM-DD
+
+    // سجّل completed_at عند أول تحديد "مكتمل"
+    const completedAt = (newStatus === 'done' && oldStatus !== 'done')
+      ? { completed_at: todayGreg }
+      : {};
+
     await updateShipment(_editingId, {
       destination:       dest,
       port:              dest === 'bahrain' ? 'bahrain' : 'uae',
@@ -710,10 +761,11 @@ async function saveEdit() {
       date:              document.getElementById('e-date').value.trim(),
       sample_date:       document.getElementById('e-sample-date')?.value?.trim() || document.getElementById('e-date').value.trim(),
       sample_day_name:   document.getElementById('e-sample-date')?.dataset?.dayName || '',
-      status:            document.getElementById('e-status').value,
+      status:            newStatus,
       exporter:          document.getElementById('e-exporter').value.trim(),
       goods_description: document.getElementById('e-goods').value.trim(),
       driver_snapshot:   driverSnapshot,
+      ...completedAt,   // أضف completed_at فقط عند أول تحديد مكتمل
     });
 
     if (Object.keys(_editFiles).length > 0) {
