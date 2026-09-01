@@ -1,0 +1,658 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex">
+  <title>بوابة العميل — M-Customs</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800;900&family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
+
+  <!-- Firebase (auto-configured by Firebase Hosting) -->
+  <script src="/__/firebase/10.12.2/firebase-app-compat.js"></script>
+  <script src="/__/firebase/10.12.2/firebase-firestore-compat.js"></script>
+  <script src="/__/firebase/init.js"></script>
+
+  <style>
+    *,*::before,*::after { box-sizing:border-box; margin:0; padding:0; }
+
+    :root {
+      --navy:  #0E1A2E;
+      --blue:  #1C4B8E;
+      --green: #2E8B57;
+      --amber: #C8943A;
+      --red:   #CC2229;
+      --gold:  #D4B266;
+      --bg:    #F5F3EC;
+      --card:  #FFFFFF;
+      --border:#E8E5DC;
+      --text:  #0E1A2E;
+      --muted: #6B6659;
+      --faint: #8A8578;
+    }
+
+    body {
+      font-family: 'Tajawal', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100dvh;
+    }
+
+    /* ══ HEADER ══ */
+    .hdr {
+      background: linear-gradient(135deg, var(--navy) 0%, #1C2B48 60%, var(--navy) 100%);
+      padding: 22px 20px 28px;
+      position: relative;
+      overflow: hidden;
+    }
+    .hdr::before {
+      content: '';
+      position: absolute;
+      top: -50px; left: -50px;
+      width: 200px; height: 200px;
+      background: radial-gradient(circle, rgba(212,178,102,.10) 0%, transparent 70%);
+    }
+    .hdr-brand { display:flex; align-items:center; gap:12px; margin-bottom:18px; }
+    .hdr-logo {
+      width:42px; height:42px; background:var(--gold); border-radius:11px;
+      display:flex; align-items:center; justify-content:center;
+      font-size:19px; font-weight:900; color:var(--navy); flex-shrink:0;
+    }
+    .hdr-name { font-size:15px; font-weight:800; color:#fff; }
+    .hdr-tagline { font-size:10px; color:rgba(255,255,255,.45);
+                   font-family:'JetBrains Mono',monospace; letter-spacing:.7px; margin-top:1px; }
+
+    .hdr-greeting { font-size:12px; color:rgba(255,255,255,.55);
+                    font-family:'JetBrains Mono',monospace; letter-spacing:1px; }
+    .hdr-customer { font-size:24px; font-weight:900; color:#fff; margin-top:4px; }
+
+    /* Live indicator */
+    .live-badge {
+      display:inline-flex; align-items:center; gap:6px;
+      margin-top:10px; background:rgba(255,255,255,.08);
+      border:1px solid rgba(255,255,255,.15); border-radius:20px;
+      padding:4px 12px; font-size:10px; color:rgba(255,255,255,.6);
+      font-family:'JetBrains Mono',monospace; letter-spacing:.5px;
+    }
+    .live-dot {
+      width:7px; height:7px; border-radius:50%; background:#22c55e;
+      animation: livePulse 2s ease-in-out infinite;
+    }
+    .live-dot.offline { background:var(--amber); animation:none; }
+    @keyframes livePulse {
+      0%,100% { opacity:1; } 50% { opacity:.3; }
+    }
+
+    /* ══ STATS ══ */
+    .stats {
+      display:grid; grid-template-columns:repeat(3,1fr);
+      gap:10px; padding:14px 16px;
+    }
+    .stat {
+      background:var(--card); border:1px solid var(--border);
+      border-radius:12px; padding:14px; text-align:center;
+      transition:transform .2s;
+    }
+    .stat-val { font-family:'JetBrains Mono',monospace; font-size:28px;
+                font-weight:900; line-height:1; }
+    .stat-val.blue  { color:var(--blue); }
+    .stat-val.amber { color:var(--amber); }
+    .stat-val.green { color:var(--green); }
+    .stat-lbl { font-size:9px; font-weight:800; color:var(--faint);
+                letter-spacing:1px; margin-top:5px; font-family:'JetBrains Mono',monospace; }
+
+    /* ══ CONTENT ══ */
+    .content { padding:4px 16px 24px; }
+
+    /* Section header */
+    .sec-hdr {
+      display:flex; align-items:center; gap:10px;
+      margin:14px 0 10px; font-family:'JetBrains Mono',monospace;
+      font-size:10px; font-weight:800; letter-spacing:1.5px; color:var(--faint);
+    }
+    .sec-hdr-line { flex:1; height:1px; background:var(--border); }
+    .sec-hdr-count {
+      background:var(--blue); color:#fff; border-radius:8px;
+      padding:2px 8px; font-size:9px;
+    }
+    .sec-hdr-count.green { background:var(--green); }
+
+    /* ══ SHIPMENT CARD ══ */
+    .ship-card {
+      background:var(--card); border:1px solid var(--border);
+      border-radius:14px; margin-bottom:12px; overflow:hidden;
+      box-shadow:0 2px 10px rgba(0,0,0,.05);
+      transition:box-shadow .2s;
+    }
+    .ship-card:hover { box-shadow:0 4px 20px rgba(28,75,142,.10); }
+
+    .ship-top {
+      display:flex; align-items:center; justify-content:space-between;
+      padding:14px 16px; border-bottom:1px solid #F5F3EC;
+    }
+    .ship-bl {
+      font-family:'JetBrains Mono',monospace; font-size:15px;
+      font-weight:900; color:var(--navy); letter-spacing:.5px;
+    }
+    .ship-job { font-size:10px; color:var(--faint);
+                font-family:'JetBrains Mono',monospace; margin-top:2px; }
+
+    /* Status badge */
+    .badge {
+      padding:5px 12px; border-radius:20px; font-size:10px;
+      font-weight:800; font-family:'JetBrains Mono',monospace;
+      letter-spacing:.3px; white-space:nowrap;
+    }
+    .badge.waiting   { background:#FEF3E2; color:var(--amber); }
+    .badge.clearance { background:#EEF2FF; color:var(--blue); }
+    .badge.delivered { background:#E7F5EE; color:var(--green); }
+
+    /* ══ TIMELINE ══ */
+    .timeline {
+      display:flex; align-items:center;
+      padding:14px 16px 10px;
+    }
+    .tl-step { display:flex; flex-direction:column; align-items:center; flex:1; }
+    .tl-dot {
+      width:28px; height:28px; border-radius:50%; border:2px solid var(--border);
+      background:#F5F3EC; display:flex; align-items:center;
+      justify-content:center; font-size:11px; z-index:1;
+      transition:all .3s;
+    }
+    .tl-dot.done   { background:var(--green); border-color:var(--green); color:#fff; }
+    .tl-dot.active {
+      background:var(--blue); border-color:var(--blue); color:#fff;
+      box-shadow:0 0 0 4px rgba(28,75,142,.15);
+      animation:tlPulse 2s ease-in-out infinite;
+    }
+    @keyframes tlPulse {
+      0%,100% { box-shadow:0 0 0 4px rgba(28,75,142,.15); }
+      50%      { box-shadow:0 0 0 8px rgba(28,75,142,.04); }
+    }
+    .tl-label {
+      font-size:8px; font-weight:800; color:var(--faint);
+      margin-top:5px; text-align:center; letter-spacing:.3px;
+      font-family:'JetBrains Mono',monospace;
+    }
+    .tl-label-ar { font-size:9px; font-weight:600; color:var(--muted);
+                   font-family:'Tajawal',sans-serif; margin-top:1px; }
+    .tl-line { flex:1; height:2px; background:var(--border);
+               margin:0 -2px; position:relative; top:-10px; }
+    .tl-line.done { background:var(--green); }
+
+    /* ══ SHIP DETAILS ══ */
+    .ship-details { padding:12px 16px 14px; }
+    .detail-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+    .detail-item label {
+      font-family:'JetBrains Mono',monospace; font-size:8px;
+      font-weight:800; color:var(--faint); letter-spacing:1.2px; display:block;
+    }
+    .detail-item span { font-size:12px; font-weight:600; color:var(--text); }
+    .detail-item span.empty { color:#C4B9A8; font-style:italic; font-weight:400; }
+    .detail-item span.green { color:var(--green); font-weight:700; }
+    .detail-item span.mono  { font-family:'JetBrains Mono',monospace; font-size:11px; }
+
+    /* ETA highlight */
+    .eta-banner {
+      background:var(--navy); border-radius:9px; padding:10px 14px;
+      display:flex; align-items:center; justify-content:space-between;
+      margin-bottom:12px;
+    }
+    .eta-label { font-family:'JetBrains Mono',monospace; font-size:8px;
+                 color:rgba(255,255,255,.45); letter-spacing:1.5px; margin-bottom:3px; }
+    .eta-val { font-size:15px; font-weight:800; color:var(--gold); }
+    .eta-port { font-size:11px; color:rgba(255,255,255,.55); margin-top:2px; }
+
+    /* ══ DELIVERED SECTION ══ */
+    .delivered-toggle {
+      display:flex; align-items:center; justify-content:space-between;
+      width:100%; background:white; border:1px solid var(--border);
+      border-radius:10px; padding:12px 16px; cursor:pointer;
+      font-family:'Tajawal',sans-serif; font-size:13px; font-weight:700;
+      color:var(--text); transition:all .18s; margin-bottom:10px;
+    }
+    .delivered-toggle:hover { background:#F5F3EC; }
+    .delivered-toggle .toggle-icon { transition:transform .25s; font-size:12px; }
+    .delivered-toggle.open .toggle-icon { transform:rotate(180deg); }
+
+    .delivered-list { display:none; }
+    .delivered-list.open { display:block; }
+
+    .del-card {
+      background:white; border:1px solid var(--border); border-radius:10px;
+      padding:12px 16px; margin-bottom:8px; display:flex;
+      align-items:center; gap:12px;
+    }
+    .del-check { width:28px; height:28px; background:#E7F5EE; border-radius:50%;
+                 display:flex; align-items:center; justify-content:center;
+                 font-size:12px; flex-shrink:0; }
+    .del-bl { font-family:'JetBrains Mono',monospace; font-size:12px;
+              font-weight:800; color:var(--text); }
+    .del-date { font-size:11px; color:var(--green); font-weight:600; margin-top:2px; }
+    .del-spacer { flex:1; }
+    .del-badge { font-family:'JetBrains Mono',monospace; font-size:9px;
+                 font-weight:800; color:var(--green); background:#E7F5EE;
+                 padding:3px 8px; border-radius:8px; }
+
+    /* ══ CONTACT ══ */
+    .contact-card {
+      background:white; border:1px solid var(--border); border-radius:14px;
+      padding:18px; text-align:center; margin-top:16px;
+    }
+    .contact-title { font-size:14px; font-weight:800; color:var(--navy); margin-bottom:4px; }
+    .contact-sub   { font-size:12px; color:var(--muted); margin-bottom:16px; }
+    .contact-btns  { display:flex; gap:10px; justify-content:center; }
+    .contact-btn {
+      display:inline-flex; align-items:center; gap:8px;
+      padding:11px 22px; border-radius:10px; font-family:'Tajawal',sans-serif;
+      font-size:13px; font-weight:700; text-decoration:none; transition:all .18s;
+    }
+    .contact-btn.wa    { background:#25D366; color:#fff; }
+    .contact-btn.wa:hover { background:#1DAA55; }
+    .contact-btn.tel   { background:#EEF2FF; color:var(--blue);
+                         border:1px solid #C7D2FE; }
+    .contact-btn.tel:hover { background:#E0E7FF; }
+
+    /* ══ FOOTER ══ */
+    .footer {
+      background:var(--navy); color:rgba(255,255,255,.35);
+      text-align:center; padding:14px;
+      font-family:'JetBrains Mono',monospace; font-size:9px; letter-spacing:1px;
+    }
+
+    /* ══ LOADING / ERROR ══ */
+    .splash {
+      display:flex; flex-direction:column; align-items:center;
+      justify-content:center; min-height:60dvh; padding:40px;
+      text-align:center;
+    }
+    .splash-spinner {
+      width:40px; height:40px; border:3px solid rgba(28,75,142,.15);
+      border-top-color:var(--blue); border-radius:50%;
+      animation:spin .7s linear infinite; margin-bottom:16px;
+    }
+    @keyframes spin { to { transform:rotate(360deg); } }
+    .splash-title { font-size:16px; font-weight:800; color:var(--navy); margin-bottom:6px; }
+    .splash-sub   { font-size:12px; color:var(--muted); }
+
+    /* ══ EMPTY ══ */
+    .empty-sec {
+      text-align:center; padding:32px 16px; color:var(--faint);
+      font-size:13px;
+    }
+
+    /* ══ RESPONSIVE ══ */
+    @media (max-width:400px) {
+      .contact-btns { flex-direction:column; }
+      .contact-btn  { justify-content:center; }
+      .stats        { gap:8px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Content injected by JS -->
+<div id="app">
+  <div class="splash">
+    <div class="splash-spinner"></div>
+    <div class="splash-title">جاري تحميل البوابة...</div>
+    <div class="splash-sub">CLIENT PORTAL · LOADING</div>
+  </div>
+</div>
+
+<script>
+/* ══════════════════════════════════════════════
+   Configuration
+══════════════════════════════════════════════ */
+// بيانات الشركة تأتي من Firestore (client_portals document)
+// عدّلها في src/firebase/clientPortal.js
+let COMPANY_PHONE    = '+966500000000';
+let COMPANY_WHATSAPP = '+966500000000';
+
+const STATUS_MAP = {
+  waiting:   { label:'WAITING',   ar:'قيد الانتظار',        cls:'waiting',   step:2 },
+  clearance: { label:'CLEARANCE', ar:'قيد التخليص الجمركي', cls:'clearance', step:3 },
+  delivered: { label:'DELIVERED', ar:'تم التسليم',          cls:'delivered', step:4 },
+};
+
+const STEPS = [
+  { en:'ARRIVED',   ar:'وصل' },
+  { en:'WAITING',   ar:'انتظار' },
+  { en:'CLEARANCE', ar:'تخليص' },
+  { en:'DELIVERED', ar:'تسليم' },
+];
+
+const PORTS_AR = {
+  jed_sea:'ميناء جدة الإسلامي', dmm_sea:'ميناء الدمام',
+  rab_sea:'ميناء رابغ',         jed_air:'مطار جدة',
+  ruh_air:'مطار الرياض',        dmm_air:'مطار الدمام',
+  batha:'منفذ البطحاء',         fahd:'جسر الملك فهد',
+};
+
+/* ══════════════════════════════════════════════
+   Helpers
+══════════════════════════════════════════════ */
+function fmtDate(d, style='short') {
+  if (!d) return null;
+  try {
+    return new Date(d).toLocaleDateString('en-GB', {
+      day:'2-digit', month: style==='long'?'long':'short', year:'numeric'
+    });
+  } catch { return d; }
+}
+
+function stepClass(stepIdx, activeStep) {
+  if (stepIdx + 1 < activeStep)  return 'done';
+  if (stepIdx + 1 === activeStep) return 'active';
+  return 'pending';
+}
+
+/* ══════════════════════════════════════════════
+   Render
+══════════════════════════════════════════════ */
+function render(data) {
+  // تحديث بيانات الشركة من Firestore
+  if (data.company_phone)    COMPANY_PHONE    = data.company_phone;
+  if (data.company_whatsapp) COMPANY_WHATSAPP = data.company_whatsapp;
+  const shipments  = data.shipments || [];
+  const active     = shipments.filter(s => s.status !== 'delivered');
+  const delivered  = shipments.filter(s => s.status === 'delivered');
+  const inClearance= active.filter(s => s.status === 'clearance').length;
+
+  /* Sort active: clearance first, then waiting, by ETA */
+  active.sort((a,b) => {
+    if (a.status === 'clearance' && b.status !== 'clearance') return -1;
+    if (b.status === 'clearance' && a.status !== 'clearance') return 1;
+    return (a.eta||'') > (b.eta||'') ? 1 : -1;
+  });
+
+  /* Last updated */
+  const lu = data.last_updated?.toDate ? data.last_updated.toDate() : new Date();
+  const luStr = lu ? (() => {
+    const diff = Math.floor((Date.now() - lu) / 1000);
+    if (diff < 60)   return 'Just now';
+    if (diff < 3600) return `${Math.floor(diff/60)}m ago`;
+    return `${Math.floor(diff/3600)}h ago`;
+  })() : '';
+
+  document.getElementById('app').innerHTML = `
+
+    <!-- HEADER -->
+    <div class="hdr">
+      <div class="hdr-brand">
+        <div class="hdr-logo">M</div>
+        <div>
+          <div class="hdr-name">M-Customs</div>
+          <div class="hdr-tagline">${data.company_name || "شركة السديس للخدمات اللوجستية"}</div>
+        </div>
+      </div>
+      <div class="hdr-greeting">CLIENT PORTAL · بوابة العميل</div>
+      <div class="hdr-customer">${data.customer_name}</div>
+      <div class="live-badge">
+        <div class="live-dot" id="live-dot"></div>
+        <span id="live-text">LIVE · ${luStr}</span>
+      </div>
+    </div>
+
+    <!-- STATS -->
+    <div class="stats">
+      <div class="stat">
+        <div class="stat-val blue">${String(active.length).padStart(2,'0')}</div>
+        <div class="stat-lbl">ACTIVE</div>
+      </div>
+      <div class="stat">
+        <div class="stat-val amber">${String(inClearance).padStart(2,'0')}</div>
+        <div class="stat-lbl">CLEARANCE</div>
+      </div>
+      <div class="stat">
+        <div class="stat-val green">${String(delivered.length).padStart(2,'0')}</div>
+        <div class="stat-lbl">DELIVERED</div>
+      </div>
+    </div>
+
+    <!-- CONTENT -->
+    <div class="content">
+
+      <!-- ACTIVE SHIPMENTS -->
+      <div class="sec-hdr">
+        ACTIVE SHIPMENTS
+        <div class="sec-hdr-line"></div>
+        <span class="sec-hdr-count">${active.length}</span>
+      </div>
+
+      ${active.length === 0
+        ? `<div class="empty-sec">
+            <div style="font-size:32px;margin-bottom:8px;">✅</div>
+            <div style="font-weight:700;color:#0E1A2E;">All shipments delivered</div>
+            <div style="margin-top:4px;">جميع شحناتكم تم تسليمها</div>
+           </div>`
+        : active.map(s => buildCard(s)).join('')}
+
+      <!-- DELIVERED SECTION -->
+      ${delivered.length > 0 ? `
+      <button class="delivered-toggle" id="del-toggle" onclick="toggleDelivered()">
+        <span>
+          <span style="font-size:14px;">✅</span>
+          Delivered Shipments · الشحنات المسلَّمة
+        </span>
+        <span>
+          <span style="background:#E7F5EE;color:#2E8B57;padding:2px 8px;border-radius:8px;
+                       font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:800;">
+            ${String(delivered.length).padStart(2,'0')}
+          </span>
+          <span class="toggle-icon" style="margin-right:8px;">▾</span>
+        </span>
+      </button>
+      <div class="delivered-list" id="del-list">
+        ${delivered.map(s => `
+          <div class="del-card">
+            <div class="del-check">✓</div>
+            <div>
+              <div class="del-bl">${s.bl_number || '—'}</div>
+              <div class="del-date">
+                ${s.delivered_date ? 'Delivered ' + fmtDate(s.delivered_date) : ''}
+              </div>
+            </div>
+            <div class="del-spacer"></div>
+            <span class="del-badge">DONE</span>
+          </div>`).join('')}
+      </div>` : ''}
+
+      <!-- CONTACT -->
+      <div class="contact-card">
+        <div class="contact-title">تواصل معنا</div>
+        <div class="contact-sub">للاستفسار عن شحناتكم</div>
+        <div class="contact-btns">
+          <a class="contact-btn wa"
+            href="https://wa.me/${COMPANY_WHATSAPP}?text=${encodeURIComponent('السلام عليكم\nالشركة: ' + data.customer_name + '\nأود الاستفسار عن شحناتنا')}"
+            target="_blank">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/>
+              <path d="M12 0C5.373 0 0 5.373 0 12c0 2.124.554 4.118 1.524 5.847L.057 23.93l6.244-1.44A11.944 11.944 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 22c-1.848 0-3.574-.474-5.073-1.306l-.363-.214-3.762.867.902-3.663-.237-.379A9.96 9.96 0 012 12C2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z"/>
+            </svg>
+            واتساب
+          </a>
+          <a class="contact-btn tel" href="tel:${COMPANY_PHONE}">
+            📞 اتصال مباشر
+          </a>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- FOOTER -->
+    <div class="footer">
+      M-CUSTOMS · شركة السديس للخدمات اللوجستية · جدة، المملكة العربية السعودية
+    </div>
+  `;
+}
+
+/* ══════════════════════════════════════════════
+   Build Shipment Card
+══════════════════════════════════════════════ */
+function buildCard(s) {
+  const st      = STATUS_MAP[s.status] || STATUS_MAP.waiting;
+  const active  = st.step;
+  const portAr  = PORTS_AR[s.port] || s.port || '—';
+  const eta     = fmtDate(s.eta, 'long');
+
+  const tlHtml = STEPS.map((step, i) => {
+    const cls = stepClass(i, active);
+    const icon = cls==='done' ? '✓' : cls==='active' ? '●' : '○';
+    const lineClass = i < STEPS.length-1 ? (i+1 < active ? 'done' : '') : '';
+    return `
+      <div class="tl-step">
+        <div class="tl-dot ${cls}">${icon}</div>
+        <div class="tl-label">${step.en}</div>
+        <div class="tl-label-ar">${step.ar}</div>
+      </div>
+      ${i < STEPS.length-1 ? `<div class="tl-line ${lineClass}"></div>` : ''}`;
+  }).join('');
+
+  const deliveryHTML = (s.status === 'clearance' || s.status === 'delivered') ? `
+    <div class="detail-grid" style="margin-top:10px;padding-top:10px;border-top:1px solid #F5F3EC;">
+      ${s.customs_no  ? `<div class="detail-item"><label>BAYAN NO</label><span class="mono">${s.customs_no}</span></div>`:''}
+      ${s.bayan_date  ? `<div class="detail-item"><label>BAYAN DATE</label><span>${fmtDate(s.bayan_date)}</span></div>`:''}
+      ${s.terminal    ? `<div class="detail-item"><label>TERMINAL</label><span>${s.terminal}</span></div>`:''}
+      ${s.do_date     ? `<div class="detail-item"><label>D/O DATE</label><span>${fmtDate(s.do_date)}</span></div>`:''}
+      ${s.eri_free_date?`<div class="detail-item"><label>ERI FREE DATE</label><span class="green">${fmtDate(s.eri_free_date)}</span></div>`:''}
+    </div>` : '';
+
+  return `
+    <div class="ship-card">
+      <!-- Top: BL + Badge -->
+      <div class="ship-top">
+        <div>
+          <div class="ship-bl">${s.bl_number || '—'}</div>
+          <div class="ship-job">JOB #${s.job_no || '—'}</div>
+        </div>
+        <span class="badge ${st.cls}">${st.label} · ${st.ar}</span>
+      </div>
+
+      <!-- Timeline -->
+      <div class="timeline">${tlHtml}</div>
+
+      <!-- Details -->
+      <div class="ship-details">
+        ${eta ? `
+        <div class="eta-banner">
+          <div>
+            <div class="eta-label">ETA · وقت الوصول المتوقع</div>
+            <div class="eta-val">${eta}</div>
+            <div class="eta-port">📍 ${portAr}</div>
+          </div>
+          <div style="font-size:24px;">📅</div>
+        </div>` : ''}
+
+        <div class="detail-grid">
+          <div class="detail-item">
+            <label>TYPE</label>
+            <span>${s.type || '—'} / <span class="mono">${s.lcl_fcl || '—'}</span></span>
+          </div>
+          <div class="detail-item">
+            <label>QTY</label>
+            <span>${s.qty || '—'}</span>
+          </div>
+          ${s.consignee ? `
+          <div class="detail-item" style="grid-column:1/-1;">
+            <label>CONSIGNEE</label>
+            <span>${s.consignee}</span>
+          </div>` : ''}
+        </div>
+
+        ${deliveryHTML}
+      </div>
+    </div>`;
+}
+
+/* ══════════════════════════════════════════════
+   Toggle Delivered Section
+══════════════════════════════════════════════ */
+function toggleDelivered() {
+  const btn  = document.getElementById('del-toggle');
+  const list = document.getElementById('del-list');
+  btn?.classList.toggle('open');
+  list?.classList.toggle('open');
+}
+
+/* ══════════════════════════════════════════════
+   Error / Not Found
+══════════════════════════════════════════════ */
+function showError(msg) {
+  document.getElementById('app').innerHTML = `
+    <div class="hdr" style="padding:20px;">
+      <div class="hdr-brand">
+        <div class="hdr-logo">M</div>
+        <div>
+          <div class="hdr-name">M-Customs</div>
+          <div class="hdr-tagline">${data.company_name || "شركة السديس للخدمات اللوجستية"}</div>
+        </div>
+      </div>
+    </div>
+    <div class="splash">
+      <div style="font-size:48px;margin-bottom:14px;">📦</div>
+      <div class="splash-title">لم يتم العثور على البوابة</div>
+      <div class="splash-sub" style="margin-top:6px;">${msg || 'الرابط غير صحيح أو انتهت صلاحيته'}</div>
+    </div>`;
+}
+
+/* ══════════════════════════════════════════════
+   Real-time Listener (onSnapshot)
+══════════════════════════════════════════════ */
+window.addEventListener('load', async () => {
+  // Bypass service worker
+  if ('serviceWorker' in navigator && !sessionStorage.getItem('_cl_sw')) {
+    const regs = await navigator.serviceWorker.getRegistrations();
+    if (regs.length) {
+      sessionStorage.setItem('_cl_sw','1');
+      await Promise.all(regs.map(r => r.unregister()));
+      location.reload();
+      return;
+    }
+  }
+
+  const token = new URLSearchParams(location.search).get('token');
+  if (!token) { showError('رابط البوابة غير صحيح'); return; }
+
+  try {
+    const db = firebase.firestore();
+
+    // Initial load
+    const snap = await db.collection('client_portals').doc(token).get();
+    if (!snap.exists) { showError('البوابة غير موجودة'); return; }
+
+    // Set page title
+    const data = snap.data();
+    document.title = `${data.customer_name} · M-Customs`;
+    render(data);
+
+    // Subscribe to real-time updates
+    db.collection('client_portals').doc(token)
+      .onSnapshot(
+        docSnap => {
+          if (!docSnap.exists) return;
+          render(docSnap.data());
+
+          // Update live indicator
+          const dot  = document.getElementById('live-dot');
+          const text = document.getElementById('live-text');
+          if (dot)  dot.className  = 'live-dot';
+          if (text) text.textContent = 'LIVE · Just updated';
+        },
+        err => {
+          console.error('[Portal]', err);
+          const dot  = document.getElementById('live-dot');
+          const text = document.getElementById('live-text');
+          if (dot)  { dot.className = 'live-dot offline'; }
+          if (text) text.textContent = 'RECONNECTING...';
+        }
+      );
+
+  } catch(e) {
+    console.error('[Portal]', e);
+    showError('خطأ في الاتصال، يرجى المحاولة لاحقاً');
+  }
+});
+</script>
+</body>
+</html>
