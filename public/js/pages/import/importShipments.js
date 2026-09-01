@@ -5,6 +5,7 @@ import {
 import { toast } from '../../app.js';
 import { getCurrentProfile } from '../../app.js';
 import { createTrackingLink, updateTrackingStatus } from '../../../../src/firebase/tracking.js';
+import { updateClientPortal } from '../../../../src/firebase/clientPortal.js';
 
 let _shipments = [];
 let _customers = [];
@@ -719,9 +720,19 @@ async function changeImportStatus(id, status) {
     const s = _shipments.find(x => x.id === id);
     if (s) {
       s.status = status;
+
       // مزامنة رابط التتبع
       if (s.tracking_token) {
         await updateTrackingStatus(s.tracking_token, { status });
+      }
+
+      // مزامنة بوابة العميل تلقائياً
+      if (s.customer_id) {
+        const customer = _customers.find(c => c.id === s.customer_id);
+        if (customer?.portal_token) {
+          const customerShipments = _shipments.filter(x => x.customer_id === s.customer_id);
+          await updateClientPortal(customer.portal_token, customerShipments);
+        }
       }
     }
     toast(`✅ ${IMPORT_STATUS[status]?.ar}`, 'success');

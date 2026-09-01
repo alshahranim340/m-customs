@@ -1,4 +1,5 @@
-import { getCustomers, addCustomer, updateCustomer, deleteCustomer } from '../../../../src/firebase/importDb.js';
+import { getCustomers, addCustomer, updateCustomer, deleteCustomer, getImportShipments } from '../../../../src/firebase/importDb.js';
+import { createClientPortal } from '../../../../src/firebase/clientPortal.js';
 import { toast } from '../../app.js';
 
 let _customers = [];
@@ -272,3 +273,108 @@ async function deleteCustomerUI(id) {
     toast('خطأ في الحذف', 'error');
   }
 }
+
+
+/* ══════════════════════════════════════════════
+   بوابة العميل — إنشاء ومشاركة
+══════════════════════════════════════════════ */
+async function openClientPortalForCustomer(customerId) {
+  const c   = _customers.find(x => x.id === customerId);
+  if (!c) return;
+
+  const btn = document.querySelector(`[data-portal-btn="${customerId}"]`);
+  const origHTML = btn?.innerHTML || '';
+  if (btn) { btn.innerHTML = '<i class="ti ti-loader"></i>'; btn.disabled = true; }
+
+  try {
+    // جلب شحنات العميل
+    const all       = await getImportShipments();
+    const shipments = all.filter(s => s.customer_id === customerId);
+
+    // إنشاء أو تحديث البوابة
+    const token = await createClientPortal(customerId, c, shipments);
+    const url   = `${location.origin}/client.html?token=${token}`;
+
+    // تحديث الـ token محلياً
+    c.portal_token = token;
+
+    _showPortalModal(url, token, c.company_name, shipments.length);
+  } catch(e) {
+    console.error('[ClientPortal]', e);
+    toast('خطأ في إنشاء البوابة', 'error');
+  } finally {
+    if (btn) { btn.innerHTML = origHTML; btn.disabled = false; }
+  }
+}
+
+function _showPortalModal(url, token, customerName, shipmentCount) {
+  document.getElementById('portal-modal')?.remove();
+
+  const waMsg = encodeURIComponent(
+    `السلام عليكم ${customerName}،
+
+يمكنكم متابعة شحناتكم عبر البوابة الإلكترونية:
+${url}
+
+البوابة تُحدَّث تلقائياً مع كل تغيير.
+
+شركة السديس للخدمات اللوجستية`
+  );
+
+  const modal = document.createElement('div');
+  modal.id = 'portal-modal';
+  modal.style.cssText = 'position:fixed;inset:0;z-index:3000;display:flex;align-items:center;justify-content:center;background:rgba(10,20,40,.65);padding:16px;backdrop-filter:blur(3px);font-family:Tajawal,sans-serif;';
+  modal.innerHTML = `
+    <div style="background:white;border-radius:16px;width:100%;max-width:440px;overflow:hidden;box-shadow:0 24px 64px rgba(0,0,0,.3);">
+
+      <div style="background:linear-gradient(135deg,#0E1A2E,#1C2B48);padding:20px 22px;display:flex;align-items:center;justify-content:space-between;">
+        <div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:#D4B266;letter-spacing:2px;font-weight:800;">CLIENT PORTAL</div>
+          <div style="font-size:16px;font-weight:900;color:white;margin-top:3px;">بوابة العميل</div>
+        </div>
+        <button onclick="document.getElementById('portal-modal').remove()"
+          style="background:rgba(255,255,255,.1);border:none;color:white;width:30px;height:30px;border-radius:8px;cursor:pointer;font-size:14px;">✕</button>
+      </div>
+
+      <div style="padding:22px;">
+
+        <div style="background:#F5F3EC;border-radius:10px;padding:12px 16px;margin-bottom:16px;">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:#8A8578;letter-spacing:1.5px;font-weight:800;margin-bottom:4px;">CUSTOMER</div>
+          <div style="font-size:14px;font-weight:800;color:#0E1A2E;">${customerName}</div>
+          <div style="font-size:11px;color:#2E8B57;margin-top:3px;font-weight:700;">✓ ${shipmentCount} shipment${shipmentCount!==1?'s':''} synced</div>
+        </div>
+
+        <div style="background:#FAFAF7;border:1.5px solid #E8E5DC;border-radius:10px;padding:11px 14px;margin-bottom:14px;">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:#8A8578;letter-spacing:1px;font-weight:800;margin-bottom:5px;">🔗 PORTAL URL</div>
+          <div style="font-size:11px;color:#1C4B8E;font-family:'JetBrains Mono',monospace;font-weight:600;word-break:break-all;">${url}</div>
+        </div>
+
+        <div style="display:flex;gap:10px;">
+          <button onclick="_copyPortalUrl('${url}',this)"
+            style="flex:1;padding:11px;border:1.5px solid #E8E5DC;border-radius:9px;background:white;font-family:Tajawal,sans-serif;font-size:13px;font-weight:700;cursor:pointer;">
+            📋 نسخ الرابط
+          </button>
+          <a href="https://wa.me/?text=${waMsg}" target="_blank"
+            style="flex:1;padding:11px;background:#25D366;color:white;border-radius:9px;font-family:Tajawal,sans-serif;font-size:13px;font-weight:700;text-decoration:none;display:flex;align-items:center;justify-content:center;gap:6px;">
+            واتساب
+          </a>
+        </div>
+
+        <div style="text-align:center;margin-top:10px;font-size:11px;color:#8A8578;">
+          البوابة تتحدث تلقائياً مع كل تغيير في الحالة
+        </div>
+      </div>
+    </div>`;
+
+  document.body.appendChild(modal);
+  modal.addEventListener('click', e => { if (e.target===modal) modal.remove(); });
+
+  // نسخ تلقائي
+  navigator.clipboard.writeText(url).catch(()=>{});
+}
+
+window._copyPortalUrl = async function(url, btn) {
+  await navigator.clipboard.writeText(url);
+  btn.textContent = '✅ تم النسخ';
+  setTimeout(() => btn.textContent = '📋 نسخ الرابط', 2000);
+};
