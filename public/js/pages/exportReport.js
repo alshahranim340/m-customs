@@ -287,12 +287,33 @@ function getPeriodRange() {
   return {};
 }
 
+/* تحويل تاريخ ميلادي لاسم الشهر الهجري */
+function gregToHijriMonthLabel(gregDateStr) {
+  try {
+    const d = new Date(gregDateStr);
+    return new Intl.DateTimeFormat('ar-SA-u-ca-islamic-umalqura', {
+      month: 'long', year: 'numeric'
+    }).format(d);
+  } catch(_) { return ''; }
+}
+
 function getPeriodLabel() {
   if (_period === 'month') {
     const [y, m] = _selectedMonth.split('-');
     const d = new Date(parseInt(y), parseInt(m) - 1, 1);
-    return d.toLocaleDateString('ar-SA', { year: 'numeric', month: 'long', calendar: 'gregory' });
-  } else if (_period === 'quarter') return `الربع ${_selectedQuarter.split('-Q')[1]} · ${_selectedQuarter.split('-Q')[0]}`;
+    const gregLabel = d.toLocaleDateString('ar-SA', {
+      year: 'numeric', month: 'long', calendar: 'gregory'
+    });
+    // أضف الشهر الهجري المقابل
+    const hijriLabel = gregToHijriMonthLabel(`${y}-${m}-15`); // منتصف الشهر
+    return hijriLabel ? `${gregLabel}  ·  ${hijriLabel} هـ` : gregLabel;
+  } else if (_period === 'quarter') {
+    const [y, q] = _selectedQuarter.split('-Q');
+    const startMonth = (parseInt(q) - 1) * 3 + 1;
+    const gregLabel = `الربع ${q} · ${y}`;
+    const hijriLabel = gregToHijriMonthLabel(`${y}-${String(startMonth).padStart(2,'0')}-15`);
+    return hijriLabel ? `${gregLabel}  ·  ${hijriLabel} هـ` : gregLabel;
+  }
   else if (_period === 'year') return `سنة ${_selectedYear}`;
   else if (_period === 'custom') return `${_customFrom} إلى ${_customTo}`;
   return '';
