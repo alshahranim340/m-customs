@@ -179,7 +179,7 @@ function updatePicker() {
     for (let i = 0; i < 24; i++) {
       const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
       const val = d.toISOString().slice(0, 7);
-      const label = d.toLocaleDateString('ar-SA', { year: 'numeric', month: 'long', calendar: 'gregory' });
+      const label = d.toLocaleDateString('en-GB', { year: 'numeric', month: 'long', calendar: 'gregory' });
       months.push({ val, label });
     }
     el.innerHTML = `
@@ -316,7 +316,7 @@ function getPeriodLabel() {
   if (_period === 'month') {
     const [y, m] = _selectedMonth.split('-');
     const d = new Date(parseInt(y), parseInt(m) - 1, 1);
-    const gregLabel = d.toLocaleDateString('ar-SA', {
+    const gregLabel = d.toLocaleDateString('en-GB', {
       year: 'numeric', month: 'long', calendar: 'gregory'
     });
     // أضف الشهر الهجري المقابل
@@ -402,7 +402,7 @@ function render() {
       <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#8A8578;letter-spacing:2px;">SDS · EXPORT REPORT · ${getPeriodCode().toUpperCase()}</div>
       <div style="font-size:22px;font-weight:800;color:#0E1A2E;margin-top:6px;">تقرير الشحنات - الصادر</div>
       <div style="font-size:14px;color:#6B6659;margin-top:4px;">${periodLabel}</div>
-      <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#8A8578;margin-top:6px;">Generated: ${new Date().toLocaleString('ar-SA', { calendar: 'gregory' })}</div>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#8A8578;margin-top:6px;">Generated: ${new Date().toLocaleString('en-US', { calendar: 'gregory' })}</div>
     </div>
 
     <!-- Stats -->
@@ -574,7 +574,7 @@ function handleExcel() {
 
   // Header
   csv += `تقرير الشحنات - الصادر,${periodLabel}\n`;
-  csv += `تاريخ الإصدار,${new Date().toLocaleString('ar-SA', { calendar: 'gregory' })}\n`;
+  csv += `تاريخ الإصدار,${new Date().toLocaleString('en-US', { calendar: 'gregory' })}\n`;
   csv += `عدد الشحنات,${_filtered.length}\n\n`;
 
   // Summary

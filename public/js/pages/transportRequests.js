@@ -1252,8 +1252,8 @@ function printSelected() {
 
   const printWindow = window.open('', '_blank');
   const now = new Date();
-  const dateStr = now.toLocaleDateString('ar-SA', { calendar: 'gregory' });
-  const timeStr = now.toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' });
+  const dateStr = now.toLocaleDateString('en-GB', { calendar: 'gregory' });
+  const timeStr = now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
 
   const html = `
 <!DOCTYPE html>
@@ -1405,7 +1405,7 @@ function exportSelectedExcel() {
   let csv = BOM;
 
   const now = new Date();
-  const dateStr = now.toLocaleDateString('ar-SA', { calendar: 'gregory' });
+  const dateStr = now.toLocaleDateString('en-GB', { calendar: 'gregory' });
 
   csv += `طلبات النقل - السديس اللوجستية,${dateStr}\n`;
   csv += `عدد الطلبات,${items.length}\n\n`;
@@ -2109,7 +2109,7 @@ async function exportSelectedExcelXLSX() {
   ];
 
   const now = new Date();
-  const dateStr = now.toLocaleDateString('ar-SA', { calendar: 'gregory' });
+  const dateStr = now.toLocaleDateString('en-GB', { calendar: 'gregory' });
   const customerName = items[0].customer || 'Transport';
 
   // Build sheet data ─────────────────────────────

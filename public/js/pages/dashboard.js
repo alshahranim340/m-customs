@@ -784,7 +784,7 @@ function timeAgo(dateStr) {
   if (hrs < 24) return `قبل ${hrs} ساعة`;
   const days = Math.floor(hrs / 24);
   if (days < 7) return `قبل ${days} يوم`;
-  return then.toLocaleDateString('ar-SA', { calendar: 'gregory' });
+  return then.toLocaleDateString('en-GB', { calendar: 'gregory' });
 }
 
 function extractSource(title) {
