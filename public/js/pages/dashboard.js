@@ -3,6 +3,7 @@
 // ══════════════════════════════════════════════════════════════
 
 import { getShipments, getAllDrivers } from '../../../src/firebase/db.js';
+import { toHijri } from '../../../src/utils/hijriDate.js';
 import { getTransportRequests } from '../../../src/firebase/transportDb.js';
 import { getCurrentUser, getUserProfile } from '../../../src/firebase/auth.js';
 
@@ -213,13 +214,25 @@ async function loadStats() {
     const now = new Date();
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
 
+    // شحنات هذا الشهر — مقارنة بالشهر الهجري (لأن s.date مخزن هجري)
+    const nowHijri      = toHijri(now);              // e.g. "1448-03-02"
+    const hijriPrefix   = nowHijri.slice(0, 7);      // e.g. "1448-03"
     const shipsThisMonth = shipments.filter(s => {
-      const d = s.created_at?.toDate ? s.created_at.toDate() : (s.created_at ? new Date(s.created_at) : null);
+      if (!s.date) return false;
+      // إذا كان التاريخ هجري (1300-1600)
+      const yr = parseInt(s.date.split('-')[0]);
+      if (yr >= 1300 && yr <= 1600) {
+        return s.date.startsWith(hijriPrefix);
+      }
+      // إذا كان ميلادي — استخدم created_at
+      const d = s.created_at?.toDate ? s.created_at.toDate() : null;
       return d && d >= monthStart;
     }).length;
 
     const draftRequests = requests.filter(r => r.status === 'draft').length;
-    const inProgress = shipments.filter(s => s.status === 'draft' || s.status === 'sent_broker' || !s.status).length;
+    // قيد المعالجة = كل الشحنات غير المكتملة (كل الحالات ما عدا done)
+    const NON_DONE = new Set(['draft','sent','sent_broker','broker_replied','sent_driver','waiting_broker','appointment']);
+    const inProgress = shipments.filter(s => NON_DONE.has(s.status) || !s.status).length;
     const totalShipments = shipments.length;
 
     document.getElementById('dash-stats').innerHTML = `

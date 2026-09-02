@@ -675,27 +675,10 @@ async function editFileSelected(key, input) {
     state.textContent = file.name.length > 22 ? file.name.substring(0,22)+'…' : file.name;
     toast(`✅ ${file.name}`, 'success');
 
-    /* ── وثيقة الموعد = إكمال تلقائي ── */
-    if (key === 'appointment' && _editingId) {
-      const todayGreg = new Date().toLocaleDateString('en-GB',
-        { day:'2-digit', month:'2-digit', year:'numeric' }
-      ).split('/').reverse().join('-');
-
-      await updateShipment(_editingId, {
-        status       : 'done',
-        completed_at : todayGreg,
-      });
-
-      // تحديث الـ UI
-      if (_editingShipment) {
-        _editingShipment.status       = 'done';
-        _editingShipment.completed_at = todayGreg;
-      }
-      // تحديث قائمة الحالة في الـ modal
-      const sel = document.getElementById('e-status');
-      if (sel) sel.value = 'done';
-
-      toast('✅ وثيقة الموعد تم رفعها — الشحنة مكتملة', 'success');
+    /* ── وثيقة الموعد — يُكمل عند الحفظ (saveEdit) ── */
+    if (key === 'appointment') {
+      // أبلغ المستخدم بدون تغيير الحالة حتى يضغط حفظ
+      toast('📎 وثيقة الموعد جاهزة — اضغط حفظ لإتمام الشحنة', 'success');
     }
   } catch(e) { state.textContent = 'خطأ في الرفع'; }
 }
@@ -752,8 +735,16 @@ async function saveEdit() {
     const todayGreg  = new Date().toLocaleDateString('en-GB', {day:'2-digit',month:'2-digit',year:'numeric'})
                                  .split('/').reverse().join('-'); // YYYY-MM-DD
 
-    // إذا أُكمل تلقائياً عند رفع الموعد — احتفظ بـ done حتى لو الـ dropdown ما تغيّر
-    const finalStatus = (oldStatus === 'done' && newStatus !== 'done') ? 'done' : newStatus;
+    // تحقق من وثيقة الموعد — إذا موجودة يتحول لمكتمل تلقائياً عند الحفظ
+    const hasAppointmentDoc = !!(_editFiles['appointment'] || _existingFiles['appointment']);
+    const autoComplete      = hasAppointmentDoc && oldStatus !== 'done';
+    const finalStatus       = autoComplete ? 'done' : newStatus;
+
+    // تحديث الـ dropdown إذا اكتمل تلقائياً
+    if (autoComplete) {
+      const sel = document.getElementById('e-status');
+      if (sel) sel.value = 'done';
+    }
 
     // سجّل completed_at عند أول تحديد "مكتمل"
     const completedAt = (finalStatus === 'done' && oldStatus !== 'done')
