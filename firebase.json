@@ -2,7 +2,11 @@
   "hosting": {
     "public": "dist",
     "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
-    "rewrites": [{ "source": "**", "destination": "/index.html" }]
+    "rewrites": [
+      { "source": "/track.html", "destination": "/track.html" },
+      { "source": "/client.html", "destination": "/client.html" },
+      { "source": "**", "destination": "/index.html" }
+    ]
   },
   "firestore": {
     "rules": "firestore.rules",
