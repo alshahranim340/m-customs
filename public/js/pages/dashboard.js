@@ -2,7 +2,7 @@
 // DASHBOARD — Live morning brief with stats, alerts, news
 // ══════════════════════════════════════════════════════════════
 
-import { getShipments, getAllDrivers } from '../../../../src/firebase/db.js';
+import { getShipments, getAllDrivers } from '../../src/firebase/db.js';
 import { toHijri } from '../../../src/utils/hijriDate.js';
 import { getTransportRequests } from '../../../src/firebase/transportDb.js';
 import { getCurrentUser, getUserProfile } from '../../../src/firebase/auth.js';
@@ -891,30 +891,3 @@ async function loadPrayerTimes() {
   }
 }
 
-
-/* ── Test Email Button ── */
-window._dashTestEmail = async function() {
-  const btn = document.getElementById('btn-test-email');
-  const orig = btn ? btn.textContent : '';
-  if (btn) { btn.disabled = true; btn.textContent = '\u23F3 \u062c\u0627\u0631\u064a...'; }
-
-  try {
-    const { sendTestAlert } = await import('../../../../src/utils/notifications.js');
-    const { getAuth }       = await import('firebase/auth');
-    const { getShipments }  = await import('../../../src/firebase/db.js');
-
-    const auth      = getAuth();
-    const testEmail = auth.currentUser?.email;
-    if (!testEmail) { alert('\u0644\u0627 \u064a\u0645\u0643\u0646 \u0627\u0644\u062a\u0639\u0631\u0641 \u0639\u0644\u0649 \u0625\u064a\u0645\u064a\u0644\u0643'); return; }
-
-    const shipments = await getShipments();
-    await sendTestAlert(testEmail, shipments);
-
-    if (btn) { btn.textContent = '\u2705 \u062a\u0645!'; setTimeout(()=>{ btn.textContent=orig; btn.disabled=false; }, 3000); }
-    alert('\u2705 \u062a\u0645 \u0625\u0631\u0633\u0627\u0644 \u0625\u064a\u0645\u064a\u0644 \u062a\u062c\u0631\u064a\u0628\u064a \u0625\u0644\u0649:\n' + testEmail + '\n\n\u062a\u062d\u0642\u0642 \u0645\u0646 \u0635\u0646\u062f\u0648\u0642 \u0627\u0644\u0648\u0627\u0631\u062f (\u0623\u0648 Spam)');
-  } catch(e) {
-    console.error('[Test Email]', e);
-    if (btn) { btn.textContent = '\u274c \u062e\u0637\u0623'; setTimeout(()=>{ btn.textContent=orig; btn.disabled=false; }, 3000); }
-    alert('\u062e\u0637\u0623: ' + e.message);
-  }
-};
