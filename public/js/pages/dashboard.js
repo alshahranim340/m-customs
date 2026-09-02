@@ -2,7 +2,7 @@
 // DASHBOARD — Live morning brief with stats, alerts, news
 // ══════════════════════════════════════════════════════════════
 
-import { getShipments, getAllDrivers } from '../../src/firebase/db.js';
+import { getShipments, getAllDrivers } from '../../../src/firebase/db.js';
 import { toHijri } from '../../../src/utils/hijriDate.js';
 import { getTransportRequests } from '../../../src/firebase/transportDb.js';
 import { getCurrentUser, getUserProfile } from '../../../src/firebase/auth.js';
@@ -337,16 +337,10 @@ async function loadAlerts() {
           <div style="width:36px;height:36px;background:#2E8B57;color:white;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px;">
             <i class="ti ti-check"></i>
           </div>
-          <div style="flex:1;">
+          <div>
             <div style="font-size:14px;font-weight:800;color:#0F6338;">كل شي تحت السيطرة ✓</div>
             <div style="font-size:12px;color:#2E8B57;margin-top:2px;">ما فيه طلبات معلّقة أو تنبيهات</div>
           </div>
-          <button id="btn-test-email" onclick="window._dashTestEmail()"
-            style="background:#1C4B8E;color:white;border:none;padding:8px 14px;
-            border-radius:8px;font-family:Tajawal,sans-serif;font-size:12px;
-            font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0;">
-            🧪 اختبار الإيميل
-          </button>
         </div>
       `;
       return;
@@ -890,4 +884,3 @@ async function loadPrayerTimes() {
     container.style.display = 'none';
   }
 }
-
