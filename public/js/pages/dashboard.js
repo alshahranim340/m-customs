@@ -2,7 +2,7 @@
 // DASHBOARD — Live morning brief with stats, alerts, news
 // ══════════════════════════════════════════════════════════════
 
-import { getShipments, getAllDrivers } from '../../../src/firebase/db.js';
+import { getShipments, getAllDrivers } from '../../../../src/firebase/db.js';
 import { toHijri } from '../../../src/utils/hijriDate.js';
 import { getTransportRequests } from '../../../src/firebase/transportDb.js';
 import { getCurrentUser, getUserProfile } from '../../../src/firebase/auth.js';
@@ -899,9 +899,9 @@ window._dashTestEmail = async function() {
   if (btn) { btn.disabled = true; btn.textContent = '\u23F3 \u062c\u0627\u0631\u064a...'; }
 
   try {
-    const { sendTestAlert } = await import('../../../src/utils/notifications.js');
+    const { sendTestAlert } = await import('../../../../src/utils/notifications.js');
     const { getAuth }       = await import('firebase/auth');
-    const { getShipments }  = await import('../../src/firebase/db.js');
+    const { getShipments }  = await import('../../../src/firebase/db.js');
 
     const auth      = getAuth();
     const testEmail = auth.currentUser?.email;
