@@ -30,8 +30,8 @@ const STATUS_LEGACY_MAP = {
 };
 
 /* الحالات التي تظهر في قائمة الاختيار */
-// 'done' لا يُختار يدوياً — يُضبط تلقائياً عند رفع وثيقة الموعد
-const STATUS_OPTS = ['draft', 'waiting_broker', 'appointment'];
+// 'done' يُضبط تلقائياً عند رفع الموعد — لكن يبقى في القائمة لكي يظهر
+const STATUS_OPTS = ['draft', 'waiting_broker', 'appointment', 'done'];
 
 const DEST  = { uae: '🇦🇪 إمارات', bahrain: '🇧🇭 بحرين', oman: '🇴🇲 عُمان' };
 const PMAPS = { uae: 'جمرك البطحاء', bahrain: 'جمرك جسر الملك فهد' };
@@ -537,9 +537,13 @@ async function openEditModal(id) {
   ).join('');
   // الـ dropdown يعرض 4 حالات فقط، مع تحديد الأقرب للحالة الحالية
   const currentMapped = STATUS_LEGACY_MAP[s.status] || s.status;
-  const statusOpts = STATUS_OPTS.map(k =>
-    `<option value="${k}" ${currentMapped===k?'selected':''}>${STATUS[k].ar}</option>`
-  ).join('');
+  const statusOpts = STATUS_OPTS.map(k => {
+    const isSelected = currentMapped === k;
+    // 'done' يظهر فقط عند الاختيار — يمنع التحديد اليدوي الخاطئ
+    const isDone = k === 'done';
+    const label = isDone && !isSelected ? STATUS[k].ar + ' ✓ (تلقائي)' : STATUS[k].ar;
+    return `<option value="${k}" ${isSelected?'selected':''} ${isDone && !isSelected?'style="color:#8A8578"':''}>${label}</option>`;
+  }).join('');
 
   const attachHTML = ATTACHMENTS_ORDER.map(a => {
     const has = !!existing[a.key];
@@ -748,8 +752,11 @@ async function saveEdit() {
     const todayGreg  = new Date().toLocaleDateString('en-GB', {day:'2-digit',month:'2-digit',year:'numeric'})
                                  .split('/').reverse().join('-'); // YYYY-MM-DD
 
+    // إذا أُكمل تلقائياً عند رفع الموعد — احتفظ بـ done حتى لو الـ dropdown ما تغيّر
+    const finalStatus = (oldStatus === 'done' && newStatus !== 'done') ? 'done' : newStatus;
+
     // سجّل completed_at عند أول تحديد "مكتمل"
-    const completedAt = (newStatus === 'done' && oldStatus !== 'done')
+    const completedAt = (finalStatus === 'done' && oldStatus !== 'done')
       ? { completed_at: todayGreg }
       : {};
 
@@ -761,7 +768,7 @@ async function saveEdit() {
       date:              document.getElementById('e-date').value.trim(),
       sample_date:       document.getElementById('e-sample-date')?.value?.trim() || document.getElementById('e-date').value.trim(),
       sample_day_name:   document.getElementById('e-sample-date')?.dataset?.dayName || '',
-      status:            newStatus,
+      status:            finalStatus,  // محمي من الكتابة فوق done التلقائي
       exporter:          document.getElementById('e-exporter').value.trim(),
       goods_description: document.getElementById('e-goods').value.trim(),
       driver_snapshot:   driverSnapshot,
