@@ -258,4 +258,39 @@ export function getAlertShipments(shipments) {
     .sort((a,b) => a.daysLeft - b.daysLeft);
 }
 
+// ─────────────────────────────────────────────
+// TEST MODE — إرسال لإيميل واحد فقط للاختبار
+// ─────────────────────────────────────────────
+export async function sendTestAlert(testEmail, shipments) {
+  let testShipments = getAlertShipments(shipments).slice(0, 3);
+
+  // إذا لا توجد شحنات حقيقية — أنشئ بيانات تجريبية
+  if (testShipments.length === 0) {
+    testShipments = [
+      {
+        bl_number:     'TEST-001',
+        customer_name: 'اختبار — شركة التجربة',
+        type:          'sea',
+        port:          'jed_sea',
+        eta:           new Date(Date.now() + 2 * 86400000).toISOString().slice(0, 10),
+        status:        'waiting',
+        daysLeft:      2,
+      },
+      {
+        bl_number:     'TEST-002',
+        customer_name: 'اختبار — عميل آخر',
+        type:          'air',
+        port:          'jed_air',
+        eta:           new Date(Date.now() + 5 * 86400000).toISOString().slice(0, 10),
+        status:        'clearance',
+        daysLeft:      5,
+      }
+    ];
+  }
+
+  await sendBrevoEmail([testEmail], testShipments);
+  return { sent: 1, shipments: testShipments.length, testEmail };
+}
+
+
 export { LAST_ALERT_KEY };
