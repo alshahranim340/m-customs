@@ -37,7 +37,16 @@ export async function renderDashboard(profile) {
       ${renderGreeting()}
       <div id="dash-stats" style="margin-top:20px;">${renderStatsSkeleton()}</div>
       <div id="dash-prayer" style="margin-top:20px;"></div>
-      <div id="dash-alerts" style="margin-top:20px;"></div>
+      <!-- Email test button — always visible -->
+      <div style="display:flex;justify-content:flex-end;margin-top:20px;">
+        <button id="btn-test-email" onclick="window._dashTestEmail()"
+          style="background:#1C4B8E;color:white;border:none;padding:9px 18px;
+          border-radius:9px;font-family:Tajawal,sans-serif;font-size:12px;
+          font-weight:700;cursor:pointer;display:flex;align-items:center;gap:7px;">
+          🧪 اختبار إيميل التنبيه
+        </button>
+      </div>
+      <div id="dash-alerts" style="margin-top:10px;"></div>
       <div id="dash-news" style="margin-top:20px;">${renderNewsSkeleton()}</div>
     </div>
   `;
