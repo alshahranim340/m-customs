@@ -848,13 +848,34 @@ async function saveEdit() {
       }
     }
 
+    // ── Optimistic update: تحديث الـ UI فوراً بدون reload ──
+    const idx = _allShipments.findIndex(s => s.id === _editingId);
+    if (idx !== -1) {
+      _allShipments[idx] = {
+        ..._allShipments[idx],
+        destination:       dest,
+        port:              dest === 'bahrain' ? 'bahrain' : 'uae',
+        declaration_no:    document.getElementById('e-decl-no').value.trim(),
+        unified_no:        document.getElementById('e-unified-no').value.trim(),
+        date:              document.getElementById('e-date').value.trim(),
+        status:            finalStatus,
+        exporter:          document.getElementById('e-exporter').value.trim(),
+        goods_description: document.getElementById('e-goods').value.trim(),
+        driver_snapshot:   driverSnapshot,
+        ...completedAt,
+      };
+    }
+
     toast('✅ تم الحفظ', 'success');
     closeEditModal();
-    await loadShipments();
+    applyFiltersAndRender();   // فوري — بدون await loadShipments
     window.updateBadges?.();
+
+    // حفظ Firebase في الخلفية (بدون await)
+    loadShipments().catch(console.warn);
   } catch(e) {
     console.error(e);
-    toast('خطأ في الحفظ', 'error');
+    toast('خطأ في الحفظ — يرجى المحاولة مرة أخرى', 'error');
   } finally {
     btn.disabled = false;
     btn.textContent = '💾 حفظ';
@@ -1087,13 +1108,57 @@ async function mergeAll() {
 // DELETE
 // ─────────────────────────────────────────────
 async function confirmDelete(id, declNo) {
-  if (!window.confirm(`هل تريد حذف الشحنة رقم ${declNo||id}؟`)) return;
+  // ── Optimistic delete: احذف من الـ UI فوراً مع Undo ──
+  const shipIdx  = _allShipments.findIndex(s => s.id === id);
+  if (shipIdx === -1) return;
+  const snapshot = { ..._allShipments[shipIdx] };
+
+  // أزل من الـ UI فوراً
+  _allShipments.splice(shipIdx, 1);
+  applyFiltersAndRender();
+  window.updateBadges?.();
+
+  // أظهر toast مع زر تراجع
+  let undone = false;
+  const toastEl = document.createElement('div');
+  toastEl.style.cssText = `position:fixed;bottom:24px;left:50%;transform:translateX(-50%);
+    background:#0E1A2E;color:white;padding:12px 20px;border-radius:10px;
+    font-family:Tajawal,sans-serif;font-size:13px;font-weight:700;
+    display:flex;align-items:center;gap:12px;z-index:9999;
+    box-shadow:0 4px 20px rgba(0,0,0,0.3);`;
+  toastEl.innerHTML = `
+    <span>🗑️ تم حذف الشحنة ${declNo||''}</span>
+    <button onclick="this.closest('[data-undo]').dataset.undone='1'"
+      data-undo-btn style="background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.3);
+      color:white;padding:5px 12px;border-radius:6px;font-family:Tajawal,sans-serif;
+      font-size:12px;font-weight:700;cursor:pointer;">↩ تراجع</button>`;
+  toastEl.dataset.undo = '1';
+  document.body.appendChild(toastEl);
+
+  // انتظر 5 ثوانٍ ثم احذف فعلاً
+  await new Promise(r => setTimeout(r, 5000));
+
+  if (toastEl.dataset.undone === '1') {
+    // تراجع — أعد الشحنة
+    _allShipments.splice(shipIdx, 0, snapshot);
+    _allShipments.sort((a,b) => (a.declaration_no||'') < (b.declaration_no||'') ? 1 : -1);
+    applyFiltersAndRender();
+    window.updateBadges?.();
+    toastEl.remove();
+    return;
+  }
+
+  toastEl.remove();
+
+  // احذف من Firebase
   try {
     await deleteDoc(doc(db, 'shipments', id));
-    toast('🗑️ تم الحذف', 'success');
-    await loadShipments();
-    window.updateBadges?.();
-  } catch(e) { toast('خطأ في الحذف', 'error'); }
+  } catch(e) {
+    // فشل الحذف — أعد الشحنة
+    _allShipments.splice(shipIdx, 0, snapshot);
+    applyFiltersAndRender();
+    toast('خطأ في الحذف — تم التراجع', 'error');
+  }
 }
 
 // ─────────────────────────────────────────────
