@@ -309,17 +309,63 @@ function applyFiltersAndRender() {
       const items = inFolder[f.id] || [];
       if (_searchQuery && items.length === 0) return;
       const safeName = (f.name||'').replace(/'/g, "&#39;");
+
+      // ── Progress calculation ──
+      const NON_DONE_ST = new Set(['waiting_broker','sent_broker','broker_replied','sent_driver','appointment','sent']);
+      const fDone    = items.filter(s => s.status === 'done').length;
+      const fPending = items.filter(s => NON_DONE_ST.has(s.status)).length;
+      const fDraft   = items.filter(s => s.status === 'draft' || !s.status).length;
+      const fPct     = items.length > 0 ? Math.round(fDone / items.length * 100) : 0;
+      const fColor   = fDraft > 0 ? 'red' : fPending > 0 ? 'amber' : 'green';
+      const fBarClr  = fColor === 'green' ? '#2E8B57' : fColor === 'amber' ? '#C8943A' : '#CC2229';
+      const fBdrClr  = fColor === 'green' ? '#2E8B57' : fColor === 'amber' ? '#C8943A' : '#CC2229';
+
+      const fStatusLine = fColor === 'green'
+        ? `<span style="color:#2E8B57;font-weight:700;">✓ ${fDone} مكتمل</span>`
+        : `<span style="color:#2E8B57;">${fDone} ✓</span>&nbsp;&nbsp;`
+          + (fPending > 0 ? `<span style="color:#C8943A;">⏳ ${fPending} انتظار</span>&nbsp;&nbsp;` : '')
+          + (fDraft   > 0 ? `<span style="color:#CC2229;">⚠ ${fDraft} غير منجز</span>` : '');
+
       html += `
-        <div class="modern-folder-card" onclick="toggleFolder('${f.id}')">
+        <div class="modern-folder-card" onclick="toggleFolder('${f.id}')"
+          style="border-color:${fBdrClr};border-width:1.5px;position:relative;overflow:hidden;">
+          <!-- Colored stripe -->
+          <div style="position:absolute;top:0;right:0;width:4px;height:100%;background:${fBdrClr};border-radius:0 10px 10px 0;"></div>
+
+          <!-- Menu -->
           <button class="modern-folder-menu" onclick="event.stopPropagation();openFolderMenu('${f.id}','${safeName}')" title="خيارات">
             <i class="ti ti-dots" style="font-size:14px;"></i>
           </button>
-          <div class="modern-folder-topline">
-            <span class="modern-folder-code">FOLDER · ${pad(idx+1)}</span>
-            <span class="modern-folder-count">${pad(items.length)}</span>
+
+          <!-- Header: code + count -->
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+            <span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:#8A8578;font-weight:800;letter-spacing:1.5px;">
+              FOLDER · ${pad(idx+1)}
+            </span>
+            <span style="font-family:'JetBrains Mono',monospace;font-size:22px;font-weight:900;color:#0E1A2E;line-height:1;">
+              ${pad(items.length)}
+            </span>
           </div>
-          <div class="modern-folder-name">${f.name}</div>
-          <div class="modern-folder-meta">${items.length === 1 ? 'shipment' : 'shipments'}</div>
+
+          <!-- Folder NAME — prominent -->
+          <div style="font-size:15px;font-weight:900;color:#0E1A2E;margin-bottom:2px;
+                      white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+                      padding-left:6px;">
+            ${f.name}
+          </div>
+          <div style="font-size:10px;color:#8A8578;margin-bottom:10px;font-family:'JetBrains Mono',monospace;">
+            ${items.length === 1 ? 'shipment' : 'shipments'}
+          </div>
+
+          <!-- Progress Bar -->
+          <div style="background:#F0EDE4;border-radius:6px;height:5px;margin-bottom:7px;overflow:hidden;">
+            <div style="height:100%;width:${fPct}%;background:${fBarClr};border-radius:6px;transition:width .4s;"></div>
+          </div>
+
+          <!-- Status line -->
+          <div style="font-size:10px;font-family:'JetBrains Mono',monospace;display:flex;gap:8px;flex-wrap:wrap;">
+            ${fStatusLine}
+          </div>
         </div>`;
     });
     html += `</div>`;
