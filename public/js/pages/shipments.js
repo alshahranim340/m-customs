@@ -296,7 +296,7 @@ async function exportFolderExcel(folderId, folderName) {
           s.declaration_no  || '—',
           s.unified_no      || '—',
           s.exporter        || '—',
-          s.driver_snapshot?.name_ar || s.driver_snapshot?.name_en || '—',
+          s.driver_snapshot?.name || s.driver_snapshot?.name_ar || '—',
           s.driver_snapshot?.plate   || '—',
           DEST_AR[s.destination]     || s.destination || '—',
           s.date            || '—',
@@ -453,21 +453,18 @@ function applyFiltersAndRender() {
           <div style="position:absolute;top:0;right:0;width:4px;height:100%;background:${fBdrClr};border-radius:0 10px 10px 0;"></div>
 
           <!-- Menu -->
-          <div style="position:absolute;top:10px;left:10px;display:flex;gap:6px;">
-            <button class="modern-folder-menu" onclick="event.stopPropagation();openFolderMenu('${f.id}','${safeName}')" title="خيارات"
-              style="position:relative;top:auto;left:auto;">
-              <i class="ti ti-dots" style="font-size:14px;"></i>
-            </button>
-            <button onclick="event.stopPropagation();exportFolderExcel('${f.id}','${f.name}')"
-              title="تصدير Excel"
-              style="width:28px;height:28px;border-radius:7px;border:1px solid #E8E5DC;
-              background:white;cursor:pointer;display:flex;align-items:center;
-              justify-content:center;font-size:14px;transition:all .18s;"
-              onmouseover="this.style.background='#E7F5EE';this.style.borderColor='#2E8B57'"
-              onmouseout="this.style.background='white';this.style.borderColor='#E8E5DC'">
-              📊
-            </button>
-          </div>
+          <button class="modern-folder-menu" onclick="event.stopPropagation();openFolderMenu('${f.id}','${safeName}')" title="خيارات">
+            <i class="ti ti-dots" style="font-size:14px;"></i>
+          </button>
+          <button onclick="event.stopPropagation();exportFolderExcel('${f.id}','${f.name}')"
+            title="تصدير Excel"
+            style="position:absolute;top:10px;right:10px;width:26px;height:26px;
+            border-radius:7px;border:1px solid #D0E8D0;background:#F0FFF4;
+            cursor:pointer;font-size:13px;line-height:1;transition:all .18s;"
+            onmouseover="this.style.background='#C6EDD0';this.style.borderColor='#2E8B57'"
+            onmouseout="this.style.background='#F0FFF4';this.style.borderColor='#D0E8D0'">
+            📊
+          </button>
 
           <!-- Header: code + count -->
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
