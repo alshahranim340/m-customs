@@ -2,9 +2,7 @@
 // DASHBOARD — Live morning brief with stats, alerts, news
 // ══════════════════════════════════════════════════════════════
 
-import { getShipments, getAllDrivers } from '../../../src/firebase/db.js';
-import { db } from '../../../src/firebase/config.js';
-import { collection, getDocs, query, orderBy } from 'firebase/firestore';
+import { getShipments, getAllDrivers, getImportShipments } from '../../../src/firebase/db.js';
 import { toHijri, hijriToGregorian } from '../../../src/utils/hijriDate.js';
 import { getTransportRequests } from '../../../src/firebase/transportDb.js';
 import { getCurrentUser, getUserProfile } from '../../../src/firebase/auth.js';
@@ -295,11 +293,9 @@ async function loadStats() {
     /* ── حساب البيانات الشهرية الحقيقية للـ Charts ── */
     window._mcMonthlyData = _buildMonthlyBreakdown(shipments);
 
-    // جلب بيانات الوارد مباشرة من Firestore
+    // جلب بيانات الوارد من db.js
     try {
-      const q    = query(collection(db, 'import_shipments'), orderBy('created_at', 'desc'));
-      const snap = await getDocs(q);
-      const importShips = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      const importShips = await getImportShipments();
       window._mcImportMonthlyData = _buildMonthlyBreakdown(importShips);
     } catch(e) {
       console.warn('[Dashboard] Import monthly data failed:', e.message);
