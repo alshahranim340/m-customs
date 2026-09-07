@@ -421,7 +421,7 @@
       return;
     }
 
-    const totalFormatted = stats.total.toLocaleString('ar-SA');
+    const totalFormatted = stats.total.toLocaleString('en-US');
 
     const html = `
       <div id="dash-charts">
