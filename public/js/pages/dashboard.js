@@ -4,7 +4,7 @@
 
 import { getShipments, getAllDrivers } from '../../../src/firebase/db.js';
 import { getImportShipments } from '../../../src/firebase/importDb.js';
-import { toHijri } from '../../../src/utils/hijriDate.js';
+import { toHijri, hijriToGregorian } from '../../../src/utils/hijriDate.js';
 import { getTransportRequests } from '../../../src/firebase/transportDb.js';
 import { getCurrentUser, getUserProfile } from '../../../src/firebase/auth.js';
 
@@ -39,14 +39,7 @@ function _buildMonthlyBreakdown(shipments) {
       const yr = parseInt(s.date.split('-')[0]);
       if (yr >= 1300 && yr <= 1600) {
         // هجري — استخدم toHijri العكسي (تقريبي)
-        const parts = s.date.split('-').map(Number);
-        const approxGreg = new Date(
-          (parts[0] - 1) * 354.367 * 86400000 +
-          (parts[1] - 1) * 29.53  * 86400000 +
-          parts[2]       * 86400000 +
-          new Date(622, 6, 19).getTime()
-        );
-        greg = approxGreg;
+        greg = hijriToGregorian(s.date);
       } else {
         greg = new Date(s.date);
       }
@@ -303,9 +296,10 @@ async function loadStats() {
 
     // جلب بيانات الوارد للمقارنة الشهرية
     try {
-      const importShips = await getImportShipments(200);
+      const importShips = await getImportShipments(500);
       window._mcImportMonthlyData = _buildMonthlyBreakdown(importShips);
-    } catch(_) {
+    } catch(e) {
+      console.warn('[Dashboard] Import monthly data failed:', e.message);
       window._mcImportMonthlyData = [];
     }
     }
