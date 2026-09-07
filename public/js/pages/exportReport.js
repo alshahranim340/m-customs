@@ -380,12 +380,15 @@ function render() {
     done           : 'done',
   };
 
+  // byStatus: يعدّ حسب الحالة الفعلية لكل شحنة
+  // done KPI (176) = مكتمل هذا الشهر بـ completed_at
+  // byStatus.done = كل ذوي حالة done في الفترة
   const byStatus = { draft: 0, waiting_broker: 0, appointment: 0, done: 0 };
   _filtered.forEach(s => {
-    const group = STATUS_GROUP[s.status];
-    if (group && group !== 'done') byStatus[group]++;
+    const group = STATUS_GROUP[s.status] || 'draft';
+    byStatus[group]++;  // يعدّ الكل بما فيهم done
   });
-  byStatus.done = done; // ← بعد التعريف مباشرة ✓
+  // لا نكتب فوق byStatus.done — نتركه يعكس العدد الفعلي للحالة done
 
   // Avg per day
   let days = 1;
@@ -415,7 +418,8 @@ function render() {
       <div class="modern-stat">
         <div class="modern-stat-lbl">02 · DONE</div>
         <div class="modern-stat-val green">${pad(done)}</div>
-        <div class="modern-stat-hint">مكتملة</div>
+        <div class="modern-stat-hint">مكتملة هذا الشهر</div>
+        ${byStatus.done !== done ? `<div style="font-size:10px;color:#8A8578;margin-top:2px;">${byStatus.done} إجمالي الحالة</div>` : ''}
       </div>
       <div class="modern-stat">
         <div class="modern-stat-lbl">03 · DRIVERS</div>
