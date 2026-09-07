@@ -3,7 +3,6 @@
 // ══════════════════════════════════════════════════════════════
 
 import { getShipments, getAllDrivers } from '../../../src/firebase/db.js';
-import { getImportShipments } from '../../../src/firebase/importDb.js';
 import { toHijri, hijriToGregorian } from '../../../src/utils/hijriDate.js';
 import { getTransportRequests } from '../../../src/firebase/transportDb.js';
 import { getCurrentUser, getUserProfile } from '../../../src/firebase/auth.js';
@@ -294,9 +293,10 @@ async function loadStats() {
     /* ── حساب البيانات الشهرية الحقيقية للـ Charts ── */
     window._mcMonthlyData = _buildMonthlyBreakdown(shipments);
 
-    // جلب بيانات الوارد للمقارنة الشهرية
+    // جلب بيانات الوارد (dynamic import لتجنب تعارض Vite)
     try {
-      const importShips = await getImportShipments(500);
+      const { getImportShipments } = await import('../../../src/firebase/importDb.js');
+      const importShips = await getImportShipments();
       window._mcImportMonthlyData = _buildMonthlyBreakdown(importShips);
     } catch(e) {
       console.warn('[Dashboard] Import monthly data failed:', e.message);
