@@ -261,8 +261,7 @@ async function loadStats() {
     const shipsThisMonth = shipments.filter(s => {
       if (!s.date) return false;
       // إذا كان التاريخ هجري (1300-1600)
-      const dateStr = s[dateField];
-      const yr = parseInt(dateStr.split('-')[0]);
+      const yr = parseInt(s.date.split('-')[0]);
       if (yr >= 1300 && yr <= 1600) {
         return s.date.startsWith(hijriPrefix);
       }
