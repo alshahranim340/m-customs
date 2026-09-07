@@ -457,3 +457,12 @@ export async function createShipmentFromTransportRequest(req, driver) {
 
   return ref.id;
 }
+
+// ─────────────────────────────────────────────
+// IMPORT SHIPMENTS — للداشبورد (قراءة مباشرة)
+// ─────────────────────────────────────────────
+export async function getImportShipments() {
+  const q    = query(collection(db, 'import_shipments'), orderBy('created_at', 'desc'));
+  const snap = await getDocs(q);
+  return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+}
