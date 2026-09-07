@@ -144,28 +144,25 @@
   /* ══════════════════════════════════════════════════════
      توليد بيانات آخر 6 أشهر
   ══════════════════════════════════════════════════════ */
+  /* ══════════════════════════════════════════════════════
+     بيانات شهرية حقيقية من window._mcMonthlyData
+     (يُحسب في dashboard.js من الشحنات الفعلية)
+  ══════════════════════════════════════════════════════ */
   function genMonthlyData(total, thisMonth) {
-    const months = [];
-    const now = new Date();
     const arabicMonths = ['يناير','فبراير','مارس','أبريل','مايو','يونيو',
                           'يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+    const now = new Date();
 
-    const avg = Math.max(Math.round((total - thisMonth) / 6), 1);
+    // استخدم البيانات الحقيقية إذا متوفرة
+    if (window._mcMonthlyData && window._mcMonthlyData.length > 0) {
+      return window._mcMonthlyData;
+    }
 
+    // Fallback: آخر 6 أشهر بالعدد الحقيقي للشهر الحالي فقط
+    const months = [];
     for (let i = 5; i >= 0; i--) {
       const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      const label = arabicMonths[d.getMonth()];
-      let value;
-
-      if (i === 0) {
-        value = thisMonth; /* الشهر الحالي — حقيقي */
-      } else {
-        /* تصاعد تدريجي مع تذبذب بسيط */
-        const trend = avg * (1 - i * 0.06);
-        const noise = avg * 0.18 * (Math.random() - 0.5);
-        value = Math.max(Math.round(trend + noise), 0);
-      }
-      months.push({ label, value });
+      months.push({ label: arabicMonths[d.getMonth()], value: i === 0 ? thisMonth : 0 });
     }
     return months;
   }
@@ -350,10 +347,10 @@
     const ctx     = canvas.getContext('2d');
     const monthly = genMonthlyData(stats.total, stats.thisMonth);
 
-    /* بيانات الوارد: نسبة ثابتة من الصادر مع تذبذب */
-    const importData = monthly.map(m =>
-      Math.round(m.value * (0.35 + Math.random() * 0.1))
-    );
+    /* بيانات الوارد الحقيقية من window._mcImportMonthlyData */
+    const importData = window._mcImportMonthlyData && window._mcImportMonthlyData.length > 0
+      ? window._mcImportMonthlyData.map(d => d.value)
+      : monthly.map(() => 0);
 
     const gradExport = ctx.createLinearGradient(0, 0, 0, 200);
     gradExport.addColorStop(0, hexAlpha(CLR.blue, 0.25));
