@@ -220,7 +220,127 @@ async function loadShipments() {
   window.clearSelection       = clearSelection;
   window.moveSelectedToFolder = moveSelectedToFolder;
   window.moveToFolder         = moveToFolder;
-  window.openFolderMenu       = openFolderMenu;
+  
+/* ══════════════════════════════════════════════
+   تصدير شحنات الملف إلى Excel
+══════════════════════════════════════════════ */
+async function exportFolderExcel(folderId, folderName) {
+  const folderShipments = _allShipments.filter(s => s.folder_id === folderId);
+  if (!folderShipments.length) { toast('لا توجد شحنات في هذا الملف', 'error'); return; }
+
+  const DEST_AR   = { uae:'الإمارات 🇦🇪', bahrain:'البحرين 🇧🇭', oman:'عُمان 🇴🇲' };
+  const STATUS_AR = {
+    done:'مكتمل ✓', waiting_broker:'انتظار رد المخلص',
+    appointment:'تحديد موعد', draft:'مسودة',
+    sent_broker:'انتظار رد المخلص', broker_replied:'انتظار رد المخلص',
+    sent_driver:'تحديد موعد', sent:'انتظار رد المخلص',
+  };
+
+  async function doExport() {
+    const wb = new ExcelJS.Workbook();
+    wb.creator = 'M-Customs';
+    const ws = wb.addWorksheet('شحنات المجلد', {
+      views: [{ state:'frozen', ySplit:3 }]
+    });
+
+    const now = new Date().toLocaleDateString('en-GB', {day:'2-digit',month:'long',year:'numeric'});
+    const nc  = 8; // عدد الأعمدة
+
+    // ── أعرض الأعمدة ──
+    ws.columns = [
+      {key:'decl',   width:14}, {key:'unified', width:14},
+      {key:'export', width:26}, {key:'driver',  width:18},
+      {key:'plate',  width:12}, {key:'dest',    width:14},
+      {key:'date',   width:14}, {key:'status',  width:18},
+    ];
+
+    // ── R1: هيدر الشركة ──
+    ws.mergeCells(`A1:H1`);
+    const r1 = ws.getCell('A1');
+    r1.value = `شركة السديس للخدمات اللوجستية  —  مجلد: ${folderName}`;
+    r1.font      = { name:'Calibri', size:13, bold:true, color:{argb:'FFD4B266'} };
+    r1.fill      = { type:'pattern', pattern:'solid', fgColor:{argb:'FF0E1A2E'} };
+    r1.alignment = { horizontal:'center', vertical:'middle' };
+    ws.getRow(1).height = 28;
+
+    // ── R2: Subtitle ──
+    ws.mergeCells(`A2:H2`);
+    const r2 = ws.getCell('A2');
+    r2.value = `Generated: ${now}    |    ${folderShipments.length} Shipments`;
+    r2.font      = { name:'Calibri', size:9, color:{argb:'FFCCCCCC'} };
+    r2.fill      = { type:'pattern', pattern:'solid', fgColor:{argb:'FF1C2B48'} };
+    r2.alignment = { horizontal:'center', vertical:'middle' };
+    ws.getRow(2).height = 16;
+
+    // ── R3: أعمدة Headers ──
+    const headers = ['# البيان','رقم الموحد','المصدّر','السائق','اللوحة','الوجهة','التاريخ','الحالة'];
+    const hRow = ws.addRow(headers);
+    hRow.height = 24;
+    hRow.eachCell(cell => {
+      cell.font      = { name:'Calibri', size:9, bold:true, color:{argb:'FFFFFFFF'} };
+      cell.fill      = { type:'pattern', pattern:'solid', fgColor:{argb:'FF2E8B57'} };
+      cell.alignment = { horizontal:'center', vertical:'middle', wrapText:true };
+      cell.border    = { top:{style:'thin',color:{argb:'FFB0C8B0'}},
+                         bottom:{style:'thin',color:{argb:'FFB0C8B0'}} };
+    });
+
+    // ── Data rows ──
+    const border = { style:'thin', color:{argb:'FFE8E5DC'} };
+    const allBorder = { top:border, left:border, bottom:border, right:border };
+
+    folderShipments
+      .sort((a,b) => (a.declaration_no||'') < (b.declaration_no||'') ? 1 : -1)
+      .forEach((s, i) => {
+        const bg = i%2===0 ? 'FFFFFFFF' : 'FFEFF4FF';
+        const row = ws.addRow([
+          s.declaration_no  || '—',
+          s.unified_no      || '—',
+          s.exporter        || '—',
+          s.driver_snapshot?.name_ar || s.driver_snapshot?.name_en || '—',
+          s.driver_snapshot?.plate   || '—',
+          DEST_AR[s.destination]     || s.destination || '—',
+          s.date            || '—',
+          STATUS_AR[s.status] || s.status || '—',
+        ]);
+        row.height = 18;
+        row.eachCell((cell, col) => {
+          cell.fill      = { type:'pattern', pattern:'solid', fgColor:{argb:bg} };
+          cell.font      = { name:'Calibri', size:9 };
+          cell.alignment = { vertical:'middle' };
+          cell.border    = allBorder;
+          // رقم البيان = monospace
+          if (col === 1 || col === 2) cell.font = { name:'Courier New', size:9 };
+          // الحالة = ملوّنة
+          if (col === 8) {
+            if (s.status === 'done') cell.font = { name:'Calibri', size:9, bold:true, color:{argb:'FF2E8B57'} };
+            else if (s.status === 'draft') cell.font = { name:'Calibri', size:9, color:{argb:'FFCC2229'} };
+          }
+        });
+      });
+
+    // ── تصدير ──
+    const buf  = await wb.xlsx.writeBuffer();
+    const blob = new Blob([buf], {type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href = url;
+    a.download = `مجلد-${folderName}.xlsx`;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
+    toast(`✅ تم تصدير مجلد ${folderName}`, 'success');
+  }
+
+  if (window.ExcelJS) { doExport(); return; }
+  toast('⏳ جاري تحميل المكتبة...', 'success');
+  const s   = document.createElement('script');
+  s.src     = 'https://cdn.jsdelivr.net/npm/exceljs@4.3.0/dist/exceljs.min.js';
+  s.onload  = doExport;
+  s.onerror = () => toast('خطأ في تحميل مكتبة Excel', 'error');
+  document.head.appendChild(s);
+}
+
+window.openFolderMenu       = openFolderMenu;
+window.exportFolderExcel     = exportFolderExcel;
   window.renameFolderFn       = renameFolderFn;
 }
 
@@ -333,9 +453,21 @@ function applyFiltersAndRender() {
           <div style="position:absolute;top:0;right:0;width:4px;height:100%;background:${fBdrClr};border-radius:0 10px 10px 0;"></div>
 
           <!-- Menu -->
-          <button class="modern-folder-menu" onclick="event.stopPropagation();openFolderMenu('${f.id}','${safeName}')" title="خيارات">
-            <i class="ti ti-dots" style="font-size:14px;"></i>
-          </button>
+          <div style="position:absolute;top:10px;left:10px;display:flex;gap:6px;">
+            <button class="modern-folder-menu" onclick="event.stopPropagation();openFolderMenu('${f.id}','${safeName}')" title="خيارات"
+              style="position:relative;top:auto;left:auto;">
+              <i class="ti ti-dots" style="font-size:14px;"></i>
+            </button>
+            <button onclick="event.stopPropagation();exportFolderExcel('${f.id}','${f.name}')"
+              title="تصدير Excel"
+              style="width:28px;height:28px;border-radius:7px;border:1px solid #E8E5DC;
+              background:white;cursor:pointer;display:flex;align-items:center;
+              justify-content:center;font-size:14px;transition:all .18s;"
+              onmouseover="this.style.background='#E7F5EE';this.style.borderColor='#2E8B57'"
+              onmouseout="this.style.background='white';this.style.borderColor='#E8E5DC'">
+              📊
+            </button>
+          </div>
 
           <!-- Header: code + count -->
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
