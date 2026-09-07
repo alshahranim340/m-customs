@@ -3,6 +3,7 @@
 // ══════════════════════════════════════════════════════════════
 
 import { getShipments, getAllDrivers } from '../../../src/firebase/db.js';
+import { getImportShipments } from '../../../src/firebase/importDb.js';
 import { toHijri } from '../../../src/utils/hijriDate.js';
 import { getTransportRequests } from '../../../src/firebase/transportDb.js';
 import { getCurrentUser, getUserProfile } from '../../../src/firebase/auth.js';
@@ -11,6 +12,53 @@ let _profile = null;
 let _newsCache = null;
 let _newsCacheTime = 0;
 const NEWS_CACHE_MS = 30 * 60 * 1000; // 30 min
+
+
+/* ══════════════════════════════════════════════
+   حساب التوزيع الشهري الحقيقي
+   يُحوّل التواريخ الهجرية → ميلادية ويعدّ شهرياً
+══════════════════════════════════════════════ */
+function _buildMonthlyBreakdown(shipments) {
+  const arabicMonths = ['يناير','فبراير','مارس','أبريل','مايو','يونيو',
+                        'يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+  const now  = new Date();
+  const keys = [];
+  const data = {};
+
+  for (let i = 5; i >= 0; i--) {
+    const d   = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+    keys.push(key);
+    data[key] = { label: arabicMonths[d.getMonth()], value: 0 };
+  }
+
+  shipments.forEach(s => {
+    if (!s.date) return;
+    let greg;
+    try {
+      const yr = parseInt(s.date.split('-')[0]);
+      if (yr >= 1300 && yr <= 1600) {
+        // هجري — استخدم toHijri العكسي (تقريبي)
+        const parts = s.date.split('-').map(Number);
+        const approxGreg = new Date(
+          (parts[0] - 1) * 354.367 * 86400000 +
+          (parts[1] - 1) * 29.53  * 86400000 +
+          parts[2]       * 86400000 +
+          new Date(622, 6, 19).getTime()
+        );
+        greg = approxGreg;
+      } else {
+        greg = new Date(s.date);
+      }
+    } catch(_) { return; }
+
+    if (!greg || isNaN(greg.getTime())) return;
+    const key = `${greg.getFullYear()}-${String(greg.getMonth()+1).padStart(2,'0')}`;
+    if (data[key]) data[key].value++;
+  });
+
+  return keys.map(k => data[k]);
+}
 
 export async function renderDashboard(profile) {
   _profile = profile;
@@ -37,16 +85,7 @@ export async function renderDashboard(profile) {
       ${renderGreeting()}
       <div id="dash-stats" style="margin-top:20px;">${renderStatsSkeleton()}</div>
       <div id="dash-prayer" style="margin-top:20px;"></div>
-      <!-- Email test button — always visible -->
-      <div style="display:flex;justify-content:flex-end;margin-top:20px;">
-        <button id="btn-test-email" onclick="window._dashTestEmail()"
-          style="background:#1C4B8E;color:white;border:none;padding:9px 18px;
-          border-radius:9px;font-family:Tajawal,sans-serif;font-size:12px;
-          font-weight:700;cursor:pointer;display:flex;align-items:center;gap:7px;">
-          🧪 اختبار إيميل التنبيه
-        </button>
-      </div>
-      <div id="dash-alerts" style="margin-top:10px;"></div>
+      <div id="dash-alerts" style="margin-top:20px;"></div>
       <div id="dash-news" style="margin-top:20px;">${renderNewsSkeleton()}</div>
     </div>
   `;
@@ -258,6 +297,17 @@ async function loadStats() {
     if (window._checkMilestone) {
       window._checkMilestone('total_shipments', totalShipments, 'شحنة');
       window._checkMilestone('month_shipments', shipsThisMonth, 'شحنة هذا الشهر');
+
+    /* ── حساب البيانات الشهرية الحقيقية للـ Charts ── */
+    window._mcMonthlyData = _buildMonthlyBreakdown(shipments);
+
+    // جلب بيانات الوارد للمقارنة الشهرية
+    try {
+      const importShips = await getImportShipments(200);
+      window._mcImportMonthlyData = _buildMonthlyBreakdown(importShips);
+    } catch(_) {
+      window._mcImportMonthlyData = [];
+    }
     }
   } catch (e) {
     console.error('Stats load failed', e);
