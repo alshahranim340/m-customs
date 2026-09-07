@@ -17,7 +17,7 @@ const NEWS_CACHE_MS = 30 * 60 * 1000; // 30 min
    حساب التوزيع الشهري الحقيقي
    يُحوّل التواريخ الهجرية → ميلادية ويعدّ شهرياً
 ══════════════════════════════════════════════ */
-function _buildMonthlyBreakdown(shipments) {
+function _buildMonthlyBreakdown(shipments, dateField = 'date') {
   const arabicMonths = ['يناير','فبراير','مارس','أبريل','مايو','يونيو',
                         'يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
   const now  = new Date();
@@ -32,15 +32,16 @@ function _buildMonthlyBreakdown(shipments) {
   }
 
   shipments.forEach(s => {
-    if (!s.date) return;
+    if (!s[dateField]) return;
     let greg;
     try {
-      const yr = parseInt(s.date.split('-')[0]);
+      const dateStr = s[dateField];
+      const yr = parseInt(dateStr.split('-')[0]);
       if (yr >= 1300 && yr <= 1600) {
         // هجري — استخدم toHijri العكسي (تقريبي)
-        greg = hijriToGregorian(s.date);
+        greg = hijriToGregorian(dateStr);
       } else {
-        greg = new Date(s.date);
+        greg = new Date(dateStr);
       }
     } catch(_) { return; }
 
@@ -260,7 +261,8 @@ async function loadStats() {
     const shipsThisMonth = shipments.filter(s => {
       if (!s.date) return false;
       // إذا كان التاريخ هجري (1300-1600)
-      const yr = parseInt(s.date.split('-')[0]);
+      const dateStr = s[dateField];
+      const yr = parseInt(dateStr.split('-')[0]);
       if (yr >= 1300 && yr <= 1600) {
         return s.date.startsWith(hijriPrefix);
       }
@@ -296,7 +298,7 @@ async function loadStats() {
     // جلب بيانات الوارد من db.js
     try {
       const importShips = await getImportShipments();
-      window._mcImportMonthlyData = _buildMonthlyBreakdown(importShips);
+      window._mcImportMonthlyData = _buildMonthlyBreakdown(importShips, 'eta');
     } catch(e) {
       console.warn('[Dashboard] Import monthly data failed:', e.message);
       window._mcImportMonthlyData = [];
