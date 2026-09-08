@@ -5,7 +5,6 @@ import {
 import { toast } from '../../app.js';
 import { getCurrentProfile } from '../../app.js';
 import { createTrackingLink, updateTrackingStatus } from '../../../../src/firebase/tracking.js';
-import { updateClientPortal } from '../../../../src/firebase/clientPortal.js';
 
 let _shipments = [];
 let _customers = [];
@@ -262,10 +261,11 @@ function _updateStats() {
   const total     = _shipments.length;
   const waiting   = _shipments.filter(s=>s.status==='waiting').length;
   const customs   = _shipments.filter(s=>s.status==='customs').length;
-  const delivered = _shipments.filter(s=>s.status==='delivered').length;
+  const delivered        = _shipments.filter(s=>s.status==='delivered').length;
+  const outForDelivery = _shipments.filter(s=>s.status==='out_for_delivery').length;
   const late      = _shipments.filter(s=>{
     const eta = s.eta ? new Date(s.eta) : null;
-    return eta && eta < new Date() && s.status !== 'delivered';
+    return eta && eta < new Date() && s.status !== 'delivered' && s.status !== 'out_for_delivery';
   }).length;
 
   const pad = n => String(n).padStart(2,'0');
@@ -341,7 +341,7 @@ function _buildCard(s) {
   if (st.class==='pill-done')    { stripe='green'; statusCls='green'; }
   else if (st.class==='pill-sent'){ stripe='blue';  statusCls='blue'; }
   else if (st.class==='pill-replied'){ stripe='amber'; statusCls='amber'; }
-  if (isLate && s.status!=='delivered') stripe='red';
+  if (isLate && s.status!=='delivered' && s.status!=='out_for_delivery') stripe='red';
 
   const job  = s.job_no || s.internal_no || '—';
   const bl   = s.bl_number || '—';
@@ -720,19 +720,9 @@ async function changeImportStatus(id, status) {
     const s = _shipments.find(x => x.id === id);
     if (s) {
       s.status = status;
-
       // مزامنة رابط التتبع
       if (s.tracking_token) {
         await updateTrackingStatus(s.tracking_token, { status });
-      }
-
-      // مزامنة بوابة العميل تلقائياً
-      if (s.customer_id) {
-        const customer = _customers.find(c => c.id === s.customer_id);
-        if (customer?.portal_token) {
-          const customerShipments = _shipments.filter(x => x.customer_id === s.customer_id);
-          await updateClientPortal(customer.portal_token, customerShipments);
-        }
       }
     }
     toast(`✅ ${IMPORT_STATUS[status]?.ar}`, 'success');
