@@ -324,6 +324,9 @@ function getStageInfo(data) {
   if (status === 'delivered') {
     return { stage: 4, icon:'✅', cls:'delivered', label:'تم التسليم', sub:'وصلت البضاعة بنجاح 🎉' };
   }
+  if (status === 'out_for_delivery') {
+    return { stage: 3, icon:'🚛', cls:'arrived', label:'خرج للتسليم', sub:'الشحنة في الطريق إليك...' };
+  }
   if (status === 'clearance' || status === 'customs') {
     return { stage: 2, icon:'🏗️', cls:'arrived', label:'وصل الميناء', sub:'جاري التخليص الجمركي...' };
   }
