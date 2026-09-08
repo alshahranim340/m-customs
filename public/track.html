@@ -453,11 +453,18 @@
    Tracking Page Logic
 ══════════════════════════════════════════════ */
 
+/* step بناءً على الحالة فقط — الوصول يتأكد عند بدء التخليص */
+function getActiveStep(status) {
+  if (status === 'delivered')                      return 4; // كل شيء مكتمل
+  if (status === 'clearance' || status === 'customs') return 3; // وصل + تخليص جارٍ
+  return 1; // waiting = لا يزال في الطريق (ETA غير موثوق)
+}
+
 const STATUS_MAP = {
-  waiting:   { ar: 'قيد الانتظار',       step: 2, cls: 'waiting',   icon: '🕐' },
-  clearance: { ar: 'قيد التخليص الجمركي', step: 3, cls: 'customs',   icon: '📋' },
-  customs:   { ar: 'قيد التخليص الجمركي', step: 3, cls: 'customs',   icon: '📋' },
-  delivered: { ar: 'تم التسليم',          step: 4, cls: 'delivered',  icon: '✅' },
+  waiting:   { ar: 'قيد الانتظار',       cls: 'waiting',   icon: '🕐' },
+  clearance: { ar: 'قيد التخليص الجمركي', cls: 'customs',   icon: '📋' },
+  customs:   { ar: 'قيد التخليص الجمركي', cls: 'customs',   icon: '📋' },
+  delivered: { ar: 'تم التسليم',          cls: 'delivered',  icon: '✅' },
 };
 
 const STEPS = [
@@ -491,7 +498,7 @@ function stepClass(stepIndex, activeStep) {
 /* بناء الواجهة */
 function renderTracking(data, token) {
   const st      = STATUS_MAP[data.status] || STATUS_MAP.waiting;
-  const activeStep = st.step;
+  const activeStep = getActiveStep(data.status);
   const typeLabel  = data.type === 'air' ? 'AIR ✈️' : data.type === 'sea' ? 'SEA 🚢' : 'LAND 🚛';
 
   // WhatsApp message
