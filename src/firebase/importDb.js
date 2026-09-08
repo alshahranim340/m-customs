@@ -103,9 +103,10 @@ export const IMPORT_PORTS = {
 };
 
 export const IMPORT_STATUS = {
-  waiting:    { ar: 'قيد الانتظار',         class: 'pill-draft' },
-  clearance:  { ar: 'قيد التخليص الجمركي',  class: 'pill-sent' },
-  delivered:  { ar: 'تم التسليم',            class: 'pill-done' },
+  waiting:          { ar: 'قيد الانتظار',         class: 'pill-draft' },
+  clearance:        { ar: 'قيد التخليص الجمركي',  class: 'pill-sent'  },
+  out_for_delivery: { ar: 'خرج للتسليم',           class: 'pill-replied'},
+  delivered:        { ar: 'تم التسليم',            class: 'pill-done'  },
 };
 
 export async function getImportShipments(limitCount = 100) {
