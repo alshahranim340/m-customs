@@ -2,660 +2,568 @@
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
   <meta name="robots" content="noindex">
-  <title>تتبع الشحنة — M-Customs</title>
+  <title>تتبع الشحنة · M-Customs</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800;900&family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
-
-  <!-- Firebase (auto-configured by Firebase Hosting) -->
   <script src="/__/firebase/10.12.2/firebase-app-compat.js"></script>
   <script src="/__/firebase/10.12.2/firebase-firestore-compat.js"></script>
   <script src="/__/firebase/init.js"></script>
 
-  <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-    :root {
-      --navy:  #0E1A2E;
-      --blue:  #1C4B8E;
-      --green: #2E8B57;
-      --red:   #CC2229;
-      --gold:  #D4B266;
-      --gray:  #9CA3AF;
-      --bg:    #F5F3EC;
-      --card:  #FFFFFF;
-      --border:#E8E5DC;
-      --text:  #0E1A2E;
-      --muted: #6B6659;
-    }
+:root {
+  --navy:   #0E1A2E;
+  --blue:   #1C4B8E;
+  --green:  #2E8B57;
+  --amber:  #C8943A;
+  --red:    #CC2229;
+  --gold:   #D4B266;
+  --bg:     #F0EDE4;
+}
 
-    body {
-      font-family: 'Tajawal', sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-    }
+body {
+  font-family: 'Tajawal', sans-serif;
+  background: var(--bg);
+  min-height: 100dvh;
+  overflow-x: hidden;
+}
 
-    /* ── Header ── */
-    .trk-header {
-      background: linear-gradient(135deg, var(--navy) 0%, #1C2B48 60%, var(--navy) 100%);
-      padding: 20px 24px 28px;
-      position: relative;
-      overflow: hidden;
-    }
-    .trk-header::before {
-      content: '';
-      position: absolute;
-      top: -60px; left: -60px;
-      width: 220px; height: 220px;
-      background: radial-gradient(circle, rgba(212,178,102,.12) 0%, transparent 70%);
-    }
-    .trk-brand {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      margin-bottom: 20px;
-    }
-    .trk-logo {
-      width: 40px; height: 40px;
-      background: var(--gold);
-      border-radius: 10px;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 18px; font-weight: 900; color: var(--navy);
-      flex-shrink: 0;
-    }
-    .trk-brand-name {
-      font-size: 15px;
-      font-weight: 800;
-      color: #fff;
-    }
-    .trk-brand-sub {
-      font-size: 10px;
-      color: rgba(255,255,255,.45);
-      font-family: 'JetBrains Mono', monospace;
-      letter-spacing: .8px;
-      margin-top: 1px;
-    }
-    .trk-title {
-      color: rgba(255,255,255,.7);
-      font-size: 12px;
-      font-family: 'JetBrains Mono', monospace;
-      letter-spacing: 1.5px;
-      margin-bottom: 4px;
-    }
-    .trk-token {
-      color: var(--gold);
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 18px;
-      font-weight: 900;
-      letter-spacing: 3px;
-    }
+/* ════ ANIMATIONS ════ */
+@keyframes fadeUp   { from { opacity:0; transform:translateY(20px); } to { opacity:1; transform:translateY(0); } }
+@keyframes fadeIn   { from { opacity:0; }                              to { opacity:1; } }
+@keyframes pulse    { 0%,100% { box-shadow:0 0 0 0 rgba(28,75,142,.4); } 50% { box-shadow:0 0 0 12px rgba(28,75,142,0); } }
+@keyframes pulseRed { 0%,100% { box-shadow:0 0 0 0 rgba(204,34,41,.4);  } 50% { box-shadow:0 0 0 12px rgba(204,34,41,0); } }
+@keyframes shimmer  { 0% { background-position:-200% 0; } 100% { background-position:200% 0; } }
+@keyframes lineGrow { from { transform:scaleY(0); } to { transform:scaleY(1); } }
+@keyframes spin     { to { transform:rotate(360deg); } }
+@keyframes bounce   { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-6px)} }
+@keyframes glow     { 0%,100%{opacity:1} 50%{opacity:.6} }
+@keyframes drawLine { from { stroke-dashoffset: 200; } to { stroke-dashoffset: 0; } }
 
-    /* ── Main Content ── */
-    .trk-body {
-      flex: 1;
-      padding: 20px 16px;
-      max-width: 560px;
-      width: 100%;
-      margin: 0 auto;
-    }
+/* ════ HEADER ════ */
+.hdr {
+  background: linear-gradient(160deg, #0E1A2E 0%, #1C2B48 60%, #0E1A2E 100%);
+  padding: 20px 20px 28px;
+  position: relative;
+  overflow: hidden;
+  animation: fadeIn .5s ease;
+}
+.hdr::before {
+  content:'';
+  position:absolute; top:-60px; right:-60px;
+  width:200px; height:200px; border-radius:50%;
+  background: radial-gradient(circle, rgba(212,178,102,.12) 0%, transparent 70%);
+}
+.hdr-brand { display:flex; align-items:center; gap:12px; margin-bottom:16px; }
+.hdr-logo {
+  width:40px; height:40px; background:var(--gold); border-radius:10px;
+  display:flex; align-items:center; justify-content:center;
+  font-size:17px; font-weight:900; color:var(--navy); flex-shrink:0;
+}
+.hdr-name  { font-size:14px; font-weight:800; color:#fff; }
+.hdr-sub   { font-size:9px; color:rgba(255,255,255,.4); font-family:'JetBrains Mono',monospace; letter-spacing:1px; margin-top:1px; }
+.hdr-bl    { font-family:'JetBrains Mono',monospace; font-size:22px; font-weight:900; color:#fff; letter-spacing:.5px; }
+.hdr-name2 { font-size:15px; font-weight:700; color:rgba(255,255,255,.7); margin-top:3px; }
+.hdr-tags  { display:flex; gap:7px; flex-wrap:wrap; margin-top:10px; }
+.hdr-tag {
+  padding:3px 10px; border-radius:20px; font-size:10px; font-weight:800;
+  font-family:'JetBrains Mono',monospace; letter-spacing:.3px;
+  background:rgba(255,255,255,.1); color:rgba(255,255,255,.7); border:1px solid rgba(255,255,255,.15);
+}
+.hdr-tag.blue  { background:rgba(28,75,142,.4); color:#93C5FD; border-color:rgba(93,153,255,.3); }
+.hdr-tag.gold  { background:rgba(212,178,102,.2); color:var(--gold); border-color:rgba(212,178,102,.3); }
 
-    /* ── Shipment Card ── */
-    .trk-card {
-      background: var(--card);
-      border-radius: 14px;
-      border: 1px solid var(--border);
-      padding: 20px;
-      margin-bottom: 16px;
-      box-shadow: 0 2px 12px rgba(0,0,0,.06);
-    }
-    .trk-card-label {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 9px;
-      font-weight: 800;
-      letter-spacing: 2px;
-      color: var(--muted);
-      margin-bottom: 6px;
-    }
-    .trk-bl {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 20px;
-      font-weight: 900;
-      color: var(--navy);
-      letter-spacing: 1px;
-      margin-bottom: 4px;
-    }
-    .trk-consignee {
-      font-size: 15px;
-      font-weight: 700;
-      color: var(--navy);
-      margin-bottom: 12px;
-    }
-    .trk-tags {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 7px;
-    }
-    .trk-tag {
-      background: #F0EDE4;
-      color: var(--navy);
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 10px;
-      font-weight: 800;
-      padding: 4px 10px;
-      border-radius: 6px;
-      letter-spacing: .5px;
-    }
-    .trk-tag.blue  { background: #EEF2FF; color: var(--blue); }
-    .trk-tag.green { background: #E7F5EE; color: var(--green); }
-    .trk-tag.gold  { background: rgba(212,178,102,.15); color: #8B6914; }
+/* ════ CONTENT ════ */
+.content { padding: 0 16px 32px; }
 
-    /* ── ETA Banner ── */
-    .trk-eta {
-      background: var(--navy);
-      color: #fff;
-      border-radius: 10px;
-      padding: 14px 18px;
-      margin-bottom: 16px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-    }
-    .trk-eta-label {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 9px;
-      letter-spacing: 1.5px;
-      color: rgba(255,255,255,.5);
-      margin-bottom: 3px;
-    }
-    .trk-eta-date {
-      font-size: 17px;
-      font-weight: 800;
-      color: var(--gold);
-    }
-    .trk-eta-port {
-      font-size: 12px;
-      color: rgba(255,255,255,.65);
-      margin-top: 2px;
-    }
+/* ════ STATUS HERO ════ */
+.status-hero {
+  margin: -14px 0 0;
+  padding: 22px 20px 20px;
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 4px 24px rgba(0,0,0,.08);
+  animation: fadeUp .4s ease .1s both;
+  position: relative;
+  overflow: hidden;
+}
+.status-hero::before {
+  content: '';
+  position: absolute; top: 0; right: 0; width: 5px; height: 100%;
+  border-radius: 0 16px 16px 0;
+}
+.status-hero.intransit::before { background: var(--blue); }
+.status-hero.delayed::before   { background: var(--red); }
+.status-hero.arrived::before   { background: var(--amber); }
+.status-hero.delivered::before { background: var(--green); }
 
-    /* ── Timeline ── */
-    .trk-timeline-card {
-      background: var(--card);
-      border-radius: 14px;
-      border: 1px solid var(--border);
-      padding: 20px;
-      margin-bottom: 16px;
-      box-shadow: 0 2px 12px rgba(0,0,0,.06);
-    }
-    .trk-timeline-title {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 9px;
-      font-weight: 800;
-      letter-spacing: 2px;
-      color: var(--muted);
-      margin-bottom: 20px;
-    }
+.status-icon-wrap {
+  width: 56px; height: 56px; border-radius: 16px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 26px; margin-bottom: 14px;
+  position: relative;
+}
+.status-icon-wrap.intransit { background: #EEF2FF; }
+.status-icon-wrap.delayed   { background: #FFF5F5; }
+.status-icon-wrap.arrived   { background: #FFF9F0; }
+.status-icon-wrap.delivered { background: #E7F5EE; }
+.status-icon-wrap.pulse-blue { animation: pulse 2s infinite; }
+.status-icon-wrap.pulse-red  { animation: pulseRed 1.5s infinite; }
 
-    .trk-steps {
-      position: relative;
-      display: flex;
-      flex-direction: column;
-      gap: 0;
-    }
+.status-label { font-size:11px; font-weight:800; font-family:'JetBrains Mono',monospace; letter-spacing:2px; margin-bottom:4px; }
+.status-label.intransit { color: var(--blue); }
+.status-label.delayed   { color: var(--red); }
+.status-label.arrived   { color: var(--amber); }
+.status-label.delivered { color: var(--green); }
 
-    .trk-step {
-      display: flex;
-      gap: 16px;
-      position: relative;
-    }
-    .trk-step:not(:last-child)::after {
-      content: '';
-      position: absolute;
-      right: 18px;
-      top: 36px;
-      width: 2px;
-      height: calc(100% - 12px);
-      background: var(--border);
-      z-index: 0;
-    }
-    .trk-step.done::after   { background: var(--green); }
-    .trk-step.active::after { background: var(--border); }
+.status-text { font-size: 22px; font-weight: 900; color: var(--navy); }
+.status-sub  { font-size: 12px; color: #6B6659; margin-top: 4px; }
 
-    .trk-step-dot {
-      width: 36px;
-      height: 36px;
-      border-radius: 50%;
-      background: #F5F3EC;
-      border: 2px solid var(--border);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 14px;
-      flex-shrink: 0;
-      z-index: 1;
-      position: relative;
-      transition: all .3s;
-    }
-    .trk-step.done   .trk-step-dot { background: var(--green); border-color: var(--green); }
-    .trk-step.active .trk-step-dot {
-      background: var(--blue); border-color: var(--blue);
-      box-shadow: 0 0 0 4px rgba(28,75,142,.15);
-      animation: trkPulse 2s ease-in-out infinite;
-    }
-    @keyframes trkPulse {
-      0%,100% { box-shadow: 0 0 0 4px rgba(28,75,142,.15); }
-      50%      { box-shadow: 0 0 0 8px rgba(28,75,142,.05); }
-    }
+/* Delay pill */
+.delay-pill {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: #FFF5F5; border: 1px solid #FCA5A5;
+  border-radius: 20px; padding: 5px 12px;
+  font-size: 11px; font-weight: 700; color: var(--red);
+  margin-top: 10px; animation: glow 2s infinite;
+}
 
-    .trk-step-content {
-      flex: 1;
-      padding: 6px 0 24px;
-    }
-    .trk-step-title {
-      font-size: 14px;
-      font-weight: 800;
-      color: var(--navy);
-      margin-bottom: 3px;
-    }
-    .trk-step.pending .trk-step-title { color: var(--muted); }
-    .trk-step-detail {
-      font-size: 12px;
-      color: var(--muted);
-    }
-    .trk-step.active .trk-step-detail { color: var(--blue); font-weight: 600; }
-    .trk-step.done   .trk-step-detail { color: var(--green); }
+/* ════ ETA CARD ════ */
+.eta-card {
+  background: linear-gradient(135deg, var(--navy), #1C2B48);
+  border-radius: 14px; padding: 16px 18px;
+  display: flex; align-items: center; justify-content: space-between;
+  margin: 12px 0;
+  animation: fadeUp .4s ease .2s both;
+}
+.eta-label { font-family:'JetBrains Mono',monospace; font-size:9px; color:rgba(255,255,255,.45); letter-spacing:2px; margin-bottom:5px; }
+.eta-date  { font-size:18px; font-weight:900; color:var(--gold); }
+.eta-port  { font-size:11px; color:rgba(255,255,255,.5); margin-top:3px; }
 
-    /* ── Current Status Badge ── */
-    .trk-status-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      padding: 10px 18px;
-      border-radius: 30px;
-      font-size: 14px;
-      font-weight: 800;
-      margin-bottom: 16px;
-    }
-    .trk-status-badge.waiting   { background: #FEF3E2; color: #C8943A; }
-    .trk-status-badge.customs   { background: #EEF2FF; color: var(--blue); }
-    .trk-status-badge.clearance { background: #EEF2FF; color: var(--blue); }
-    .trk-status-badge.delivered { background: #E7F5EE; color: var(--green); }
+/* ════ JOURNEY ════ */
+.journey-card {
+  background: white; border-radius: 16px; padding: 20px;
+  box-shadow: 0 2px 12px rgba(0,0,0,.06);
+  animation: fadeUp .4s ease .3s both;
+  margin-bottom: 12px;
+}
+.journey-title {
+  font-family:'JetBrains Mono',monospace; font-size:9px;
+  color:#8A8578; letter-spacing:2px; font-weight:800; margin-bottom:20px;
+}
 
-    /* ── Delivery Details ── */
-    .trk-delivery-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 12px;
-    }
-    .trk-del-item {
-      background: #FAFAF7;
-      border: 1px solid var(--border);
-      border-radius: 9px;
-      padding: 12px 14px;
-    }
-    .trk-del-label {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 8px;
-      font-weight: 800;
-      letter-spacing: 1.5px;
-      color: var(--muted);
-      margin-bottom: 5px;
-    }
-    .trk-del-value {
-      font-size: 13px;
-      font-weight: 700;
-      color: var(--navy);
-    }
-    .trk-del-value.empty { color: #C4B9A8; font-style: italic; font-weight: 400; }
+/* Vertical steps */
+.steps-wrap { position: relative; padding-right: 44px; }
+.step-item {
+  display: flex; flex-direction: column; position: relative;
+  padding-bottom: 24px;
+}
+.step-item:last-child { padding-bottom: 0; }
 
-    /* ── Contact ── */
-    .trk-contact-card {
-      background: var(--card);
-      border-radius: 14px;
-      border: 1px solid var(--border);
-      padding: 20px;
-      margin-bottom: 16px;
-      text-align: center;
-      box-shadow: 0 2px 12px rgba(0,0,0,.06);
-    }
-    .trk-contact-title {
-      font-size: 14px;
-      font-weight: 800;
-      color: var(--navy);
-      margin-bottom: 4px;
-    }
-    .trk-contact-sub {
-      font-size: 12px;
-      color: var(--muted);
-      margin-bottom: 16px;
-    }
-    .trk-contact-btns {
-      display: flex;
-      gap: 10px;
-      justify-content: center;
-    }
-    .trk-btn {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      padding: 11px 22px;
-      border-radius: 10px;
-      font-family: 'Tajawal', sans-serif;
-      font-size: 13px;
-      font-weight: 700;
-      text-decoration: none;
-      transition: all .18s;
-      cursor: pointer;
-      border: none;
-    }
-    .trk-btn.whatsapp { background: #25D366; color: #fff; }
-    .trk-btn.whatsapp:hover { background: #1DAA55; }
-    .trk-btn.phone    { background: #EEF2FF; color: var(--blue); border: 1px solid #C7D2FE; }
-    .trk-btn.phone:hover { background: #E0E7FF; }
+/* Vertical line */
+.step-item::before {
+  content: '';
+  position: absolute; right: -28px; top: 30px;
+  width: 2px; height: calc(100% - 14px);
+  background: #E8E5DC;
+  transform-origin: top;
+}
+.step-item.done::before  { background: var(--green); }
+.step-item.active::before { background: linear-gradient(to bottom, var(--blue), #E8E5DC); }
+.step-item:last-child::before { display: none; }
 
-    /* ── Footer ── */
-    .trk-footer {
-      background: var(--navy);
-      color: rgba(255,255,255,.4);
-      text-align: center;
-      padding: 16px;
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 9px;
-      letter-spacing: 1px;
-    }
+/* Step dot */
+.step-dot {
+  position: absolute; right: -40px; top: 4px;
+  width: 26px; height: 26px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; z-index: 1; transition: all .3s;
+}
+.step-dot.pending  { background:#F0EDE4; border:2px solid #D0CBB8; color:#B0A898; }
+.step-dot.done     { background:var(--green); border:2px solid var(--green); color:white; font-weight:700; }
+.step-dot.active   { background:var(--blue);  border:2px solid var(--blue);  color:white; animation:pulse 2s infinite; }
+.step-dot.delayed  { background:var(--red);   border:2px solid var(--red);   color:white; animation:pulseRed 1.5s infinite; }
 
-    /* ── Loading ── */
-    .trk-loading {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      padding: 60px 24px;
-      gap: 16px;
-    }
-    .trk-spinner {
-      width: 36px; height: 36px;
-      border: 3px solid rgba(28,75,142,.15);
-      border-top-color: var(--blue);
-      border-radius: 50%;
-      animation: trkSpin .7s linear infinite;
-    }
-    @keyframes trkSpin { to { transform: rotate(360deg); } }
-    .trk-loading p { font-size: 13px; color: var(--muted); }
+.step-name    { font-size:15px; font-weight:800; color:var(--navy); }
+.step-detail  { font-size:11px; color:#8A8578; margin-top:3px; }
+.step-name.active-text  { color:var(--blue); }
+.step-name.done-text    { color:var(--navy); }
+.step-name.pending-text { color:#B0A898; }
+.step-name.delayed-text { color:var(--red); }
+.step-detail.active   { color:var(--blue); font-weight:600; }
+.step-detail.done-sub { color:var(--green); font-weight:600; }
+.step-detail.delay-sub{ color:var(--red); }
 
-    /* ── Error ── */
-    .trk-error {
-      text-align: center;
-      padding: 48px 24px;
-    }
-    .trk-error-icon { font-size: 48px; margin-bottom: 12px; }
-    .trk-error h2   { font-size: 18px; font-weight: 800; color: var(--navy); margin-bottom: 6px; }
-    .trk-error p    { font-size: 13px; color: var(--muted); }
+/* ════ DETAILS CARD ════ */
+.details-card {
+  background:white; border-radius:16px; padding:18px 20px;
+  box-shadow:0 2px 12px rgba(0,0,0,.06);
+  animation: fadeUp .4s ease .4s both;
+  margin-bottom:12px;
+}
+.details-title {
+  font-family:'JetBrains Mono',monospace; font-size:9px;
+  color:#8A8578; letter-spacing:2px; font-weight:800; margin-bottom:14px;
+}
+.details-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+.detail-item label {
+  font-family:'JetBrains Mono',monospace; font-size:8px;
+  color:#8A8578; letter-spacing:1.5px; font-weight:800; display:block; margin-bottom:3px;
+}
+.detail-item span { font-size:12px; font-weight:700; color:var(--navy); }
+.detail-item span.empty { color:#C4B9A8; font-weight:400; font-style:italic; }
+.detail-item span.green { color:var(--green); }
+.detail-item span.mono  { font-family:'JetBrains Mono',monospace; font-size:11px; }
 
-    /* ── Responsive ── */
-    @media (max-width: 480px) {
-      .trk-delivery-grid { grid-template-columns: 1fr; }
-      .trk-contact-btns  { flex-direction: column; }
-      .trk-btn           { justify-content: center; }
-    }
-  </style>
+/* ════ CONTACT ════ */
+.contact-card {
+  background:white; border-radius:16px; padding:18px 20px;
+  box-shadow:0 2px 12px rgba(0,0,0,.06);
+  text-align:center;
+  animation: fadeUp .4s ease .5s both;
+  margin-bottom:12px;
+}
+.contact-title { font-size:15px; font-weight:800; color:var(--navy); margin-bottom:4px; }
+.contact-sub   { font-size:11px; color:#6B6659; margin-bottom:16px; }
+.contact-btns  { display:flex; gap:10px; }
+.contact-btn {
+  flex:1; padding:13px; border-radius:12px; font-family:'Tajawal',sans-serif;
+  font-size:13px; font-weight:700; text-decoration:none; display:flex;
+  align-items:center; justify-content:center; gap:8px;
+  transition:all .2s; cursor:pointer; border:none;
+}
+.contact-btn.wa  { background:#25D366; color:white; }
+.contact-btn.wa:hover  { background:#1DAA55; transform:translateY(-2px); box-shadow:0 4px 16px rgba(37,211,102,.3); }
+.contact-btn.tel { background:#EEF2FF; color:var(--blue); border:1.5px solid #C7D2FE; }
+.contact-btn.tel:hover { background:#E0E7FF; transform:translateY(-2px); }
+
+/* ════ FOOTER ════ */
+.footer {
+  background:var(--navy); color:rgba(255,255,255,.3);
+  text-align:center; padding:14px;
+  font-family:'JetBrains Mono',monospace; font-size:8px; letter-spacing:1.5px;
+}
+
+/* ════ LOADING ════ */
+.loading-wrap { display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:70dvh; padding:40px; }
+.loading-logo { width:56px; height:56px; background:var(--gold); border-radius:14px; display:flex; align-items:center; justify-content:center; font-size:22px; font-weight:900; color:var(--navy); margin-bottom:20px; animation:bounce 1.5s infinite; }
+.loading-spinner { width:36px; height:36px; border:3px solid rgba(28,75,142,.15); border-top-color:var(--blue); border-radius:50%; animation:spin .7s linear infinite; margin-bottom:14px; }
+.loading-text { font-size:14px; font-weight:700; color:var(--navy); }
+.loading-sub  { font-size:11px; color:#8A8578; margin-top:4px; font-family:'JetBrains Mono',monospace; }
+
+/* ════ ERROR ════ */
+.error-wrap { display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:60dvh; padding:40px; text-align:center; }
+.error-icon  { font-size:48px; margin-bottom:16px; }
+.error-title { font-size:18px; font-weight:800; color:var(--navy); margin-bottom:6px; }
+.error-sub   { font-size:12px; color:#6B6659; }
+
+/* Live dot */
+.live-dot {
+  display:inline-block; width:7px; height:7px; border-radius:50%; background:#22c55e;
+  animation:pulse 2s infinite; margin-left:6px;
+}
+
+/* ════ RESPONSIVE ════ */
+@media (max-width:360px) {
+  .contact-btns { flex-direction:column; }
+  .hdr-bl { font-size:18px; }
+}
+</style>
 </head>
 <body>
 
-<script>
-/* bypass PWA service worker so track.html renders as standalone page */
-(function(){
-  if (!('serviceWorker' in navigator)) return;
-  var done = sessionStorage.getItem('_trk_sw');
-  if (done) return;
-  navigator.serviceWorker.getRegistrations().then(function(regs){
-    if (!regs.length) return;
-    sessionStorage.setItem('_trk_sw','1');
-    Promise.all(regs.map(function(r){ return r.unregister(); }))
-      .then(function(){ location.reload(); });
-  });
-})();
-</script>
-
-  <!-- HEADER -->
-  <div class="trk-header">
-    <div class="trk-brand">
-      <div class="trk-logo">M</div>
-      <div>
-        <div class="trk-brand-name">M-Customs</div>
-        <div class="trk-brand-sub">شركة السديس للخدمات اللوجستية</div>
-      </div>
-    </div>
-    <div class="trk-title">SHIPMENT TRACKING · تتبع الشحنة</div>
-    <div class="trk-token" id="trk-token-display">— — —</div>
+<div id="trk-body">
+  <div class="loading-wrap">
+    <div class="loading-logo">M</div>
+    <div class="loading-spinner"></div>
+    <div class="loading-text">جاري تحميل بيانات الشحنة</div>
+    <div class="loading-sub">SHIPMENT TRACKING · LOADING</div>
   </div>
-
-  <!-- CONTENT -->
-  <div class="trk-body" id="trk-body">
-    <div class="trk-loading">
-      <div class="trk-spinner"></div>
-      <p>جاري تحميل بيانات الشحنة...</p>
-    </div>
-  </div>
-
-  <!-- FOOTER -->
-  <div class="trk-footer">
-    M-CUSTOMS · نظام التخليص الجمركي · جدة، المملكة العربية السعودية
-  </div>
+</div>
 
 <script>
-/* ══════════════════════════════════════════════
-   Tracking Page Logic
-══════════════════════════════════════════════ */
-
-/* step بناءً على الحالة فقط — الوصول يتأكد عند بدء التخليص */
-function getActiveStep(status) {
-  if (status === 'delivered')                      return 4; // كل شيء مكتمل
-  if (status === 'clearance' || status === 'customs') return 3; // وصل + تخليص جارٍ
-  return 1; // waiting = لا يزال في الطريق (ETA غير موثوق)
-}
-
-const STATUS_MAP = {
-  waiting:   { ar: 'قيد الانتظار',       cls: 'waiting',   icon: '🕐' },
-  clearance: { ar: 'قيد التخليص الجمركي', cls: 'customs',   icon: '📋' },
-  customs:   { ar: 'قيد التخليص الجمركي', cls: 'customs',   icon: '📋' },
-  delivered: { ar: 'تم التسليم',          cls: 'delivered',  icon: '✅' },
-};
-
-const STEPS = [
-  { icon: '🚢', title: 'وصول البضاعة',      detail_done: 'تم الاستلام في الميناء', detail_pending: 'في انتظار الوصول' },
-  { icon: '🕐', title: 'قيد الانتظار',       detail_done: 'اكتملت مرحلة الانتظار',  detail_active: 'جاري المعالجة...' },
-  { icon: '📋', title: 'التخليص الجمركي',   detail_done: 'تم التخليص بنجاح',         detail_active: 'قيد التخليص الجمركي...' },
-  { icon: '🚛', title: 'تسليم البضاعة',      detail_done: 'تم التسليم بنجاح',         detail_pending: 'في انتظار التسليم' },
-];
-
+/* ════════════════════════════════
+   Config
+════════════════════════════════ */
 const PHONE    = '+966536118708';
 const WHATSAPP = '+966536118708';
 
-/* تنسيق التاريخ */
-function fmtDate(d, style = 'long') {
+const PORTS_AR = {
+  jed_sea:'ميناء جدة الإسلامي', dmm_sea:'ميناء الدمام',
+  rab_sea:'ميناء رابغ',          jed_air:'مطار جدة',
+  ruh_air:'مطار الرياض',         dmm_air:'مطار الدمام',
+  batha:'منفذ البطحاء',          fahd:'جسر الملك فهد',
+};
+
+/* ════ Helpers ════ */
+function fmtDate(d) {
   if (!d) return null;
   try {
-    const opts = style === 'long'
-      ? { year: 'numeric', month: 'long', day: 'numeric' }
-      : { month: 'short', day: 'numeric' };
-    return new Date(d).toLocaleDateString('ar-SA', opts);
+    return new Date(d).toLocaleDateString('ar-SA-u-ca-gregory', {
+      day:'numeric', month:'long', year:'numeric'
+    });
   } catch { return d; }
 }
 
-/* نص الـ step */
-function stepClass(stepIndex, activeStep) {
-  if (stepIndex + 1 < activeStep)  return 'done';
-  if (stepIndex + 1 === activeStep) return 'active';
-  return 'pending';
+function daysDiff(eta) {
+  if (!eta) return null;
+  const diff = Math.ceil((new Date() - new Date(eta)) / 86400000);
+  return diff;
 }
 
-/* بناء الواجهة */
-function renderTracking(data, token) {
-  const st      = STATUS_MAP[data.status] || STATUS_MAP.waiting;
-  const activeStep = getActiveStep(data.status);
-  const typeLabel  = data.type === 'air' ? 'AIR ✈️' : data.type === 'sea' ? 'SEA 🚢' : 'LAND 🚛';
+/* ════ Step logic ════ */
+// 4 مراحل: في الطريق → وصل الميناء → خرج للتسليم → تم التسليم
+function getStageInfo(data) {
+  const { status, eta, delivered_date, loading_date } = data;
+  const overdueDays = eta ? daysDiff(eta) : null;
+  const isDelayed   = status === 'waiting' && overdueDays > 0;
 
-  // WhatsApp message
-  const waMsg = encodeURIComponent(
-    `السلام عليكم\nأود الاستفسار عن شحنتي:\nرقم البوليصة: ${data.bl_number}\nرقم التتبع: ${token}`
-  );
+  if (status === 'delivered') {
+    return { stage: 4, icon:'✅', cls:'delivered', label:'تم التسليم', sub:'وصلت البضاعة بنجاح 🎉' };
+  }
+  if (status === 'clearance' || status === 'customs') {
+    return { stage: 2, icon:'🏗️', cls:'arrived', label:'وصل الميناء', sub:'جاري التخليص الجمركي...' };
+  }
+  if (isDelayed) {
+    return {
+      stage: 1, icon:'⚠️', cls:'delayed', label:'تأخّرت عن الموعد',
+      sub: `كانت ETA ${fmtDate(eta)} — لم نستلم موعداً جديداً بعد`,
+      delayDays: overdueDays,
+    };
+  }
+  return { stage: 1, icon:'🚢', cls:'intransit', label:'في الطريق للميناء', sub: eta ? `موعد الوصول المتوقع: ${fmtDate(eta)}` : 'في الطريق' };
+}
+
+/* ════ Steps data ════ */
+function buildSteps(stageInfo, data) {
+  const s = stageInfo.stage;
+  return [
+    {
+      key:'arrival',
+      icon: s >= 2 ? '✓' : (stageInfo.cls === 'delayed' ? '⚠' : '🚢'),
+      name: 'في الطريق للميناء',
+      detail: s >= 2 ? `وصل · ${fmtDate(data.eta) || ''}` : (stageInfo.cls === 'delayed' ? `تأخّرت ${stageInfo.delayDays} يوم` : (data.eta ? `ETA: ${fmtDate(data.eta)}` : 'جاري الشحن...')),
+      cls: s >= 2 ? 'done' : (stageInfo.cls === 'delayed' ? 'delayed' : 'active'),
+    },
+    {
+      key:'customs',
+      icon: s >= 3 ? '✓' : (s === 2 ? '🏗️' : '📋'),
+      name: 'وصل الميناء · التخليص',
+      detail: s >= 3 ? `تم التخليص${data.customs_no ? ' · بيان: '+data.customs_no : ''}` : (s === 2 ? `جاري التخليص الجمركي...${data.terminal ? ' · '+data.terminal : ''}` : 'في انتظار الوصول'),
+      cls: s >= 3 ? 'done' : (s === 2 ? 'active' : 'pending'),
+    },
+    {
+      key:'transit',
+      icon: s >= 4 ? '✓' : (s === 3 ? '🚛' : '📦'),
+      name: 'خرج للتسليم',
+      detail: s >= 4 ? `تم الاستلام` : (s === 3 ? 'في الطريق إليك...' : 'في انتظار التخليص'),
+      cls: s >= 4 ? 'done' : (s === 3 ? 'active' : 'pending'),
+    },
+    {
+      key:'done',
+      icon: s === 4 ? '✓' : '🏠',
+      name: 'تم التسليم',
+      detail: data.delivered_date ? fmtDate(data.delivered_date) : 'في انتظار التسليم',
+      cls: s === 4 ? 'done' : 'pending',
+    },
+  ];
+}
+
+/* ════ Render ════ */
+function render(data, token) {
+  const stageInfo = getStageInfo(data);
+  const steps     = buildSteps(stageInfo, data);
+  const portAr    = PORTS_AR[data.port] || data.port || '';
+  const typeLabel = data.type === 'air' ? '✈️ جوي' : data.type === 'sea' ? '🚢 بحري' : '🚛 بري';
+  const waMsg     = encodeURIComponent(`السلام عليكم\nأود الاستفسار عن شحنتي:\nرقم البوليصة: ${data.bl_number||''}\nرقم التتبع: ${token}`);
+
+  /* Steps HTML */
+  const stepsHTML = steps.map(st => {
+    const dotCls  = st.cls === 'delayed' ? 'delayed' : st.cls;
+    const nameCls = st.cls === 'done' ? 'done-text' : st.cls === 'active' ? 'active-text' : st.cls === 'delayed' ? 'delayed-text' : 'pending-text';
+    const detCls  = st.cls === 'done' ? 'done-sub' : st.cls === 'active' ? 'active' : st.cls === 'delayed' ? 'delay-sub' : '';
+    return `
+      <div class="step-item ${st.cls}">
+        <div class="step-dot ${dotCls}">${st.icon}</div>
+        <div class="step-name ${nameCls}">${st.name}</div>
+        <div class="step-detail ${detCls}">${st.detail || ''}</div>
+      </div>`;
+  }).join('');
+
+  /* Details */
+  const detailFields = [
+    { label:'ETA', val: data.eta ? fmtDate(data.eta) : null, mono:false },
+    { label:'TYPE', val: typeLabel, mono:false },
+    { label:'PORT', val: portAr || null, mono:false },
+    { label:'LCL/FCL', val: data.lcl_fcl || null, mono:true },
+    { label:'QTY', val: data.qty || null, mono:true },
+    { label:'JOB NO', val: data.job_no || null, mono:true },
+    { label:'BAYAN', val: data.customs_no || null, mono:true },
+    { label:'TERMINAL', val: data.terminal || null, mono:false },
+    { label:'D/O DATE', val: data.do_date ? fmtDate(data.do_date) : null, mono:false },
+    { label:'ERI FREE', val: data.eri_free_date ? fmtDate(data.eri_free_date) : null, mono:false, green:true },
+  ].filter(f => f.val);
+
+  const detailsHTML = detailFields.map(f => `
+    <div class="detail-item">
+      <label>${f.label}</label>
+      <span class="${f.mono?'mono':''} ${f.green?'green':''}">${f.val}</span>
+    </div>`).join('');
 
   document.getElementById('trk-body').innerHTML = `
-
-    <!-- SHIPMENT CARD -->
-    <div class="trk-card">
-      <div class="trk-card-label">SHIPMENT DETAILS · تفاصيل الشحنة</div>
-      <div class="trk-bl">${data.bl_number || '—'}</div>
-      <div class="trk-consignee">${data.consignee || data.customer_name || '—'}</div>
-      <div class="trk-tags">
-        <span class="trk-tag blue">${typeLabel}</span>
-        ${data.port    ? `<span class="trk-tag">${data.port}</span>` : ''}
-        ${data.lcl_fcl ? `<span class="trk-tag gold">${data.lcl_fcl}</span>` : ''}
-        ${data.qty     ? `<span class="trk-tag">QTY: ${data.qty}</span>` : ''}
-        ${data.job_no  ? `<span class="trk-tag">JOB: ${data.job_no}</span>` : ''}
+    <!-- HEADER -->
+    <div class="hdr">
+      <div class="hdr-brand">
+        <div class="hdr-logo">M</div>
+        <div>
+          <div class="hdr-name">M-Customs</div>
+          <div class="hdr-sub">شركة السديس للخدمات اللوجستية</div>
+        </div>
+        <div style="margin-right:auto;">
+          <div class="live-dot" id="live-dot"></div>
+        </div>
+      </div>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:rgba(255,255,255,.4);letter-spacing:2px;margin-bottom:6px;">
+        SHIPMENT TRACKING · تتبع الشحنة
+      </div>
+      <div class="hdr-bl">${data.bl_number || '—'}</div>
+      <div class="hdr-name2">${data.consignee || data.customer_name || '—'}</div>
+      <div class="hdr-tags">
+        <span class="hdr-tag blue">${typeLabel}</span>
+        ${data.lcl_fcl ? `<span class="hdr-tag gold">${data.lcl_fcl}</span>` : ''}
+        ${data.qty     ? `<span class="hdr-tag">QTY: ${data.qty}</span>` : ''}
+        ${data.job_no  ? `<span class="hdr-tag">JOB: ${data.job_no}</span>` : ''}
       </div>
     </div>
 
-    <!-- ETA BANNER -->
-    ${data.eta ? `
-    <div class="trk-eta">
-      <div>
-        <div class="trk-eta-label">ESTIMATED ARRIVAL · الوصول المتوقع</div>
-        <div class="trk-eta-date">${fmtDate(data.eta)}</div>
-        ${data.port ? `<div class="trk-eta-port">📍 ${data.port}</div>` : ''}
-      </div>
-      <div style="font-size:28px;">📅</div>
-    </div>` : ''}
+    <div class="content">
 
-    <!-- STATUS BADGE -->
-    <div>
-      <span class="trk-status-badge ${st.cls}">
-        ${st.icon} ${st.ar}
-      </span>
+      <!-- STATUS HERO -->
+      <div class="status-hero ${stageInfo.cls}">
+        <div class="status-icon-wrap ${stageInfo.cls} ${stageInfo.cls==='intransit'?'pulse-blue':stageInfo.cls==='delayed'?'pulse-red':''}">
+          ${stageInfo.icon}
+        </div>
+        <div class="status-label ${stageInfo.cls}">
+          ${stageInfo.cls==='intransit'?'IN TRANSIT':stageInfo.cls==='delayed'?'DELAYED':stageInfo.cls==='arrived'?'AT PORT':'DELIVERED'}
+        </div>
+        <div class="status-text">${stageInfo.label}</div>
+        <div class="status-sub">${stageInfo.sub}</div>
+        ${stageInfo.delayDays ? `<div class="delay-pill">⚠️ متأخرة ${stageInfo.delayDays} يوم عن الموعد</div>` : ''}
+      </div>
+
+      <!-- ETA CARD -->
+      ${data.eta ? `
+      <div class="eta-card">
+        <div>
+          <div class="eta-label">ESTIMATED ARRIVAL · الوصول المتوقع</div>
+          <div class="eta-date">${fmtDate(data.eta)}</div>
+          ${portAr ? `<div class="eta-port">📍 ${portAr}</div>` : ''}
+        </div>
+        <div style="font-size:32px;">📅</div>
+      </div>` : ''}
+
+      <!-- JOURNEY -->
+      <div class="journey-card">
+        <div class="journey-title">SHIPMENT JOURNEY · مسار الشحنة</div>
+        <div class="steps-wrap">${stepsHTML}</div>
+      </div>
+
+      <!-- DETAILS -->
+      ${detailsHTML ? `
+      <div class="details-card">
+        <div class="details-title">SHIPMENT DETAILS · تفاصيل الشحنة</div>
+        <div class="details-grid">${detailsHTML}</div>
+      </div>` : ''}
+
+      <!-- CONTACT -->
+      <div class="contact-card">
+        <div class="contact-title">تواصل معنا</div>
+        <div class="contact-sub">للاستفسار عن شحنتك أو أي معلومات إضافية</div>
+        <div class="contact-btns">
+          <a class="contact-btn wa"
+            href="https://wa.me/${WHATSAPP}?text=${waMsg}"
+            target="_blank">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/>
+              <path d="M12 0C5.373 0 0 5.373 0 12c0 2.124.554 4.118 1.524 5.847L.057 23.93l6.244-1.44A11.944 11.944 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 22c-1.848 0-3.574-.474-5.073-1.306l-.363-.214-3.762.867.902-3.663-.237-.379A9.96 9.96 0 012 12C2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z"/>
+            </svg>
+            واتساب
+          </a>
+          <a class="contact-btn tel" href="tel:${PHONE}">
+            📞 اتصال مباشر
+          </a>
+        </div>
+      </div>
+
     </div>
 
-    <!-- TIMELINE -->
-    <div class="trk-timeline-card">
-      <div class="trk-timeline-title">SHIPMENT JOURNEY · مسار الشحنة</div>
-      <div class="trk-steps">
-        ${STEPS.map((step, i) => {
-          const cls   = stepClass(i, activeStep);
-          const detail = cls === 'done'
-            ? (step.detail_done   || '')
-            : cls === 'active'
-            ? (step.detail_active || '')
-            : (step.detail_pending|| '');
-          const dotIcon = cls === 'done' ? '✓' : cls === 'active' ? step.icon : '○';
-          const dotColor = cls === 'done' ? '#fff' : cls === 'active' ? '#fff' : '#C4B9A8';
-          // Special: delivered shows delivered_date
-          const extraDetail = (i === 3 && data.delivered_date && cls === 'done')
-            ? `<div style="font-size:11px;color:var(--green);margin-top:2px;font-weight:600;">
-                ${fmtDate(data.delivered_date)}
-              </div>` : '';
-          // Customs: show bayan if available
-          const bayaDetail = (i === 2 && data.customs_no && cls !== 'pending')
-            ? `<div style="font-family:'JetBrains Mono',monospace;font-size:11px;
-                color:var(--blue);margin-top:2px;font-weight:700;">
-                بيان رقم: ${data.customs_no}
-              </div>` : '';
-
-          return `
-          <div class="trk-step ${cls}">
-            <div class="trk-step-dot" style="color:${dotColor};font-size:${cls==='done'?'14':'16'}px;">
-              ${dotIcon}
-            </div>
-            <div class="trk-step-content">
-              <div class="trk-step-title">${step.title}</div>
-              <div class="trk-step-detail">${detail}</div>
-              ${bayaDetail}
-              ${extraDetail}
-            </div>
-          </div>`;
-        }).join('')}
-      </div>
-    </div>
-
-    <!-- DELIVERY DETAILS (show if in customs or delivered) -->
-    ${activeStep >= 3 || data.terminal || data.do_date ? `
-    <div class="trk-card">
-      <div class="trk-card-label">DELIVERY INFO · معلومات التسليم</div>
-      <div style="margin-top:14px;" class="trk-delivery-grid">
-        ${data.terminal  ? `<div class="trk-del-item"><div class="trk-del-label">TERMINAL</div><div class="trk-del-value">${data.terminal}</div></div>` : ''}
-        ${data.do_date   ? `<div class="trk-del-item"><div class="trk-del-label">D/O DATE</div><div class="trk-del-value">${fmtDate(data.do_date,'short')}</div></div>` : ''}
-        ${data.customs_no? `<div class="trk-del-item"><div class="trk-del-label">رقم البيان</div><div class="trk-del-value">${data.customs_no}</div></div>` : ''}
-        ${data.delivered_date ? `<div class="trk-del-item"><div class="trk-del-label">تاريخ التسليم</div><div class="trk-del-value" style="color:var(--green)">${fmtDate(data.delivered_date)}</div></div>` : ''}
-      </div>
-    </div>` : ''}
-
-    <!-- CONTACT -->
-    <div class="trk-contact-card">
-      <div class="trk-contact-title">تواصل معنا</div>
-      <div class="trk-contact-sub">للاستفسار عن شحنتك أو أي معلومات إضافية</div>
-      <div class="trk-contact-btns">
-        <a class="trk-btn whatsapp" href="https://wa.me/${WHATSAPP}?text=${waMsg}" target="_blank">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/>
-            <path d="M12 0C5.373 0 0 5.373 0 12c0 2.124.554 4.118 1.524 5.847L.057 23.93l6.244-1.44A11.944 11.944 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 22c-1.848 0-3.574-.474-5.073-1.306l-.363-.214-3.762.867.902-3.663-.237-.379A9.96 9.96 0 012 12C2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z"/>
-          </svg>
-          واتساب
-        </a>
-        <a class="trk-btn phone" href="tel:${PHONE}">
-          📞 اتصال مباشر
-        </a>
-      </div>
+    <!-- FOOTER -->
+    <div class="footer">
+      M-CUSTOMS · شركة السديس للخدمات اللوجستية · جدة · المملكة العربية السعودية
     </div>
   `;
 }
 
-/* خطأ */
+/* ════ Error ════ */
 function showError(msg) {
   document.getElementById('trk-body').innerHTML = `
-    <div class="trk-error">
-      <div class="trk-error-icon">📦</div>
-      <h2>لم يتم العثور على الشحنة</h2>
-      <p>${msg || 'الرابط غير صحيح أو انتهت صلاحيته'}</p>
+    <div class="hdr">
+      <div class="hdr-brand">
+        <div class="hdr-logo">M</div>
+        <div><div class="hdr-name">M-Customs</div><div class="hdr-sub">شركة السديس للخدمات اللوجستية</div></div>
+      </div>
+    </div>
+    <div class="error-wrap">
+      <div class="error-icon">📦</div>
+      <div class="error-title">لم يتم العثور على الشحنة</div>
+      <div class="error-sub">${msg || 'الرابط غير صحيح أو انتهت صلاحيته'}</div>
     </div>`;
 }
 
-/* ══ MAIN ══ */
+/* ════ Init ════ */
 window.addEventListener('load', async () => {
-  const token = new URLSearchParams(location.search).get('token');
-
-  if (!token) {
-    showError('رابط التتبع غير صحيح');
-    return;
+  // Unregister service worker
+  if ('serviceWorker' in navigator && !sessionStorage.getItem('_trk_sw')) {
+    const regs = await navigator.serviceWorker.getRegistrations();
+    if (regs.length) {
+      sessionStorage.setItem('_trk_sw','1');
+      await Promise.all(regs.map(r => r.unregister()));
+      location.reload(); return;
+    }
   }
 
-  document.getElementById('trk-token-display').textContent =
-    token.replace(/(.{4})/g, '$1 ').trim();
+  const token = new URLSearchParams(location.search).get('token');
+  if (!token) { showError('رابط التتبع غير صحيح'); return; }
 
   try {
-    const db   = firebase.firestore();
-    const snap = await db.collection('tracking_tokens').doc(token).get();
+    const db = firebase.firestore();
 
-    if (!snap.exists) {
-      showError('لم يتم العثور على هذه الشحنة');
-      return;
-    }
+    // Initial load
+    const snap = await db.collection('tracking_tokens').doc(token).get();
+    if (!snap.exists) { showError('رابط التتبع غير موجود'); return; }
 
     const data = snap.data();
-    renderTracking(data, token);
+    document.title = `${data.bl_number || 'شحنة'} · تتبع M-Customs`;
+    render(data, token);
 
-    /* عدّاد المشاهدات (non-blocking) */
-    db.collection('tracking_tokens').doc(token).update({
-      views:       firebase.firestore.FieldValue.increment(1),
-      last_viewed: firebase.firestore.FieldValue.serverTimestamp(),
-    }).catch(() => {});
-
+    // Real-time updates
+    db.collection('tracking_tokens').doc(token).onSnapshot(
+      docSnap => {
+        if (!docSnap.exists) return;
+        render(docSnap.data(), token);
+        const dot = document.getElementById('live-dot');
+        if (dot) { dot.style.background='#22c55e'; }
+      },
+      err => {
+        const dot = document.getElementById('live-dot');
+        if (dot) { dot.style.background='#C8943A'; }
+      }
+    );
   } catch(e) {
-    showError('خطأ في الاتصال، يرجى المحاولة لاحقاً');
-    console.error(e);
+    showError('خطأ في الاتصال، يرجى المحاولة مرة أخرى');
   }
 });
 </script>
