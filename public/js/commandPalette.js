@@ -97,10 +97,12 @@ const QUICK_ACTIONS = [
   { icon: 'ti-file-plus',     label: 'شحنة جديدة',        en: 'New shipment',     keywords: 'new shipment shipments',  action: () => _navigate('new-shipment') },
   { icon: 'ti-chart-bar',     label: 'التقارير',           en: 'Reports',          keywords: 'reports تقارير report',    action: () => { _navigate('transport-requests'); setTimeout(() => window._openReports?.(), 200); } },
   { icon: 'ti-truck',         label: 'طلبات النقل',        en: 'Transport requests', keywords: 'transport requests نقل', action: () => _navigate('transport-requests') },
-  { icon: 'ti-clipboard-list',label: 'سجل الشحنات',        en: 'Shipments ledger', keywords: 'shipments ledger سجل',    action: () => _navigate('shipments-ledger') },
+  { icon: 'ti-clipboard-list',label: 'سجل الشحنات',        en: 'Shipments ledger', keywords: 'shipments ledger سجل',    action: () => _navigate('shipments') },
   { icon: 'ti-users',         label: 'السائقون',           en: 'Drivers',          keywords: 'drivers سائقين',           action: () => _navigate('drivers') },
   { icon: 'ti-layout-dashboard', label: 'لوحة التحكم',     en: 'Dashboard',        keywords: 'dashboard لوحة home',      action: () => _navigate('dashboard') },
   { icon: 'ti-settings',      label: 'إدارة القوائم',      en: 'Transport settings',keywords: 'settings dropdowns',      action: () => _navigate('transport-settings') },
+  { icon: 'ti-user-cog',      label: 'الموظفون',           en: 'Employees',        keywords: 'employees users موظفين',   action: () => _navigate('users') },
+  { icon: 'ti-package-import',label: 'الدفعات الواردة',     en: 'Incoming batches', keywords: 'incoming batches دفعات واردة', action: () => _navigate('incoming-batches') },
 ];
 
 function search(query) {

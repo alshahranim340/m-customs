@@ -362,7 +362,9 @@ async function loadAlerts() {
 
     const alerts = [];
 
-    const drafts = requests.filter(r => r.status === 'draft');
+    // استبعاد الطلبات المحذوفة (Soft Delete) — نفس منطق صفحة طلبات النقل
+    const activeRequests = requests.filter(r => !r.deleted);
+    const drafts = activeRequests.filter(r => r.status === 'draft');
     if (drafts.length > 0) {
       alerts.push({
         icon: 'ti-file-pencil',
