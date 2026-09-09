@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex">
+  <title>تتبع الشحنة — M-Customs</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800;900&family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
+
+  <!-- Firebase (auto-configured by Firebase Hosting) -->
+  <script src="/__/firebase/10.12.2/firebase-app-compat.js"></script>
+  <script src="/__/firebase/10.12.2/firebase-firestore-compat.js"></script>
+  <script src="/__/firebase/init.js"></script>
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --navy:  #0E1A2E;
+      --blue:  #1C4B8E;
+      --green: #2E8B57;
+      --red:   #CC2229;
+      --gold:  #D4B266;
+      --gray:  #9CA3AF;
+      --bg:    #F5F3EC;
+      --card:  #FFFFFF;
+      --border:#E8E5DC;
+      --text:  #0E1A2E;
+      --muted: #6B6659;
+    }
+
+    body {
+      font-family: 'Tajawal', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── Header ── */
+    .trk-header {
+      background: linear-gradient(135deg, var(--navy) 0%, #1C2B48 60%, var(--navy) 100%);
+      padding: 20px 24px 28px;
+      position: relative;
+      overflow: hidden;
+    }
+    .trk-header::before {
+      content: '';
+      position: absolute;
+      top: -60px; left: -60px;
+      width: 220px; height: 220px;
+      background: radial-gradient(circle, rgba(212,178,102,.12) 0%, transparent 70%);
+    }
+    .trk-brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    .trk-logo {
+      width: 40px; height: 40px;
+      background: var(--gold);
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px; font-weight: 900; color: var(--navy);
+      flex-shrink: 0;
+    }
+    .trk-brand-name {
+      font-size: 15px;
+      font-weight: 800;
+      color: #fff;
+    }
+    .trk-brand-sub {
+      font-size: 10px;
+      color: rgba(255,255,255,.45);
+      font-family: 'JetBrains Mono', monospace;
+      letter-spacing: .8px;
+      margin-top: 1px;
+    }
+    .trk-title {
+      color: rgba(255,255,255,.7);
+      font-size: 12px;
+      font-family: 'JetBrains Mono', monospace;
+      letter-spacing: 1.5px;
+      margin-bottom: 4px;
+    }
+    .trk-token {
+      color: var(--gold);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 18px;
+      font-weight: 900;
+      letter-spacing: 3px;
+    }
+
+    /* ── Main Content ── */
+    .trk-body {
+      flex: 1;
+      padding: 20px 16px;
+      max-width: 560px;
+      width: 100%;
+      margin: 0 auto;
+    }
+
+    /* ── Shipment Card ── */
+    .trk-card {
+      background: var(--card);
+      border-radius: 14px;
+      border: 1px solid var(--border);
+      padding: 20px;
+      margin-bottom: 16px;
+      box-shadow: 0 2px 12px rgba(0,0,0,.06);
+    }
+    .trk-card-label {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 9px;
+      font-weight: 800;
+      letter-spacing: 2px;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+    .trk-bl {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 20px;
+      font-weight: 900;
+      color: var(--navy);
+      letter-spacing: 1px;
+      margin-bottom: 4px;
+    }
+    .trk-consignee {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--navy);
+      margin-bottom: 12px;
+    }
+    .trk-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 7px;
+    }
+    .trk-tag {
+      background: #F0EDE4;
+      color: var(--navy);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      font-weight: 800;
+      padding: 4px 10px;
+      border-radius: 6px;
+      letter-spacing: .5px;
+    }
+    .trk-tag.blue  { background: #EEF2FF; color: var(--blue); }
+    .trk-tag.green { background: #E7F5EE; color: var(--green); }
+    .trk-tag.gold  { background: rgba(212,178,102,.15); color: #8B6914; }
+
+    /* ── ETA Banner ── */
+    .trk-eta {
+      background: var(--navy);
+      color: #fff;
+      border-radius: 10px;
+      padding: 14px 18px;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .trk-eta-label {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 9px;
+      letter-spacing: 1.5px;
+      color: rgba(255,255,255,.5);
+      margin-bottom: 3px;
+    }
+    .trk-eta-date {
+      font-size: 17px;
+      font-weight: 800;
+      color: var(--gold);
+    }
+    .trk-eta-port {
+      font-size: 12px;
+      color: rgba(255,255,255,.65);
+      margin-top: 2px;
+    }
+
+    /* ── Timeline ── */
+    .trk-timeline-card {
+      background: var(--card);
+      border-radius: 14px;
+      border: 1px solid var(--border);
+      padding: 20px;
+      margin-bottom: 16px;
+      box-shadow: 0 2px 12px rgba(0,0,0,.06);
+    }
+    .trk-timeline-title {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 9px;
+      font-weight: 800;
+      letter-spacing: 2px;
+      color: var(--muted);
+      margin-bottom: 20px;
+    }
+
+    .trk-steps {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+    }
+
+    .trk-step {
+      display: flex;
+      gap: 16px;
+      position: relative;
+    }
+    .trk-step:not(:last-child)::after {
+      content: '';
+      position: absolute;
+      right: 18px;
+      top: 36px;
+      width: 2px;
+      height: calc(100% - 12px);
+      background: var(--border);
+      z-index: 0;
+    }
+    .trk-step.done::after   { background: var(--green); }
+    .trk-step.active::after { background: var(--border); }
+
+    .trk-step-dot {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: #F5F3EC;
+      border: 2px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      flex-shrink: 0;
+      z-index: 1;
+      position: relative;
+      transition: all .3s;
+    }
+    .trk-step.done   .trk-step-dot { background: var(--green); border-color: var(--green); }
+    .trk-step.active .trk-step-dot {
+      background: var(--blue); border-color: var(--blue);
+      box-shadow: 0 0 0 4px rgba(28,75,142,.15);
+      animation: trkPulse 2s ease-in-out infinite;
+    }
+    @keyframes trkPulse {
+      0%,100% { box-shadow: 0 0 0 4px rgba(28,75,142,.15); }
+      50%      { box-shadow: 0 0 0 8px rgba(28,75,142,.05); }
+    }
+
+    .trk-step-content {
+      flex: 1;
+      padding: 6px 0 24px;
+    }
+    .trk-step-title {
+      font-size: 14px;
+      font-weight: 800;
+      color: var(--navy);
+      margin-bottom: 3px;
+    }
+    .trk-step.pending .trk-step-title { color: var(--muted); }
+    .trk-step-detail {
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .trk-step.active .trk-step-detail { color: var(--blue); font-weight: 600; }
+    .trk-step.done   .trk-step-detail { color: var(--green); }
+
+    /* ── Current Status Badge ── */
+    .trk-status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 18px;
+      border-radius: 30px;
+      font-size: 14px;
+      font-weight: 800;
+      margin-bottom: 16px;
+    }
+    .trk-status-badge.waiting   { background: #FEF3E2; color: #C8943A; }
+    .trk-status-badge.customs   { background: #EEF2FF; color: var(--blue); }
+    .trk-status-badge.clearance { background: #EEF2FF; color: var(--blue); }
+    .trk-status-badge.delivered { background: #E7F5EE; color: var(--green); }
+
+    /* ── Delivery Details ── */
+    .trk-delivery-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+    .trk-del-item {
+      background: #FAFAF7;
+      border: 1px solid var(--border);
+      border-radius: 9px;
+      padding: 12px 14px;
+    }
+    .trk-del-label {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 8px;
+      font-weight: 800;
+      letter-spacing: 1.5px;
+      color: var(--muted);
+      margin-bottom: 5px;
+    }
+    .trk-del-value {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--navy);
+    }
+    .trk-del-value.empty { color: #C4B9A8; font-style: italic; font-weight: 400; }
+
+    /* ── Contact ── */
+    .trk-contact-card {
+      background: var(--card);
+      border-radius: 14px;
+      border: 1px solid var(--border);
+      padding: 20px;
+      margin-bottom: 16px;
+      text-align: center;
+      box-shadow: 0 2px 12px rgba(0,0,0,.06);
+    }
+    .trk-contact-title {
+      font-size: 14px;
+      font-weight: 800;
+      color: var(--navy);
+      margin-bottom: 4px;
+    }
+    .trk-contact-sub {
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 16px;
+    }
+    .trk-contact-btns {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+    }
+    .trk-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 11px 22px;
+      border-radius: 10px;
+      font-family: 'Tajawal', sans-serif;
+      font-size: 13px;
+      font-weight: 700;
+      text-decoration: none;
+      transition: all .18s;
+      cursor: pointer;
+      border: none;
+    }
+    .trk-btn.whatsapp { background: #25D366; color: #fff; }
+    .trk-btn.whatsapp:hover { background: #1DAA55; }
+    .trk-btn.phone    { background: #EEF2FF; color: var(--blue); border: 1px solid #C7D2FE; }
+    .trk-btn.phone:hover { background: #E0E7FF; }
+
+    /* ── Footer ── */
+    .trk-footer {
+      background: var(--navy);
+      color: rgba(255,255,255,.4);
+      text-align: center;
+      padding: 16px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 9px;
+      letter-spacing: 1px;
+    }
+
+    /* ── Loading ── */
+    .trk-loading {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 60px 24px;
+      gap: 16px;
+    }
+    .trk-spinner {
+      width: 36px; height: 36px;
+      border: 3px solid rgba(28,75,142,.15);
+      border-top-color: var(--blue);
+      border-radius: 50%;
+      animation: trkSpin .7s linear infinite;
+    }
+    @keyframes trkSpin { to { transform: rotate(360deg); } }
+    .trk-loading p { font-size: 13px; color: var(--muted); }
+
+    /* ── Error ── */
+    .trk-error {
+      text-align: center;
+      padding: 48px 24px;
+    }
+    .trk-error-icon { font-size: 48px; margin-bottom: 12px; }
+    .trk-error h2   { font-size: 18px; font-weight: 800; color: var(--navy); margin-bottom: 6px; }
+    .trk-error p    { font-size: 13px; color: var(--muted); }
+
+    /* ── Responsive ── */
+    @media (max-width: 480px) {
+      .trk-delivery-grid { grid-template-columns: 1fr; }
+      .trk-contact-btns  { flex-direction: column; }
+      .trk-btn           { justify-content: center; }
+    }
+  </style>
+</head>
+<body>
+
+<script>
+/* bypass PWA service worker so track.html renders as standalone page */
+(function(){
+  if (!('serviceWorker' in navigator)) return;
+  var done = sessionStorage.getItem('_trk_sw');
+  if (done) return;
+  navigator.serviceWorker.getRegistrations().then(function(regs){
+    if (!regs.length) return;
+    sessionStorage.setItem('_trk_sw','1');
+    Promise.all(regs.map(function(r){ return r.unregister(); }))
+      .then(function(){ location.reload(); });
+  });
+})();
+</script>
+
+  <!-- HEADER -->
+  <div class="trk-header">
+    <div class="trk-brand">
+      <div class="trk-logo">M</div>
+      <div>
+        <div class="trk-brand-name">M-Customs</div>
+        <div class="trk-brand-sub">شركة السديس للخدمات اللوجستية</div>
+      </div>
+    </div>
+    <div class="trk-title">SHIPMENT TRACKING · تتبع الشحنة</div>
+    <div class="trk-token" id="trk-token-display">— — —</div>
+  </div>
+
+  <!-- CONTENT -->
+  <div class="trk-body" id="trk-body">
+    <div class="trk-loading">
+      <div class="trk-spinner"></div>
+      <p>جاري تحميل بيانات الشحنة...</p>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <div class="trk-footer">
+    M-CUSTOMS · نظام التخليص الجمركي · جدة، المملكة العربية السعودية
+  </div>
+
+<script>
+/* ══════════════════════════════════════════════
+   Tracking Page Logic
+══════════════════════════════════════════════ */
+
+const STATUS_MAP = {
+  waiting:   { ar: 'قيد الانتظار',       step: 2, cls: 'waiting',   icon: '🕐' },
+  clearance: { ar: 'قيد التخليص الجمركي', step: 3, cls: 'customs',   icon: '📋' },
+  customs:   { ar: 'قيد التخليص الجمركي', step: 3, cls: 'customs',   icon: '📋' },
+  delivered: { ar: 'تم التسليم',          step: 4, cls: 'delivered',  icon: '✅' },
+};
+
+const STEPS = [
+  { icon: '🚢', title: 'وصول البضاعة',      detail_done: 'تم الاستلام في الميناء', detail_pending: 'في انتظار الوصول' },
+  { icon: '🕐', title: 'قيد الانتظار',       detail_done: 'اكتملت مرحلة الانتظار',  detail_active: 'جاري المعالجة...' },
+  { icon: '📋', title: 'التخليص الجمركي',   detail_done: 'تم التخليص بنجاح',         detail_active: 'قيد التخليص الجمركي...' },
+  { icon: '🚛', title: 'تسليم البضاعة',      detail_done: 'تم التسليم بنجاح',         detail_pending: 'في انتظار التسليم' },
+];
+
+const PHONE    = '+966536118708';
+const WHATSAPP = '+966536118708';
+
+/* تنسيق التاريخ */
+function fmtDate(d, style = 'long') {
+  if (!d) return null;
+  try {
+    const opts = style === 'long'
+      ? { year: 'numeric', month: 'long', day: 'numeric' }
+      : { month: 'short', day: 'numeric' };
+    return new Date(d).toLocaleDateString('ar-SA', opts);
+  } catch { return d; }
+}
+
+/* نص الـ step */
+function stepClass(stepIndex, activeStep) {
+  if (stepIndex + 1 < activeStep)  return 'done';
+  if (stepIndex + 1 === activeStep) return 'active';
+  return 'pending';
+}
+
+/* بناء الواجهة */
+function renderTracking(data, token) {
+  const st      = STATUS_MAP[data.status] || STATUS_MAP.waiting;
+  const activeStep = st.step;
+  const typeLabel  = data.type === 'air' ? 'AIR ✈️' : data.type === 'sea' ? 'SEA 🚢' : 'LAND 🚛';
+
+  // WhatsApp message
+  const waMsg = encodeURIComponent(
+    `السلام عليكم\nأود الاستفسار عن شحنتي:\nرقم البوليصة: ${data.bl_number}\nرقم التتبع: ${token}`
+  );
+
+  document.getElementById('trk-body').innerHTML = `
+
+    <!-- SHIPMENT CARD -->
+    <div class="trk-card">
+      <div class="trk-card-label">SHIPMENT DETAILS · تفاصيل الشحنة</div>
+      <div class="trk-bl">${data.bl_number || '—'}</div>
+      <div class="trk-consignee">${data.consignee || data.customer_name || '—'}</div>
+      <div class="trk-tags">
+        <span class="trk-tag blue">${typeLabel}</span>
+        ${data.port    ? `<span class="trk-tag">${data.port}</span>` : ''}
+        ${data.lcl_fcl ? `<span class="trk-tag gold">${data.lcl_fcl}</span>` : ''}
+        ${data.qty     ? `<span class="trk-tag">QTY: ${data.qty}</span>` : ''}
+        ${data.job_no  ? `<span class="trk-tag">JOB: ${data.job_no}</span>` : ''}
+      </div>
+    </div>
+
+    <!-- ETA BANNER -->
+    ${data.eta ? `
+    <div class="trk-eta">
+      <div>
+        <div class="trk-eta-label">ESTIMATED ARRIVAL · الوصول المتوقع</div>
+        <div class="trk-eta-date">${fmtDate(data.eta)}</div>
+        ${data.port ? `<div class="trk-eta-port">📍 ${data.port}</div>` : ''}
+      </div>
+      <div style="font-size:28px;">📅</div>
+    </div>` : ''}
+
+    <!-- STATUS BADGE -->
+    <div>
+      <span class="trk-status-badge ${st.cls}">
+        ${st.icon} ${st.ar}
+      </span>
+    </div>
+
+    <!-- TIMELINE -->
+    <div class="trk-timeline-card">
+      <div class="trk-timeline-title">SHIPMENT JOURNEY · مسار الشحنة</div>
+      <div class="trk-steps">
+        ${STEPS.map((step, i) => {
+          const cls   = stepClass(i, activeStep);
+          const detail = cls === 'done'
+            ? (step.detail_done   || '')
+            : cls === 'active'
+            ? (step.detail_active || '')
+            : (step.detail_pending|| '');
+          const dotIcon = cls === 'done' ? '✓' : cls === 'active' ? step.icon : '○';
+          const dotColor = cls === 'done' ? '#fff' : cls === 'active' ? '#fff' : '#C4B9A8';
+          // Special: delivered shows delivered_date
+          const extraDetail = (i === 3 && data.delivered_date && cls === 'done')
+            ? `<div style="font-size:11px;color:var(--green);margin-top:2px;font-weight:600;">
+                ${fmtDate(data.delivered_date)}
+              </div>` : '';
+          // Customs: show bayan if available
+          const bayaDetail = (i === 2 && data.customs_no && cls !== 'pending')
+            ? `<div style="font-family:'JetBrains Mono',monospace;font-size:11px;
+                color:var(--blue);margin-top:2px;font-weight:700;">
+                بيان رقم: ${data.customs_no}
+              </div>` : '';
+
+          return `
+          <div class="trk-step ${cls}">
+            <div class="trk-step-dot" style="color:${dotColor};font-size:${cls==='done'?'14':'16'}px;">
+              ${dotIcon}
+            </div>
+            <div class="trk-step-content">
+              <div class="trk-step-title">${step.title}</div>
+              <div class="trk-step-detail">${detail}</div>
+              ${bayaDetail}
+              ${extraDetail}
+            </div>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>
+
+    <!-- DELIVERY DETAILS (show if in customs or delivered) -->
+    ${activeStep >= 3 || data.terminal || data.do_date ? `
+    <div class="trk-card">
+      <div class="trk-card-label">DELIVERY INFO · معلومات التسليم</div>
+      <div style="margin-top:14px;" class="trk-delivery-grid">
+        ${data.terminal  ? `<div class="trk-del-item"><div class="trk-del-label">TERMINAL</div><div class="trk-del-value">${data.terminal}</div></div>` : ''}
+        ${data.do_date   ? `<div class="trk-del-item"><div class="trk-del-label">D/O DATE</div><div class="trk-del-value">${fmtDate(data.do_date,'short')}</div></div>` : ''}
+        ${data.customs_no? `<div class="trk-del-item"><div class="trk-del-label">رقم البيان</div><div class="trk-del-value">${data.customs_no}</div></div>` : ''}
+        ${data.delivered_date ? `<div class="trk-del-item"><div class="trk-del-label">تاريخ التسليم</div><div class="trk-del-value" style="color:var(--green)">${fmtDate(data.delivered_date)}</div></div>` : ''}
+      </div>
+    </div>` : ''}
+
+    <!-- CONTACT -->
+    <div class="trk-contact-card">
+      <div class="trk-contact-title">تواصل معنا</div>
+      <div class="trk-contact-sub">للاستفسار عن شحنتك أو أي معلومات إضافية</div>
+      <div class="trk-contact-btns">
+        <a class="trk-btn whatsapp" href="https://wa.me/${WHATSAPP}?text=${waMsg}" target="_blank">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/>
+            <path d="M12 0C5.373 0 0 5.373 0 12c0 2.124.554 4.118 1.524 5.847L.057 23.93l6.244-1.44A11.944 11.944 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 22c-1.848 0-3.574-.474-5.073-1.306l-.363-.214-3.762.867.902-3.663-.237-.379A9.96 9.96 0 012 12C2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z"/>
+          </svg>
+          واتساب
+        </a>
+        <a class="trk-btn phone" href="tel:${PHONE}">
+          📞 اتصال مباشر
+        </a>
+      </div>
+    </div>
+  `;
+}
+
+/* خطأ */
+function showError(msg) {
+  document.getElementById('trk-body').innerHTML = `
+    <div class="trk-error">
+      <div class="trk-error-icon">📦</div>
+      <h2>لم يتم العثور على الشحنة</h2>
+      <p>${msg || 'الرابط غير صحيح أو انتهت صلاحيته'}</p>
+    </div>`;
+}
+
+/* ══ MAIN ══ */
+window.addEventListener('load', async () => {
+  const token = new URLSearchParams(location.search).get('token');
+
+  if (!token) {
+    showError('رابط التتبع غير صحيح');
+    return;
+  }
+
+  document.getElementById('trk-token-display').textContent =
+    token.replace(/(.{4})/g, '$1 ').trim();
+
+  try {
+    const db   = firebase.firestore();
+    const snap = await db.collection('tracking_tokens').doc(token).get();
+
+    if (!snap.exists) {
+      showError('لم يتم العثور على هذه الشحنة');
+      return;
+    }
+
+    const data = snap.data();
+    renderTracking(data, token);
+
+    /* عدّاد المشاهدات (non-blocking) */
+    db.collection('tracking_tokens').doc(token).update({
+      views:       firebase.firestore.FieldValue.increment(1),
+      last_viewed: firebase.firestore.FieldValue.serverTimestamp(),
+    }).catch(() => {});
+
+  } catch(e) {
+    showError('خطأ في الاتصال، يرجى المحاولة لاحقاً');
+    console.error(e);
+  }
+});
+</script>
+</body>
+</html>
