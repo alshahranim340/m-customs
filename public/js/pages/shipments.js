@@ -207,7 +207,7 @@ function matchSearch(s) {
 
 async function loadShipments() {
   [_allShipments, _folders] = await Promise.all([
-    getShipments(200),
+    getShipments(), // بدون حد أقصى — سجل الشحنات لازم يعرض كل الشحنات
     getFolders()
   ]);
   applyFiltersAndRender();

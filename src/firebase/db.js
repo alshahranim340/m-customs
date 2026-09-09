@@ -1,6 +1,6 @@
 import {
   collection, doc, addDoc, updateDoc, getDoc,
-  getDocs, query, where, orderBy, serverTimestamp
+  getDocs, query, where, orderBy, limit, serverTimestamp
 } from "firebase/firestore";
 import { db } from "./config.js";
 
@@ -364,13 +364,16 @@ export async function createShipment(shipmentData, driverData, existingDriverId 
 }
 
 /**
- * Get all shipments, newest first
+ * Get shipments, newest first.
+ * Pass limitCount to cap how many are fetched (recommended for
+ * lightweight/preview use — splash stats, command palette, dashboard
+ * alerts). Omit it (or pass 0/undefined) to fetch the full collection,
+ * e.g. for the Shipments Ledger page which must show every shipment.
  */
-export async function getShipments(limitCount = 50) {
-  const q = query(
-    collection(db, "shipments"),
-    orderBy("created_at", "desc")
-  );
+export async function getShipments(limitCount) {
+  const constraints = [collection(db, "shipments"), orderBy("created_at", "desc")];
+  if (limitCount) constraints.push(limit(limitCount));
+  const q = query(...constraints);
   const snap = await getDocs(q);
   return snap.docs.map(d => ({ id: d.id, ...d.data() }));
 }
