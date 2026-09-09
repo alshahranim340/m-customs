@@ -292,12 +292,9 @@ body{
   font-family:'Tajawal',sans-serif;
   direction:rtl;
   min-height:100vh;
-  overflow:hidden;
   background: #0a1420;
   position:relative;
-  display:flex;
-  align-items:center;
-  justify-content:center;
+  padding: 0 0 60px;
 }
 
 /* ═══════════════ BACKGROUND LAYERS ═══════════════ */
@@ -458,7 +455,8 @@ body{
   position: relative;
   z-index: 100;
   width: 460px;
-  margin-right: 5%;
+  max-width: calc(100% - 40px);
+  margin: 0 auto;
   animation: cardIn 0.9s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 @keyframes cardIn {
@@ -776,706 +774,121 @@ body{
   background: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23e8b850'><path d='M12 2 L14.4 9.2 L22 9.2 L15.8 13.8 L18.2 21 L12 16.4 L5.8 21 L8.2 13.8 L2 9.2 L9.6 9.2 Z'/></svg>") center/contain no-repeat;
 }
 
+/* ═══ هوية "الختم" — قسم صور حقيقية (طائرة/سفينة/شاحنة) + بطاقة دخول عائمة ═══ */
+.hero { position: relative; margin-bottom: -130px; }
+.hero-band {
+  position: relative;
+  width: 100%;
+  height: 24vh;
+  min-height: 150px;
+  max-height: 180px;
+  background-size: cover;
+  background-position: center;
+  background-color: #0e1b30;
+  overflow: hidden;
+}
+.hero-band-shade {
+  position: absolute; inset: 0;
+  background: linear-gradient(180deg,
+    rgba(8, 16, 28, 0.60) 0%,
+    rgba(8, 16, 28, 0.10) 45%,
+    rgba(8, 16, 28, 0.15) 60%,
+    rgba(8, 16, 28, 0.70) 100%);
+}
+/* مرساة يمين فقط — يتجنّب زر الوضع الليلي/النهاري الثابت أعلى يسار الصفحة */
+.hero-topbar {
+  position: absolute; top: 22px; right: 30px;
+  display: flex; align-items: center;
+  gap: 12px;
+  max-width: min(78%, 460px);
+  z-index: 2;
+}
+.hero-brand-ar {
+  color: #fff;
+  font-family: 'Cairo', 'Tajawal', sans-serif;
+  font-size: clamp(18px, 3.4vw, 26px);
+  font-weight: 900;
+  text-shadow: 0 2px 16px rgba(0, 0, 0, 0.55);
+}
+.hero-brand-sub {
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 11.5px;
+  margin-top: 5px;
+  line-height: 1.5;
+  text-shadow: 0 1px 10px rgba(0, 0, 0, 0.55);
+}
+.hero-logo-badge {
+  width: 54px; height: 54px;
+  border-radius: 13px;
+  background: #fff;
+  padding: 5px;
+  flex-shrink: 0;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35), 0 0 0 2px var(--gold);
+}
+.hero-logo-badge img { width: 100%; height: 100%; object-fit: contain; display: block; }
+.hero-modes {
+  position: absolute; right: 30px; bottom: 22px; left: 30px;
+  display: flex; align-items: center; gap: 14px;
+  z-index: 2;
+}
+.hero-mode { display: flex; align-items: center; gap: 7px; }
+.hero-mode span {
+  color: #fff; font-size: 12px; font-weight: 800;
+  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.55);
+}
+.hero-mode svg { width: 18px; height: 18px; color: var(--gold-light); }
+.hero-mode-sep { width: 26px; height: 1px; background: rgba(255, 255, 255, 0.4); }
+
+@media (max-width: 640px) {
+  .hero-band { height: 18vh; min-height: 110px; max-height: 130px; }
+  .hero-topbar { top: 14px; right: 18px; max-width: 82%; }
+  .hero-modes { right: 18px; left: 18px; bottom: 14px; }
+  .hero { margin-bottom: -100px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .wrap { animation: none; }
+}
+
 </style>
 
 
-<div class="sky"></div>
-<div class="pattern-overlay"></div>
-<div class="horizon"></div>
-
-<!-- ═══ TOP-RIGHT: Regional map with Saudi hub + trade routes ═══ -->
-<svg class="corner-motif tr" viewBox="0 0 260 220" xmlns="http://www.w3.org/2000/svg">
-  <defs>
-    <linearGradient id="saudiMap" x1="0" x2="1" y1="0" y2="1">
-      <stop offset="0%" stop-color="#006C35"/>
-      <stop offset="100%" stop-color="#004822"/>
-    </linearGradient>
-  </defs>
-
-  <!-- Compass rose (small, top corner) -->
-  <g transform="translate(232, 28)" opacity="0.7">
-    <circle cx="0" cy="0" r="14" fill="none" stroke="#c8943a" stroke-width="0.6"/>
-    <circle cx="0" cy="0" r="10" fill="none" stroke="#c8943a" stroke-width="0.4"/>
-    <path d="M 0 -12 L 3 0 L 0 12 L -3 0 Z" fill="#c8943a"/>
-    <path d="M -12 0 L 0 3 L 12 0 L 0 -3 Z" fill="rgba(200,148,58,0.4)"/>
-    <text x="0" y="-16" fill="#c8943a" font-family="Arial" font-size="6" font-weight="900" text-anchor="middle">N</text>
-  </g>
-
-  <!-- Region label -->
-  <text x="20" y="24" fill="#c8943a" font-family="'Cairo',sans-serif" font-size="9" font-weight="900" letter-spacing="1.5">شبكة الشحن الخليجية</text>
-  <text x="20" y="36" fill="rgba(200,148,58,0.6)" font-family="monospace" font-size="6" font-weight="700" letter-spacing="2">GCC LOGISTICS NETWORK</text>
-  <line x1="20" y1="42" x2="130" y2="42" stroke="rgba(200,148,58,0.4)" stroke-width="0.5"/>
-
-  <!-- Arabian Peninsula (stylized outline) -->
-  <path d="M 60 80
-           L 88 65
-           L 118 62
-           L 148 68
-           L 175 82
-           L 195 105
-           L 205 130
-           L 200 155
-           L 185 175
-           L 160 188
-           L 130 193
-           L 100 188
-           L 75 175
-           L 58 155
-           L 50 130
-           L 52 105
-           Z"
-        fill="url(#saudiMap)" fill-opacity="0.28" stroke="#006C35" stroke-width="1.2"/>
-
-  <!-- Saudi flag mini banner -->
-  <g transform="translate(115, 105)">
-    <rect x="0" y="0" width="24" height="14" fill="#006C35" stroke="#004822" stroke-width="0.5"/>
-    <!-- Shahada line -->
-    <path d="M 3 5 Q 6 3 9 5 T 15 5 T 21 5" stroke="#f5f0e4" stroke-width="0.8" fill="none"/>
-    <!-- Sword -->
-    <line x1="3" y1="10" x2="21" y2="10" stroke="#f5f0e4" stroke-width="0.7"/>
-    <path d="M 20 9 L 22 10 L 20 11 Z" fill="#f5f0e4"/>
-  </g>
-
-  <!-- ═══ PORT MARKERS ═══ -->
-
-  <!-- Jeddah (HUB - large gold, western coast) -->
-  <g transform="translate(78, 140)">
-    <circle cx="0" cy="0" r="12" fill="none" stroke="#c8943a" stroke-width="0.5" opacity="0.4">
-      <animate attributeName="r" values="6;16;6" dur="3s" repeatCount="indefinite"/>
-      <animate attributeName="opacity" values="0.8;0;0.8" dur="3s" repeatCount="indefinite"/>
-    </circle>
-    <circle cx="0" cy="0" r="5" fill="#c8943a" stroke="#8a6320" stroke-width="0.6"/>
-    <!-- Anchor icon inside -->
-    <path d="M 0 -2 L 0 2 M -2 0 L 2 0 M -1.5 1.5 Q 0 3 1.5 1.5" stroke="#f5f0e4" stroke-width="0.6" fill="none"/>
-    <text x="0" y="15" fill="#c8943a" font-family="'Cairo',sans-serif" font-size="6.5" font-weight="900" text-anchor="middle">جدة</text>
-    <text x="0" y="21" fill="rgba(200,148,58,0.7)" font-family="monospace" font-size="4.5" font-weight="700" text-anchor="middle">JED · HUB</text>
-  </g>
-
-  <!-- Dammam (eastern) -->
-  <g transform="translate(175, 118)">
-    <circle class="port-pulse d1" cx="0" cy="0" r="3" fill="#4FD1C5" stroke="#0a4a44" stroke-width="0.4"/>
-    <text x="0" y="10" fill="#4FD1C5" font-family="'Cairo',sans-serif" font-size="5.5" font-weight="700" text-anchor="middle">الدمام</text>
-  </g>
-
-  <!-- Dubai (UAE) -->
-  <g transform="translate(200, 148)">
-    <circle class="port-pulse d2" cx="0" cy="0" r="3" fill="#4FD1C5" stroke="#0a4a44" stroke-width="0.4"/>
-    <text x="0" y="10" fill="#4FD1C5" font-family="'Cairo',sans-serif" font-size="5.5" font-weight="700" text-anchor="middle">دبي</text>
-  </g>
-
-  <!-- Bahrain -->
-  <g transform="translate(168, 128)">
-    <circle class="port-pulse d3" cx="0" cy="0" r="2.5" fill="#4FD1C5"/>
-    <text x="8" y="2" fill="#4FD1C5" font-family="'Cairo',sans-serif" font-size="5" font-weight="700">البحرين</text>
-  </g>
-
-  <!-- Muscat (Oman) -->
-  <g transform="translate(200, 180)">
-    <circle class="port-pulse" cx="0" cy="0" r="2.5" fill="#4FD1C5"/>
-    <text x="0" y="9" fill="#4FD1C5" font-family="'Cairo',sans-serif" font-size="5" font-weight="700" text-anchor="middle">مسقط</text>
-  </g>
-
-  <!-- ═══ TRADE ROUTES (animated dashed lines from Jeddah hub) ═══ -->
-  <g fill="none" stroke-linecap="round">
-    <path class="route-anim" d="M 78 140 Q 130 128 168 128" stroke="#c8943a" stroke-width="1" stroke-dasharray="4 4" opacity="0.7"/>
-    <path class="route-anim slow" d="M 78 140 Q 140 130 175 118" stroke="#c8943a" stroke-width="1" stroke-dasharray="4 4" opacity="0.7"/>
-    <path class="route-anim reverse" d="M 78 140 Q 145 148 200 148" stroke="#c8943a" stroke-width="1" stroke-dasharray="4 4" opacity="0.7"/>
-    <path class="route-anim slow" d="M 78 140 Q 145 162 200 180" stroke="#c8943a" stroke-width="1" stroke-dasharray="4 4" opacity="0.7"/>
-  </g>
-
-  <!-- Small plane silhouette flying over map -->
-  <g transform="translate(140, 90) rotate(35)">
-    <path d="M 0 0 L 12 -1 L 14 -3 L 15 -3 L 15 -1 L 20 0 L 15 1 L 15 3 L 14 3 L 12 1 L 0 0 L -3 -3 L -1 0 L -3 3 Z" fill="#c8943a"/>
-  </g>
-
-  <!-- Small legend -->
-  <g transform="translate(20, 200)">
-    <circle cx="4" cy="0" r="3" fill="#c8943a"/>
-    <text x="10" y="2" fill="rgba(200,148,58,0.85)" font-family="'Cairo',sans-serif" font-size="5.5" font-weight="700">مركز · HUB</text>
-    <circle cx="80" cy="0" r="2.5" fill="#4FD1C5"/>
-    <text x="86" y="2" fill="rgba(79,209,197,0.85)" font-family="'Cairo',sans-serif" font-size="5.5" font-weight="700">وجهة · DEST</text>
-    <line x1="160" y1="0" x2="180" y2="0" stroke="#c8943a" stroke-width="1" stroke-dasharray="3 3"/>
-    <text x="184" y="2" fill="rgba(200,148,58,0.85)" font-family="'Cairo',sans-serif" font-size="5.5" font-weight="700">مسار</text>
-  </g>
-</svg>
-
-<!-- ═══ BOTTOM-LEFT: Multi-modal transport panel ═══ -->
-<svg class="corner-motif bl" viewBox="0 0 260 220" xmlns="http://www.w3.org/2000/svg">
-  <!-- Panel label -->
-  <text x="20" y="24" fill="#006C35" font-family="'Cairo',sans-serif" font-size="9" font-weight="900" letter-spacing="1.5">وسائل النقل والشحن</text>
-  <text x="20" y="36" fill="rgba(0,108,53,0.6)" font-family="monospace" font-size="6" font-weight="700" letter-spacing="2">MULTI-MODAL TRANSPORT</text>
-  <line x1="20" y1="42" x2="140" y2="42" stroke="rgba(0,108,53,0.4)" stroke-width="0.5"/>
-
-  <!-- ═══ AIR TRANSPORT (top row) ═══ -->
-  <g transform="translate(20, 60)">
-    <!-- Icon frame -->
-    <rect x="0" y="0" width="220" height="42" rx="4" fill="rgba(0,108,53,0.06)" stroke="rgba(0,108,53,0.25)" stroke-width="0.5"/>
-
-    <!-- Airport tower -->
-    <g transform="translate(15, 22)">
-      <rect x="-2" y="-14" width="4" height="14" fill="#006C35"/>
-      <rect x="-6" y="-18" width="12" height="5" rx="1" fill="#c8943a" stroke="#8a6320" stroke-width="0.3"/>
-      <rect x="-4" y="-16" width="2" height="2" fill="#f5f0e4"/>
-      <rect x="0" y="-16" width="2" height="2" fill="#f5f0e4"/>
-      <rect x="4" y="-16" width="2" height="2" fill="#f5f0e4"/>
-      <!-- Base -->
-      <rect x="-8" y="0" width="16" height="3" fill="#5a4d38"/>
-    </g>
-
-    <!-- Runway with dashed centerline -->
-    <line x1="30" y1="28" x2="140" y2="18" stroke="#3a4658" stroke-width="4" opacity="0.5"/>
-    <line x1="30" y1="28" x2="140" y2="18" stroke="#f5f0e4" stroke-width="0.5" stroke-dasharray="3 3" opacity="0.7"/>
-
-    <!-- Plane silhouette (large, detailed) -->
-    <g transform="translate(105, 15) rotate(-8)">
-      <!-- Wings -->
-      <path d="M 0 0 L -14 5 L -16 5 L -13 2 L 0 -2 Z" fill="#c8943a" opacity="0.9"/>
-      <path d="M 0 0 L -14 -3 L -16 -3 L -13 -1 L 0 -1 Z" fill="#c8943a" opacity="0.7"/>
-      <!-- Body -->
-      <ellipse cx="0" cy="0" rx="22" ry="2.5" fill="#0a1828"/>
-      <path d="M 20 0 L 26 -1 L 28 0 L 26 1 Z" fill="#0a1828"/>
-      <!-- Windows dots -->
-      <circle cx="12" cy="0" r="0.5" fill="#c8943a"/>
-      <circle cx="8" cy="0" r="0.5" fill="#c8943a"/>
-      <circle cx="4" cy="0" r="0.5" fill="#c8943a"/>
-      <circle cx="0" cy="0" r="0.5" fill="#c8943a"/>
-      <!-- Tail -->
-      <path d="M -18 0 L -22 -6 L -19 -6 L -15 0 Z" fill="#0a1828"/>
-    </g>
-
-    <!-- Label -->
-    <text x="205" y="18" fill="#006C35" font-family="'Cairo',sans-serif" font-size="6.5" font-weight="900" text-anchor="end">جوي</text>
-    <text x="205" y="26" fill="rgba(0,108,53,0.6)" font-family="monospace" font-size="4.5" font-weight="700" text-anchor="end">AIR</text>
-
-    <!-- Data pill -->
-    <rect x="150" y="32" width="60" height="7" rx="3.5" fill="#c8943a" opacity="0.85"/>
-    <text x="180" y="37" fill="white" font-family="monospace" font-size="4.5" font-weight="900" text-anchor="middle" letter-spacing="0.5">EXPRESS · 24H</text>
-  </g>
-
-  <!-- ═══ SEA TRANSPORT (middle row) ═══ -->
-  <g transform="translate(20, 110)">
-    <rect x="0" y="0" width="220" height="42" rx="4" fill="rgba(0,108,53,0.06)" stroke="rgba(0,108,53,0.25)" stroke-width="0.5"/>
-
-    <!-- Port crane -->
-    <g transform="translate(15, 35)">
-      <rect x="-1" y="-22" width="2" height="22" fill="#c8943a"/>
-      <rect x="8" y="-22" width="2" height="22" fill="#c8943a"/>
-      <rect x="-3" y="-24" width="14" height="2.5" fill="#c8943a"/>
-      <line x1="-3" y1="-24" x2="14" y2="-32" stroke="#c8943a" stroke-width="1"/>
-      <line x1="4" y1="-30" x2="4" y2="-26" stroke="#3a2810" stroke-width="0.4"/>
-      <rect x="-4" y="0" width="16" height="2" fill="#3a2810"/>
-    </g>
-
-    <!-- Water surface -->
-    <path d="M 40 32 Q 60 30 80 32 T 120 32 T 160 32 T 200 32" stroke="rgba(79,209,197,0.6)" stroke-width="1.5" fill="none"/>
-    <path d="M 40 36 Q 60 34 80 36 T 120 36 T 160 36 T 200 36" stroke="rgba(79,209,197,0.3)" stroke-width="0.8" fill="none"/>
-
-    <!-- Container ship (side profile) -->
-    <g transform="translate(70, 20)">
-      <!-- Hull -->
-      <path d="M 0 8 L 70 8 L 76 14 L 6 14 Z" fill="#0a1828" stroke="#050d18" stroke-width="0.4"/>
-      <path d="M 6 14 L 76 14 L 74 16 L 8 16 Z" fill="#8a1818"/>
-      <!-- Deck line -->
-      <line x1="0" y1="8" x2="70" y2="8" stroke="#243c60" stroke-width="0.5"/>
-      <!-- Containers row 1 -->
-      <rect x="6" y="2" width="10" height="6" fill="#c41818"/>
-      <rect x="16" y="2" width="10" height="6" fill="#006C35"/>
-      <rect x="26" y="2" width="10" height="6" fill="#c8943a"/>
-      <rect x="36" y="2" width="10" height="6" fill="#1a5098"/>
-      <rect x="46" y="2" width="10" height="6" fill="#c41818"/>
-      <!-- Containers row 2 (stacked) -->
-      <rect x="16" y="-4" width="10" height="6" fill="#c8943a"/>
-      <rect x="26" y="-4" width="10" height="6" fill="#006C35"/>
-      <rect x="36" y="-4" width="10" height="6" fill="#1a5098"/>
-      <!-- Bridge -->
-      <rect x="55" y="-2" width="14" height="10" fill="#e8e0d0" stroke="#8a8078" stroke-width="0.3"/>
-      <rect x="57" y="0" width="10" height="2" fill="#1a3660"/>
-      <!-- Funnel -->
-      <rect x="60" y="-8" width="4" height="6" fill="#0a1828"/>
-      <rect x="60" y="-7" width="4" height="1.5" fill="#c8943a"/>
-    </g>
-
-    <!-- Label -->
-    <text x="205" y="18" fill="#006C35" font-family="'Cairo',sans-serif" font-size="6.5" font-weight="900" text-anchor="end">بحري</text>
-    <text x="205" y="26" fill="rgba(0,108,53,0.6)" font-family="monospace" font-size="4.5" font-weight="700" text-anchor="end">SEA</text>
-
-    <!-- Data pill -->
-    <rect x="150" y="32" width="60" height="7" rx="3.5" fill="#c8943a" opacity="0.85"/>
-    <text x="180" y="37" fill="white" font-family="monospace" font-size="4.5" font-weight="900" text-anchor="middle" letter-spacing="0.5">STANDARD · 14D</text>
-  </g>
-
-  <!-- ═══ LAND TRANSPORT (bottom row) ═══ -->
-  <g transform="translate(20, 160)">
-    <rect x="0" y="0" width="220" height="42" rx="4" fill="rgba(0,108,53,0.06)" stroke="rgba(0,108,53,0.25)" stroke-width="0.5"/>
-
-    <!-- Border checkpoint pole -->
-    <g transform="translate(15, 34)">
-      <rect x="-1" y="-24" width="2" height="24" fill="#c8943a"/>
-      <rect x="-3" y="-24" width="10" height="3" fill="#c41818"/>
-      <rect x="-3" y="-21" width="10" height="3" fill="#f5f0e4"/>
-      <rect x="-4" y="0" width="8" height="2" fill="#3a2810"/>
-    </g>
-
-    <!-- Road -->
-    <line x1="35" y1="34" x2="140" y2="34" stroke="#3a4658" stroke-width="3.5" opacity="0.6"/>
-    <line x1="35" y1="34" x2="140" y2="34" stroke="#f5c845" stroke-width="0.5" stroke-dasharray="4 3" opacity="0.7"/>
-
-    <!-- Semi-truck (side profile) -->
-    <g transform="translate(65, 22)">
-      <!-- Trailer -->
-      <rect x="0" y="0" width="46" height="10" fill="#f5f0e4" stroke="#8a7d68" stroke-width="0.4"/>
-      <!-- Trailer branding -->
-      <rect x="12" y="2" width="22" height="6" fill="rgba(0,108,53,0.15)"/>
-      <text x="23" y="6.5" fill="rgba(0,108,53,0.7)" font-family="'Cairo',sans-serif" font-size="3.5" font-weight="900" text-anchor="middle">السديس</text>
-      <!-- Corrugations -->
-      <line x1="6" y1="0" x2="6" y2="10" stroke="rgba(0,0,0,0.15)" stroke-width="0.3"/>
-      <line x1="10" y1="0" x2="10" y2="10" stroke="rgba(0,0,0,0.15)" stroke-width="0.3"/>
-      <line x1="38" y1="0" x2="38" y2="10" stroke="rgba(0,0,0,0.15)" stroke-width="0.3"/>
-      <line x1="42" y1="0" x2="42" y2="10" stroke="rgba(0,0,0,0.15)" stroke-width="0.3"/>
-      <!-- Cab -->
-      <path d="M 46 0 L 60 0 L 62 3 L 62 10 L 46 10 Z" fill="#006C35" stroke="#003a1a" stroke-width="0.4"/>
-      <!-- Windshield -->
-      <rect x="48" y="1.5" width="10" height="4" fill="#1a3660"/>
-      <!-- Wheels -->
-      <circle cx="8" cy="11.5" r="2" fill="#0a0a0a"/>
-      <circle cx="14" cy="11.5" r="2" fill="#0a0a0a"/>
-      <circle cx="34" cy="11.5" r="2" fill="#0a0a0a"/>
-      <circle cx="40" cy="11.5" r="2" fill="#0a0a0a"/>
-      <circle cx="54" cy="11.5" r="2" fill="#0a0a0a"/>
-      <!-- Wheel centers -->
-      <circle cx="8" cy="11.5" r="0.7" fill="#c8943a"/>
-      <circle cx="14" cy="11.5" r="0.7" fill="#c8943a"/>
-      <circle cx="34" cy="11.5" r="0.7" fill="#c8943a"/>
-      <circle cx="40" cy="11.5" r="0.7" fill="#c8943a"/>
-      <circle cx="54" cy="11.5" r="0.7" fill="#c8943a"/>
-    </g>
-
-    <!-- Label -->
-    <text x="205" y="18" fill="#006C35" font-family="'Cairo',sans-serif" font-size="6.5" font-weight="900" text-anchor="end">بري</text>
-    <text x="205" y="26" fill="rgba(0,108,53,0.6)" font-family="monospace" font-size="4.5" font-weight="700" text-anchor="end">LAND</text>
-
-    <!-- Data pill -->
-    <rect x="150" y="32" width="60" height="7" rx="3.5" fill="#c8943a" opacity="0.85"/>
-    <text x="180" y="37" fill="white" font-family="monospace" font-size="4.5" font-weight="900" text-anchor="middle" letter-spacing="0.5">GCC · 3-5 DAYS</text>
-  </g>
-</svg>
-
-<div id="sparks"></div>
-
-<!-- ═══════════════════ ISOMETRIC PORT SCENE ═══════════════════ -->
-<div class="port-scene">
-<svg viewBox="0 0 700 550" xmlns="http://www.w3.org/2000/svg">
-<defs>
-  <linearGradient id="water" x1="0" x2="0" y1="0" y2="1">
-    <stop offset="0%" stop-color="#0e4a6b"/>
-    <stop offset="100%" stop-color="#0a2842"/>
-  </linearGradient>
-  <linearGradient id="ground" x1="0" x2="0" y1="0" y2="1">
-    <stop offset="0%" stop-color="#2a3648"/>
-    <stop offset="100%" stop-color="#1a2436"/>
-  </linearGradient>
-  <linearGradient id="dock" x1="0" x2="0" y1="0" y2="1">
-    <stop offset="0%" stop-color="#e8dfc8"/>
-    <stop offset="100%" stop-color="#a09380"/>
-  </linearGradient>
-  <linearGradient id="dockSide" x1="0" x2="0" y1="0" y2="1">
-    <stop offset="0%" stop-color="#8a7d68"/>
-    <stop offset="100%" stop-color="#5a4d38"/>
-  </linearGradient>
-  <linearGradient id="warehouseFront" x1="0" x2="0" y1="0" y2="1">
-    <stop offset="0%" stop-color="#f5f0e4"/>
-    <stop offset="100%" stop-color="#c8b890"/>
-  </linearGradient>
-  <linearGradient id="warehouseSide" x1="0" x2="0" y1="0" y2="1">
-    <stop offset="0%" stop-color="#a89870"/>
-    <stop offset="100%" stop-color="#786850"/>
-  </linearGradient>
-  <linearGradient id="warehouseRoof" x1="0" x2="0" y1="0" y2="1">
-    <stop offset="0%" stop-color="#006C35"/>
-    <stop offset="100%" stop-color="#004822"/>
-  </linearGradient>
-  <linearGradient id="craneStructure" x1="0" x2="0" y1="0" y2="1">
-    <stop offset="0%" stop-color="#c8943a"/>
-    <stop offset="100%" stop-color="#8a6320"/>
-  </linearGradient>
-  <linearGradient id="shipHull" x1="0" x2="0" y1="0" y2="1">
-    <stop offset="0%" stop-color="#1a3252"/>
-    <stop offset="100%" stop-color="#0a1a2e"/>
-  </linearGradient>
-</defs>
-
-<!-- ═══ WATER (background) ═══ -->
-<path d="M 0 340 L 700 340 L 700 550 L 0 550 Z" fill="url(#water)"/>
-<!-- Water reflection lines -->
-<line x1="0" y1="360" x2="700" y2="360" stroke="rgba(255,255,255,0.05)" stroke-width="0.8"/>
-<line x1="0" y1="385" x2="700" y2="385" stroke="rgba(255,255,255,0.04)" stroke-width="0.6"/>
-<line x1="0" y1="410" x2="700" y2="410" stroke="rgba(255,255,255,0.03)" stroke-width="0.6"/>
-<!-- Water reflection under ship (subtle) -->
-<ellipse cx="200" cy="420" rx="180" ry="12" fill="rgba(200,148,58,0.08)"/>
-
-<!-- ═══ SHIP AT DOCK ═══ -->
-<g class="ship">
-  <!-- Hull main -->
-  <path d="M 40 355 L 380 355 L 400 385 L 60 400 L 20 385 Z" fill="url(#shipHull)" stroke="#050e1c" stroke-width="1"/>
-  <!-- Hull top edge -->
-  <path d="M 40 355 L 380 355 L 380 350 L 40 350 Z" fill="#243c60"/>
-  <!-- Red waterline -->
-  <path d="M 50 390 L 385 388 L 395 393 L 55 397 Z" fill="#8a1818"/>
-
-  <!-- Bow -->
-  <path d="M 380 355 L 400 385 L 405 375 L 388 350 Z" fill="#0a1a2e" stroke="#050e1c" stroke-width="0.5"/>
-
-  <!-- Container rows on ship -->
-  <g>
-    <!-- Row 1 (bottom, on deck) -->
-    <rect x="70" y="330" width="42" height="25" fill="#c41818" stroke="#5a0a0a" stroke-width="0.5"/>
-    <rect x="112" y="330" width="42" height="25" fill="#006C35" stroke="#003a1a" stroke-width="0.5"/>
-    <rect x="154" y="330" width="42" height="25" fill="#c8943a" stroke="#5a4210" stroke-width="0.5"/>
-    <rect x="196" y="330" width="42" height="25" fill="#1a5098" stroke="#082848" stroke-width="0.5"/>
-    <rect x="238" y="330" width="42" height="25" fill="#c41818" stroke="#5a0a0a" stroke-width="0.5"/>
-    <rect x="280" y="330" width="42" height="25" fill="#006C35" stroke="#003a1a" stroke-width="0.5"/>
-    <rect x="322" y="330" width="42" height="25" fill="#c8943a" stroke="#5a4210" stroke-width="0.5"/>
-    <!-- Container ridges -->
-    <g stroke="rgba(0,0,0,0.25)" stroke-width="0.4">
-      <line x1="70" y1="342" x2="364" y2="342"/>
-    </g>
-
-    <!-- Row 2 (stacked) -->
-    <rect x="90" y="305" width="42" height="25" fill="#1a5098" stroke="#082848" stroke-width="0.5"/>
-    <rect x="132" y="305" width="42" height="25" fill="#c8943a" stroke="#5a4210" stroke-width="0.5"/>
-    <rect x="174" y="305" width="42" height="25" fill="#c41818" stroke="#5a0a0a" stroke-width="0.5"/>
-    <rect x="216" y="305" width="42" height="25" fill="#006C35" stroke="#003a1a" stroke-width="0.5"/>
-    <rect x="258" y="305" width="42" height="25" fill="#1a5098" stroke="#082848" stroke-width="0.5"/>
-    <rect x="300" y="305" width="42" height="25" fill="#c41818" stroke="#5a0a0a" stroke-width="0.5"/>
-    <g stroke="rgba(0,0,0,0.25)" stroke-width="0.4">
-      <line x1="90" y1="317" x2="342" y2="317"/>
-    </g>
-
-    <!-- Row 3 (top, fewer) -->
-    <rect x="120" y="280" width="42" height="25" fill="#c8943a" stroke="#5a4210" stroke-width="0.5"/>
-    <rect x="162" y="280" width="42" height="25" fill="#006C35" stroke="#003a1a" stroke-width="0.5"/>
-    <rect x="204" y="280" width="42" height="25" fill="#1a5098" stroke="#082848" stroke-width="0.5"/>
-    <rect x="246" y="280" width="42" height="25" fill="#c41818" stroke="#5a0a0a" stroke-width="0.5"/>
-  </g>
-
-  <!-- Bridge/superstructure at stern -->
-  <rect x="15" y="290" width="55" height="65" fill="#e8e0d0" stroke="#8a8078" stroke-width="0.8"/>
-  <rect x="18" y="293" width="49" height="12" fill="#f5f0e4"/>
-  <rect x="18" y="308" width="49" height="12" fill="#e0d5c0"/>
-  <rect x="18" y="323" width="49" height="12" fill="#d5c8b0"/>
-
-  <!-- Bridge windows -->
-  <rect x="22" y="296" width="8" height="6" fill="#1a3660" stroke="#0a1830" stroke-width="0.3"/>
-  <rect x="33" y="296" width="8" height="6" fill="#1a3660" stroke="#0a1830" stroke-width="0.3"/>
-  <rect x="44" y="296" width="8" height="6" fill="#1a3660" stroke="#0a1830" stroke-width="0.3"/>
-  <rect x="55" y="296" width="8" height="6" fill="#1a3660" stroke="#0a1830" stroke-width="0.3"/>
-
-  <!-- Funnel -->
-  <rect x="30" y="265" width="14" height="30" fill="#0a1828" stroke="#050d18" stroke-width="0.5"/>
-  <rect x="30" y="270" width="14" height="6" fill="#c8943a"/>
-  <rect x="30" y="278" width="14" height="4" fill="#006C35"/>
-  <!-- Smoke -->
-  <circle cx="37" cy="258" r="4" fill="rgba(180,180,190,0.35)"/>
-  <circle cx="40" cy="250" r="5" fill="rgba(180,180,190,0.25)"/>
-
-  <!-- Mast -->
-  <line x1="200" y1="278" x2="200" y2="255" stroke="#3a4a5a" stroke-width="1.5"/>
-  <circle class="warn-light" cx="200" cy="253" r="2" fill="#ff2020"/>
-</g>
-
-<!-- ═══ DOCK PLATFORM (isometric) ═══ -->
-<g>
-  <!-- Top surface -->
-  <path d="M 0 400 L 700 400 L 700 425 L 0 425 Z" fill="url(#dock)" stroke="#5a4d38" stroke-width="0.8"/>
-  <!-- Dock front face (3D depth) -->
-  <path d="M 0 425 L 700 425 L 700 470 L 0 470 Z" fill="url(#dockSide)"/>
-
-  <!-- Dock edge highlight -->
-  <line x1="0" y1="400" x2="700" y2="400" stroke="rgba(255,255,255,0.4)" stroke-width="0.8"/>
-
-  <!-- Bollards on dock -->
-  <g fill="#3a3020" stroke="#1a1408" stroke-width="0.5">
-    <rect x="80" y="393" width="7" height="14" rx="1.5"/>
-    <ellipse cx="83.5" cy="393" rx="4.5" ry="1.8" fill="#5a4830"/>
-    <rect x="240" y="393" width="7" height="14" rx="1.5"/>
-    <ellipse cx="243.5" cy="393" rx="4.5" ry="1.8" fill="#5a4830"/>
-    <rect x="360" y="393" width="7" height="14" rx="1.5"/>
-    <ellipse cx="363.5" cy="393" rx="4.5" ry="1.8" fill="#5a4830"/>
-  </g>
-
-  <!-- Dock lane markings -->
-  <line x1="30" y1="415" x2="80" y2="415" stroke="rgba(255,220,100,0.5)" stroke-width="1.5" stroke-dasharray="6 4"/>
-  <line x1="150" y1="415" x2="220" y2="415" stroke="rgba(255,220,100,0.5)" stroke-width="1.5" stroke-dasharray="6 4"/>
-</g>
-
-<!-- ═══ CONTAINER YARD (right side) ═══ -->
-<g>
-  <!-- Ground plot -->
-  <path d="M 400 385 L 690 385 L 690 400 L 400 400 Z" fill="#1a2028"/>
-
-  <!-- Stack 1 -->
-  <g>
-    <!-- Layer bottom -->
-    <rect x="420" y="360" width="50" height="25" fill="#c41818" stroke="#5a0a0a" stroke-width="0.6"/>
-    <rect x="420" y="360" width="50" height="4" fill="#8a1010"/>
-    <text x="445" y="376" fill="rgba(255,255,255,0.35)" font-family="Arial Black,sans-serif" font-size="6" font-weight="900" text-anchor="middle">SDS</text>
-    <!-- Layer 2 -->
-    <rect x="420" y="335" width="50" height="25" fill="#006C35" stroke="#003a1a" stroke-width="0.6"/>
-    <rect x="420" y="335" width="50" height="4" fill="#004822"/>
-    <text x="445" y="351" fill="rgba(255,255,255,0.35)" font-family="Arial Black,sans-serif" font-size="6" font-weight="900" text-anchor="middle">SDS</text>
-    <!-- Layer 3 -->
-    <rect x="420" y="310" width="50" height="25" fill="#c8943a" stroke="#5a4210" stroke-width="0.6"/>
-    <rect x="420" y="310" width="50" height="4" fill="#8a6320"/>
-  </g>
-
-  <!-- Stack 2 -->
-  <g>
-    <rect x="478" y="360" width="50" height="25" fill="#1a5098" stroke="#082848" stroke-width="0.6"/>
-    <rect x="478" y="360" width="50" height="4" fill="#0e3268"/>
-    <rect x="478" y="335" width="50" height="25" fill="#c8943a" stroke="#5a4210" stroke-width="0.6"/>
-    <rect x="478" y="335" width="50" height="4" fill="#8a6320"/>
-  </g>
-
-  <!-- Stack 3 -->
-  <g>
-    <rect x="536" y="360" width="50" height="25" fill="#006C35" stroke="#003a1a" stroke-width="0.6"/>
-    <rect x="536" y="360" width="50" height="4" fill="#004822"/>
-    <text x="561" y="376" fill="rgba(255,255,255,0.35)" font-family="Arial Black,sans-serif" font-size="6" font-weight="900" text-anchor="middle">SDS</text>
-    <rect x="536" y="335" width="50" height="25" fill="#c41818" stroke="#5a0a0a" stroke-width="0.6"/>
-    <rect x="536" y="335" width="50" height="4" fill="#8a1010"/>
-    <rect x="536" y="310" width="50" height="25" fill="#1a5098" stroke="#082848" stroke-width="0.6"/>
-    <rect x="536" y="310" width="50" height="4" fill="#0e3268"/>
-    <rect x="536" y="285" width="50" height="25" fill="#006C35" stroke="#003a1a" stroke-width="0.6"/>
-    <rect x="536" y="285" width="50" height="4" fill="#004822"/>
-  </g>
-
-  <!-- Stack 4 -->
-  <g>
-    <rect x="594" y="360" width="50" height="25" fill="#c8943a" stroke="#5a4210" stroke-width="0.6"/>
-    <rect x="594" y="360" width="50" height="4" fill="#8a6320"/>
-    <rect x="594" y="335" width="50" height="25" fill="#c41818" stroke="#5a0a0a" stroke-width="0.6"/>
-    <rect x="594" y="335" width="50" height="4" fill="#8a1010"/>
-  </g>
-</g>
-
-<!-- ═══ CRANE 1 (main gantry crane over ship) ═══ -->
-<g>
-  <!-- Base legs -->
-  <rect x="60" y="200" width="10" height="200" fill="url(#craneStructure)" stroke="#5a4210" stroke-width="0.6"/>
-  <rect x="380" y="200" width="10" height="200" fill="url(#craneStructure)" stroke="#5a4210" stroke-width="0.6"/>
-  <!-- Cross-braces on legs -->
-  <line x1="60" y1="260" x2="70" y2="280" stroke="#8a6320" stroke-width="1"/>
-  <line x1="70" y1="260" x2="60" y2="280" stroke="#8a6320" stroke-width="1"/>
-  <line x1="60" y1="320" x2="70" y2="340" stroke="#8a6320" stroke-width="1"/>
-  <line x1="70" y1="320" x2="60" y2="340" stroke="#8a6320" stroke-width="1"/>
-  <line x1="380" y1="260" x2="390" y2="280" stroke="#8a6320" stroke-width="1"/>
-  <line x1="390" y1="260" x2="380" y2="280" stroke="#8a6320" stroke-width="1"/>
-  <line x1="380" y1="320" x2="390" y2="340" stroke="#8a6320" stroke-width="1"/>
-  <line x1="390" y1="320" x2="380" y2="340" stroke="#8a6320" stroke-width="1"/>
-
-  <!-- Crane wheels on rails -->
-  <rect x="55" y="395" width="20" height="8" fill="#3a2818" rx="1.5"/>
-  <rect x="375" y="395" width="20" height="8" fill="#3a2818" rx="1.5"/>
-
-  <!-- Horizontal main girder -->
-  <rect x="55" y="195" width="340" height="18" fill="url(#craneStructure)" stroke="#5a4210" stroke-width="0.6"/>
-  <!-- Girder lattice pattern -->
-  <g stroke="#5a4210" stroke-width="0.6" fill="none">
-    <line x1="65" y1="195" x2="80" y2="213"/>
-    <line x1="80" y1="195" x2="95" y2="213"/>
-    <line x1="95" y1="195" x2="110" y2="213"/>
-    <line x1="110" y1="195" x2="125" y2="213"/>
-    <line x1="125" y1="195" x2="140" y2="213"/>
-    <line x1="140" y1="195" x2="155" y2="213"/>
-    <line x1="155" y1="195" x2="170" y2="213"/>
-    <line x1="170" y1="195" x2="185" y2="213"/>
-    <line x1="185" y1="195" x2="200" y2="213"/>
-    <line x1="200" y1="195" x2="215" y2="213"/>
-    <line x1="215" y1="195" x2="230" y2="213"/>
-    <line x1="230" y1="195" x2="245" y2="213"/>
-    <line x1="245" y1="195" x2="260" y2="213"/>
-    <line x1="260" y1="195" x2="275" y2="213"/>
-    <line x1="275" y1="195" x2="290" y2="213"/>
-    <line x1="290" y1="195" x2="305" y2="213"/>
-    <line x1="305" y1="195" x2="320" y2="213"/>
-    <line x1="320" y1="195" x2="335" y2="213"/>
-    <line x1="335" y1="195" x2="350" y2="213"/>
-    <line x1="350" y1="195" x2="365" y2="213"/>
-    <line x1="365" y1="195" x2="380" y2="213"/>
-  </g>
-
-  <!-- Cabin (operator) -->
-  <rect x="180" y="213" width="30" height="18" fill="#c8943a" stroke="#5a4210" stroke-width="0.5"/>
-  <rect x="183" y="215" width="24" height="10" fill="#1a3660" stroke="#0a1830" stroke-width="0.4"/>
-
-  <!-- Moving trolley + arm -->
-  <g class="crane-arm">
-    <rect x="215" y="213" width="16" height="10" fill="#8a6320"/>
-    <line x1="223" y1="223" x2="223" y2="278" stroke="#3a3020" stroke-width="1"/>
-    <!-- Hook + container -->
-    <rect x="210" y="278" width="26" height="20" fill="#006C35" stroke="#003a1a" stroke-width="0.5"/>
-    <rect x="210" y="278" width="26" height="3" fill="#004822"/>
-    <text x="223" y="292" fill="rgba(255,255,255,0.5)" font-family="Arial Black,sans-serif" font-size="5" font-weight="900" text-anchor="middle">SDS</text>
-  </g>
-
-  <!-- Warning lights on top -->
-  <circle class="warn-light delay-1" cx="60" cy="195" r="2.5" fill="#ff3030"/>
-  <circle class="warn-light delay-2" cx="390" cy="195" r="2.5" fill="#ff3030"/>
-</g>
-
-<!-- ═══ CRANE 2 (smaller, right side) ═══ -->
-<g>
-  <rect x="480" y="240" width="8" height="160" fill="url(#craneStructure)" stroke="#5a4210" stroke-width="0.5"/>
-  <rect x="490" y="235" width="120" height="12" fill="url(#craneStructure)" stroke="#5a4210" stroke-width="0.5"/>
-
-  <g class="crane-arm-2">
-    <rect x="540" y="247" width="12" height="8" fill="#8a6320"/>
-    <line x1="546" y1="255" x2="546" y2="290" stroke="#3a3020" stroke-width="0.8"/>
-    <rect x="536" y="290" width="20" height="14" fill="#c41818" stroke="#5a0a0a" stroke-width="0.4"/>
-  </g>
-
-  <!-- Counterweight -->
-  <rect x="472" y="243" width="12" height="15" fill="#5a4210" stroke="#3a2810" stroke-width="0.4"/>
-  <circle class="warn-light" cx="484" cy="240" r="2" fill="#ff3030"/>
-</g>
-
-<!-- ═══ WAREHOUSE / CUSTOMS BUILDING (background, left of cranes) ═══ -->
-<g transform="translate(280, 240)">
-  <!-- Right side (isometric) -->
-  <path d="M 60 0 L 110 -20 L 110 90 L 60 110 Z" fill="url(#warehouseSide)" stroke="#584830" stroke-width="0.6"/>
-  <!-- Front face -->
-  <rect x="0" y="0" width="60" height="110" fill="url(#warehouseFront)" stroke="#8a7d68" stroke-width="0.6"/>
-
-  <!-- Green roof -->
-  <path d="M 0 0 L 60 0 L 110 -20 L 50 -20 Z" fill="url(#warehouseRoof)" stroke="#004822" stroke-width="0.6"/>
-  <path d="M 25 0 L 30 -10 L 85 -10 L 80 0 Z" fill="#128a4a" opacity="0.5"/>
-
-  <!-- Roof edge shadow -->
-  <line x1="0" y1="0" x2="60" y2="0" stroke="rgba(0,0,0,0.4)" stroke-width="1"/>
-
-  <!-- Building windows (front) -->
-  <g fill="#f5c845" stroke="#8a6320" stroke-width="0.4">
-    <rect x="7" y="12" width="10" height="14"/>
-    <rect x="22" y="12" width="10" height="14"/>
-    <rect x="37" y="12" width="10" height="14"/>
-    <rect x="7" y="35" width="10" height="14"/>
-    <rect x="22" y="35" width="10" height="14"/>
-    <rect x="37" y="35" width="10" height="14"/>
-  </g>
-  <!-- Window frames -->
-  <g stroke="#3a2810" stroke-width="0.3" fill="none">
-    <line x1="12" y1="12" x2="12" y2="26"/>
-    <line x1="7" y1="19" x2="17" y2="19"/>
-  </g>
-
-  <!-- Entrance -->
-  <rect x="22" y="70" width="20" height="35" fill="#3a2810" stroke="#1a1408" stroke-width="0.5"/>
-  <rect x="24" y="72" width="16" height="30" fill="#5a3d20"/>
-  <!-- Door handle -->
-  <circle cx="38" cy="88" r="1" fill="#c8943a"/>
-
-  <!-- Windows on side (isometric) -->
-  <g fill="#f5c845" stroke="#584830" stroke-width="0.3">
-    <path d="M 70 8 L 82 4 L 82 18 L 70 22 Z"/>
-    <path d="M 88 3 L 100 -1 L 100 13 L 88 17 Z"/>
-    <path d="M 70 32 L 82 28 L 82 42 L 70 46 Z"/>
-    <path d="M 88 27 L 100 23 L 100 37 L 88 41 Z"/>
-  </g>
-
-  <!-- Building sign -->
-  <rect x="4" y="55" width="52" height="10" fill="#006C35" stroke="#003a1a" stroke-width="0.4"/>
-  <text x="30" y="63" fill="#f5f0e4" font-family="Cairo,Arial,sans-serif" font-size="7" font-weight="900" text-anchor="middle">جمرك</text>
-
-  <!-- Antenna/mast on roof -->
-  <line x1="80" y1="-15" x2="80" y2="-32" stroke="#3a2810" stroke-width="1"/>
-  <circle class="warn-light" cx="80" cy="-32" r="1.8" fill="#ff2020"/>
-</g>
-
-<!-- ═══ PALM TREES ═══ -->
-<g>
-  <!-- Palm 1 (far left, near ship) -->
-  <g transform="translate(15, 220)">
-    <rect x="-3" y="0" width="6" height="180" fill="#5a3d20" stroke="#3a2810" stroke-width="0.5"/>
-    <!-- Trunk texture rings -->
-    <g stroke="#3a2810" stroke-width="0.4">
-      <line x1="-3" y1="15" x2="3" y2="15"/>
-      <line x1="-3" y1="30" x2="3" y2="30"/>
-      <line x1="-3" y1="45" x2="3" y2="45"/>
-      <line x1="-3" y1="60" x2="3" y2="60"/>
-      <line x1="-3" y1="80" x2="3" y2="80"/>
-      <line x1="-3" y1="100" x2="3" y2="100"/>
-      <line x1="-3" y1="120" x2="3" y2="120"/>
-      <line x1="-3" y1="145" x2="3" y2="145"/>
-    </g>
-    <!-- Fronds -->
-    <g class="palm-fronds">
-      <path d="M 0 0 Q -25 -20 -50 -15 Q -35 -5 0 3" fill="#006C35" stroke="#004822" stroke-width="0.5"/>
-      <path d="M 0 0 Q 25 -20 50 -15 Q 35 -5 0 3" fill="#006C35" stroke="#004822" stroke-width="0.5"/>
-      <path d="M 0 0 Q -30 -35 -55 -40 Q -35 -18 0 -2" fill="#128a4a" stroke="#004822" stroke-width="0.5"/>
-      <path d="M 0 0 Q 30 -35 55 -40 Q 35 -18 0 -2" fill="#128a4a" stroke="#004822" stroke-width="0.5"/>
-      <path d="M 0 0 Q -15 -40 -25 -60 Q -10 -30 3 -3" fill="#006C35" stroke="#004822" stroke-width="0.5"/>
-      <path d="M 0 0 Q 15 -40 25 -60 Q 10 -30 -3 -3" fill="#006C35" stroke="#004822" stroke-width="0.5"/>
-      <path d="M 0 0 Q -5 -30 5 -55 Q 5 -25 0 -2" fill="#128a4a" stroke="#004822" stroke-width="0.5"/>
-      <!-- Dates cluster -->
-      <ellipse cx="0" cy="8" rx="8" ry="5" fill="#8a3818"/>
-      <circle cx="-3" cy="10" r="1.5" fill="#c8531a"/>
-      <circle cx="3" cy="10" r="1.5" fill="#c8531a"/>
-      <circle cx="0" cy="8" r="1.5" fill="#c8531a"/>
-    </g>
-  </g>
-
-  <!-- Palm 2 (right, between yard and warehouse) -->
-  <g transform="translate(390, 230)">
-    <rect x="-3" y="0" width="6" height="170" fill="#5a3d20" stroke="#3a2810" stroke-width="0.5"/>
-    <g stroke="#3a2810" stroke-width="0.4">
-      <line x1="-3" y1="20" x2="3" y2="20"/>
-      <line x1="-3" y1="40" x2="3" y2="40"/>
-      <line x1="-3" y1="60" x2="3" y2="60"/>
-      <line x1="-3" y1="85" x2="3" y2="85"/>
-      <line x1="-3" y1="115" x2="3" y2="115"/>
-      <line x1="-3" y1="140" x2="3" y2="140"/>
-    </g>
-    <g class="palm-fronds delay-1">
-      <path d="M 0 0 Q -22 -18 -45 -14 Q -32 -4 0 3" fill="#006C35" stroke="#004822" stroke-width="0.5"/>
-      <path d="M 0 0 Q 22 -18 45 -14 Q 32 -4 0 3" fill="#006C35" stroke="#004822" stroke-width="0.5"/>
-      <path d="M 0 0 Q -28 -32 -50 -36 Q -32 -16 0 -2" fill="#128a4a" stroke="#004822" stroke-width="0.5"/>
-      <path d="M 0 0 Q 28 -32 50 -36 Q 32 -16 0 -2" fill="#128a4a" stroke="#004822" stroke-width="0.5"/>
-      <path d="M 0 0 Q -12 -36 -22 -55 Q -8 -28 3 -3" fill="#006C35" stroke="#004822" stroke-width="0.5"/>
-      <path d="M 0 0 Q 12 -36 22 -55 Q 8 -28 -3 -3" fill="#006C35" stroke="#004822" stroke-width="0.5"/>
-      <ellipse cx="0" cy="6" rx="6" ry="4" fill="#8a3818"/>
-    </g>
-  </g>
-</g>
-
-<!-- ═══ TRUCK ON DOCK (small isometric) ═══ -->
-<g transform="translate(150, 375)">
-  <!-- Trailer -->
-  <rect x="0" y="0" width="55" height="22" fill="#f5f0e4" stroke="#8a7d68" stroke-width="0.6"/>
-  <path d="M 55 0 L 60 -5 L 60 17 L 55 22 Z" fill="#8a7d68"/>
-  <path d="M 0 0 L 5 -5 L 60 -5 L 55 0 Z" fill="#c8b890"/>
-  <!-- Trailer branding -->
-  <text x="27" y="14" fill="rgba(10,24,40,0.3)" font-family="Arial,sans-serif" font-size="4.5" font-weight="800" text-anchor="middle">السديس</text>
-
-  <!-- Cab -->
-  <rect x="55" y="4" width="18" height="18" fill="#006C35" stroke="#003a1a" stroke-width="0.5"/>
-  <path d="M 73 4 L 76 1 L 76 19 L 73 22 Z" fill="#004822"/>
-  <path d="M 55 4 L 58 1 L 76 1 L 73 4 Z" fill="#128a4a"/>
-  <!-- Windshield -->
-  <rect x="57" y="7" width="14" height="6" fill="#1a3660"/>
-  <!-- Wheels -->
-  <circle cx="10" cy="24" r="3" fill="#1a1408"/>
-  <circle cx="20" cy="24" r="3" fill="#1a1408"/>
-  <circle cx="42" cy="24" r="3" fill="#1a1408"/>
-  <circle cx="52" cy="24" r="3" fill="#1a1408"/>
-  <circle cx="62" cy="24" r="3" fill="#1a1408"/>
-</g>
-
-<!-- ═══ FOREGROUND WATER RIPPLES ═══ -->
-<g opacity="0.4">
-  <path d="M 0 465 Q 100 460 200 465 T 400 465 T 600 465 T 700 465" stroke="rgba(255,255,255,0.15)" stroke-width="0.6" fill="none"/>
-  <path d="M 0 490 Q 120 485 240 490 T 480 490 T 700 490" stroke="rgba(255,255,255,0.1)" stroke-width="0.5" fill="none"/>
-</g>
-</svg>
+<div class="hero">
+  <div class="hero-band" style="background-image:url('https://images.pexels.com/photos/1911388/pexels-photo-1911388.jpeg?auto=compress&amp;cs=tinysrgb&amp;w=1600')">
+    <div class="hero-band-shade"></div>
+    <div class="hero-topbar">
+      <div class="hero-logo-badge">
+        <img src="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/4gKgSUNDX1BST0ZJTEUAAQEAAAKQbGNtcwQwAABtbnRyUkdCIFhZWiAAAAAAAAAAAAAAAABhY3NwQVBQTAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA9tYAAQAAAADTLWxjbXMAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAtkZXNjAAABCAAAADhjcHJ0AAABQAAAAE53dHB0AAABkAAAABRjaGFkAAABpAAAACxyWFlaAAAB0AAAABRiWFlaAAAB5AAAABRnWFlaAAAB+AAAABRyVFJDAAACDAAAACBnVFJDAAACLAAAACBiVFJDAAACTAAAACBjaHJtAAACbAAAACRtbHVjAAAAAAAAAAEAAAAMZW5VUwAAABwAAAAcAHMAUgBHAEIAIABiAHUAaQBsAHQALQBpAG4AAG1sdWMAAAAAAAAAAQAAAAxlblVTAAAAMgAAABwATgBvACAAYwBvAHAAeQByAGkAZwBoAHQALAAgAHUAcwBlACAAZgByAGUAZQBsAHkAAAAAWFlaIAAAAAAAAPbWAAEAAAAA0y1zZjMyAAAAAAABDEoAAAXj///zKgAAB5sAAP2H///7ov///aMAAAPYAADAlFhZWiAAAAAAAABvlAAAOO4AAAOQWFlaIAAAAAAAACSdAAAPgwAAtr5YWVogAAAAAAAAYqUAALeQAAAY3nBhcmEAAAAAAAMAAAACZmYAAPKnAAANWQAAE9AAAApbcGFyYQAAAAAAAwAAAAJmZgAA8qcAAA1ZAAAT0AAACltwYXJhAAAAAAADAAAAAmZmAADypwAADVkAABPQAAAKW2Nocm0AAAAAAAMAAAAAo9cAAFR7AABMzQAAmZoAACZmAAAPXP/bAEMABQMEBAQDBQQEBAUFBQYHDAgHBwcHDwsLCQwRDxISEQ8RERMWHBcTFBoVEREYIRgaHR0fHx8TFyIkIh4kHB4fHv/bAEMBBQUFBwYHDggIDh4UERQeHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHv/CABEIAZABkAMBIgACEQEDEQH/xAAcAAEAAQUBAQAAAAAAAAAAAAAABgEDBAUHAgj/xAAaAQEAAwEBAQAAAAAAAAAAAAAAAQIEAwUG/9oADAMBAAIQAxAAAAHq4tAAAATGRewsms3BEgKVFil+1SvkACtKgAAAAAAAAAAAFgdZAAAAVoMv3hZELoiQFKi15v26xbVpEK0qAAAAAAAAAAAAWB1kAAAABgZ8E6Vt+Odt+folOeJdDpz1DoTno6BSAEdAc/RM/QP3y1zqsS3Wfvs2Rv8AlMc20lzIjU7X0pwCKgAAAAAWB1kAAAABA55BO1OaD1cgQBJd3GH09JldGlmDZySS9G0+adZsNJgZPPlOJoVcW2alSsh28Hr0t0NFpNu7+x1sAAAAABYHWQAAAAEEncE7U5oPUyBE+trc6h4H1GlmNxXz8rU6zQ8PNysStPPzhWKhIIAps9YtPQ/Wl3Xr7QvIAAAAFgdZAAAAAQSdwTtTmg9TIvWc/J6fTpTjZPk9mt2UTjBr6Hj5AiAAAAAJFIo7IvV1h36AAAAAY9aV6yAAAAAgk7gnanNB6mRfsKd++ZUEnflaUQl+sy8Yqr58fJVSsQAAAABIpDHpF6usO/QAAAADHHWagAAAAQKewHtTm49TIBc61yG5xv8AQTm8+8/TjxedY2CkKrmYfl5QrAAAAEkkOgknrbLKtO1wAAAAMcdZVpUAAAAQOeQLtTmylfUyAAUy8WkT0mc/Pu0y9e46PElHndYL5mcb8rPgDLyAAAksmjMm9fbS1ep3vZVpWAAAAMcdZAqAAABAZ9Ae1ObVtXfUyAAAAVl8PVt3zJ4b1nztFI/O8Ly6w9es+ZmCIAksmjMm9faGjp5tX/FYtlIioAAMcdZAVoKgAAQGfQHtTl9/HuepkuqVAAAAK38cns0g4F2fzdGbEptieahq5b8nIEJLJozJvX2ho6AWvF+zSAQABjjsCJAVoKgAQGfQDtTl6lfUyXvVi8elKgAAAFJHHfVZ+g66/YeRt1MYnkS83PgDz88lk0Yk/r7A0dQFu5SIsq0rAAGOOwAIkBWiYqIlz7oMN7U5CPVyV9eBkVsXIXFKgAAAHZJFH5B5Gxq9pb4oM9+PCwyKUxaU+tsDR1AAt+LtqkAgDHHYAAESEwrRE1w8usx88Y3V+U+rloOtKqD3csIZNcf0Xnge3ge/ViV0nquWeTtFIQvHv2PBwSKUxeUeprDR1AAWb1qseREAWKXbXYAAESAAAgk7Xr872O/QPfw562GBo50EwBWlaBflVLR3tzZ+foDP0YuTF+FNZQ8XFJJPGZN6+0NHQABbueIi2KwBdw86z0nGFoBIQAAAYmNF8fGb3YNsaxJdL7ztfSJ6/o3rTHMvXTEoDuJMrOPkHO48w9edZoc3LP01Hl5ajnElk0Zk3r7Q0dAAHj3biPArAF8Xtj2M/HmLCtLAQAABqoxPNVg5RduaYuOnrt6GsyMpafN+y6Tk1xUzk+LBHnBz3KusbOla61sUNe2Y2Um0W99PWHfoAAtXbNYoIgC+L2At4+ZSYwWRZl5EwAAAAAAAESEwAPRS/W9WTn+wvWYNNuedgSAB4t1pSoAF8XsAApUWrWURg0zfEsVe8ShMz5B1/vzQ2ZchOpaTYQ0km3g8tltdNtYl5PrSSGdC0vqeXn5vJOxxGg84lqXmY8o6kRebcb7JVxzdaXdaaSSSxqS4+oUsAtvFYCIAAvi9jx4iLyx6hdefUyEgAOKdjjUE2cewcG3UulDMLsiriUj6Tbr1iOx2+Z4ftwnE6F49vweIy7oFb15Bk9WS4bJ+lkcVlXQKRPIJhPKVnSSWzez9BSJrbp5rBREVAABfpXxa1uhWqtBWvke/VuherYrM31n1K5j3eYdI6Vf8wIn9YVNYljZHMSaeo9br2nqG06cJmikQtHWq8+zYTNG8Ssy+liC49vQqQK5txTumi2/KffgrBQAVAABf8e1rWKevNagAAAChqOc76R6+eHiQ6Q3iQSjnudxvNebdEgcNBKI5MdFPXqGbekzLns152dX5ZIfBWLTKM3r1mA7TUeH7u455Ndf7XizDaR+QZLBWQAKgAAvi9qW7qIsL1IWl0WV4WV4WV6hZrdFleFmt0WqXhZrdFmt0WqXhaXRapeFmtxC0upeHsjw9jw9jw9jw9jw9oeHsXBewAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAoVYl+YuPGPD//EAC8QAAAGAAQFBAEEAwEAAAAAAAABAgMEBQYRIDAQEhQVQBMWMzUxISM0UCUyNnD/2gAIAQEAAQUC2kHrP+sSes/6sgk89gy/qiCVbBl/VS5jEQnMSqJz3M6Pczo9zPD3M8Pczw9zPj3M+Pcrw9yvD3K8Pcrw9yvD3K8Pcrw9yuj3K6PcrgTiJ9QYsrB0MqnqBZ5eXi/4dwiMek4GIMhwN0UpYYw2RBmlhtm1Fjt+fjD4tgiMwhhZhiqfcDFAsw1SsJBMQWCVNYQFWKgc94FPeIIsgzJac87F/wAOpCFKOLBdcOHRmI9fGZB8jaX7FCQ9LecBnnqI8hEnKSEqJSfLxf8ADoIsxHi84gVX6MNoZIlCVOQ2H33HT2oUk2VJMlJ8rF/w6K+MbqoEBDBcJ0o96pXzM+Vi/wCHi0nmXRRiQ3wnvem3vUvl4v8Ah4wfmilyx+Fgrmkb1N5eL/h4x1crsRXPG4T05SN6m8vF/wAOjDM4lN8JzHqpMjI92m8vGB/taG1qbXS2iJbfCXFJ0OIUhW5SeXjH49KFqQqsvjSUeQ0+gPsodTIjraPbpPLxh8WtiQ8wuuv0qDTiHEmRGUmEFEaT2aTgfk4x+HZhTpERdbcMSeD7CHSkRltbNJxPyMZfAW0X6HV3TscRn2pDZ/qJMMjCiNJ6qTQfj4y+BO5BmPRHaywamtiTHS6Tram1aaTSZeNjL4C3YzzjD1RYomth9lLqHm1NL0Umo/Fxl8ATuxnlsPVcxEyOJLJPIcSaFcaPUfi4y+AEC3aCUcabwsGOdPGj1n4mMvg4FupPI65z1oXCa16b3Ck/Oo/Exn8PEt3Dp51nCxRzM8KX861eHixrngaMwR7eH08tXwcLmQoslCm/Os/DmMlIjSWlMP6SMEewgjUuG36UXjI+cU358vEtZ66DLLXmOYZjmHMOYGoYZiHIm6HzzeFL+dg9J793SE8HmnGl7cKK7KerYiIcbjJX6bJ8KTZVpWXgTIUaWmbhxZCRDkxz1tsuOHBoZTxwILEJvRPf9RfCj2VaVFmD3lyGUmhaFkFJSoSKmC8HcNxjCsNGPbLoLDSw3htkMUkBsNMtNloUZJKZL5tFJsq1LLdsXDQ0ELUk0TXSCJ6QiSyoEoj2TURB6a2kPvuO6aTZVrWncsWzW1pJSiCZLxAprxAp6x3AdwHcAc9YVMeMLWtWuk2T2FJ3H4SFn0Dg6BwdA4OgdHQOjoHR0Lo6F0dC6OhdHROjonR0Tw6J4dG8OjeHRvDo3h0L46KQKplxnwlJBl5iE7atw0Ay8giCU8Lq3kRLK/sXoUOnkLlQNZ7xpBpGWjvKu6cHLlSbOY96EWls1WB3dkdeIL/URXVcjdfOOS7YyDixGcSFzxJLMpoW0s4UWmmHPjWtsqFNQr9ipulTZwxT93i/6zDX1Goz8HIGgGgxyg/+l4SP+ktvrcHf7Yy/FJ9ZJ+Cj/lKSSym1MWS3SuOQbgkDFhEVVg36zFX3KP4WFfuxin7zF/1mGvqNJn41nnExE2aXG18qUyJX+XsLx+VHqLJVeVpPenuxr9bTb1s641h5lQmYhcYk+6HRImqdsfdDwt7h+wbq7tcCLLmOyZr+I31x6ieqvf8AdDwSqRbW2M05QMNfUaDPbM+OYz2MQ1fXtRLOwqxLtrCyKjpG2GO3Qh26EO3Qg7DgNNx1QHUxJcd81wYi1duhDt0IduhDt0IduhDt0IduhDt0IduhBlhlkPsNPk02hpHDMGe2evMZjPStppYQy03pktk6zEgssNwoDcVzbzLiZ7qtvMZjMTbdSL9JkpOKEuRmMONrei8Js5yXdz4DkUYl9ViNhtC3YmJG3G2FwT7fh7qbB61gzIzGG7VU1GIZfSV+F5vVQX2/UQwby7DEc5yC120lwKZTp1+8rdt5JRYVozG7XhmZ1MDGH1uGD/xOYzF7SuOv11xLhPYtUSqrC30+Jfrl/XYK/kTTLpcHEfcZD8eXbVUgoF3zfpE+6vqwp6EP2VQ7Vy0zIm+e2Z5FMktzLSXDgJjUjzkGdiWW3Kh01g1FgNTlzrIR7MotlaZW9lcwlP1VPa9uadkuXDtlIbjRcOvlBfsJrs5lDaaavo40VyJiWM0UipsOeHHNSbK1mqjTrydHnRaGIqJX+AZbeRcMiGRDIuORDIuGRcci15DIvEyGQyGQyGQyGQyGQyGQyGQyGQyGQyGQyGQyGQyGQyGQyGQyGQyGQyGQyGQyGQyGQyGQy/8ARD/HMYQYX+OYf//EAC0RAAEDAQcEAgEEAwAAAAAAAAEAAgMRBBASITAxMgUTICJBUVAUI0BhQnGh/9oACAEDAQE/AfzDjQLuFdxy7jl3HLuFBzzsm2O1O2aUenWhvIgL9NEzlJX/AEiYG8RVF1dZ/G/dWXpU04xbD+0LPYbPy9z/AMTuqdsUjaGqbqc8n+SMz3LG5CUprg7Wk43AVNArNZ4enx9yYVedgrTbZbQfYp8tMgjn4g0TTUV1ZON3SI2yWtocrbMZpi4qR1BoRcdWTjdBMYZA8J7g5xIUjajQi46snG9r8KDgU+OuyIp5RcNWTj4tl+0QHhOjp4xcdWTj5A0TH4k+KuyIpfFx1ZOPnso34lJHivi46snHQBobpm/N0XHVfx0W7JwqLouOs5tD5tFTed1Fx1iKp0ZHiASmMw3SOwi6LjrPkwoTD5VWlYGrttWEXVTpQEXFxzui460jK5hdtywOWF691WRfuIh53WArAVgKjyb/ACMQ12mqcaKvsgfaissDH2aR5GYRr8JpqqnFRNOZTDUL7TdtbiUffZYHb1UDKSAnNTz0idHFHT7Ra77QY4fKwO3qu277QY4fKwZIZDWc4BE0CBqseDMJ1rlINTvusWVVizWLOixZ0Vnsvfa412RNDQKusfZYqtTTkn0O6FaEIO9aJ24RNTVGu66aD25D9hSNof7Q216eFPDP83//xAAuEQABAwIEBgIBAwUAAAAAAAABAAIDBBEQEiAxEyEwMjNRFCJBBUBCI1BSYXH/2gAIAQIBAT8B0n98R+1jbmdZfHj9L40fpfHj9L48fpfGj9L48acKZpsSEaikBsOadPGT9WLiD0ib9aDvGio/UIYeV+fpOrqiXsFk++8ryjJGD9QjUOXGf7Tap43UcrZNutB5BjV1Uk7+FCbAblRU7IlPU2OVqJJ30tcWm4THZm36sHeMK2QsgcQqeMMjAVTJkZy6FP4x1YO8YSsEjS0osMf1KqYy9nLoU/jHVg7xjLGHhPjc3dT0wfzG6c0tNjqp/GOrB3jTJTA9qmgDuTgpqZzOf4003jCI6kHeNTmBwsVLAW/8U9KHc2oi3I403jGB6cHeNe6miym42VRT5xcbrbCm8YxPSg8g6Dm5hZEWVZF/IYU3jHVgNnjoydxUjczSEVTeIaD0dlFJnbfW85RdHB/cVTeIaD0mPLDcJlS126BvodI1u6mmz8sJ5cjcKbxjQcRrnquGbBMrW/yTKhv4KFQ/2vkPRmefyr4SVTGbKSQyG5wpvGNB0A6qmmLzmavjyelwJfSEcw2QNQFnqVnqE5szt1wH+lwX+lwX+lTgiMA6Dpv1rrhO5f7RFjbp3V8JWhtrKJgde6a0GMlOaBGHKeV7Z2NGxUZZs4KVuQqw4eZSNAa0qoaGusEP4KXuOJOm6vpI4zBbcJn9EXcuOy1rKSdhZayjivIHvff0hJF/inTxu3C48drZUZ4z+E6aNxuWozjMDbkE43N8L9G6urqNhfsmNzusntymybFxLhNpI7tsuH9st0IgQTfZGL65guGcuZTT8IgW3Qj+oLkeRt1ozwrXXDtMCNlIxxcSoS4G7U4tD2u2TmESZvwo+cbkz6sLfaY4XLFXcpGj0VCTYA8wU+2Y26NlZWVlbHnjz0WwsrKysrK39yth/8QAORAAAQMBAwgKAAYBBQAAAAAAAQACAxESITEEECJAQXGBwRMUIDAyMzRRYZEjQlJygqGxYGJwgIP/2gAIAQEABj8C/wCVQZ32a4I9HCC3ZVeQxeQxeTGvIYvJjXkxryY15Ea8mNeTGvJjXkxryY15Ma8hi8hi8hi0cmB4LRyIL8RkLFfjrkHHl3uC8BV0RosLO9DpJVWxaWhE0cNfg48u5uFVgrmEhC3Rq0yXLwsVGNqtFi2LYtNiudfr0HHl27lQNJQMjrPwrmAlbGhUjFpeKm5X9q5WZLx7qrTUa5Bx5doVFfhB0ooPZUY0DNZZpOWm7u6Hwqow1uDjy7IoLyg5wq/P0cZ398W/p1uDjy7AC6QjdnoMT38vDW4OPLsBMHxnI9u/l4a3Bx5dgFMcPbO7v5eGtwceXZ6rIdIeHPUeIKh76XhrcH8uXZD2GhC6OQ0lH956tucqOHey8Oet5P8Ay5doOaaEIMyq8fqCtRPDhmo5fHv3kvDnrcHHl3FqJ5aUGZULJ/UrTHBwVCrUX0qEd1Lw563BvPLuqxvNPZBkn4cma8X+69x3MvDnrcG88u8DJtOP/CtxOBGa1H9Kh7cvDnrcG88u9tRu4LRNH7W5vZysuHal4c9bg3nl3wkjdQqhukGIzUKsu7MvDnrcG88u/EkbqEIPHi/MM1NqsnsS8Oetwbzy1BorovuOe23EdiXhrcHHlqFVFJ7jP8HPLw1vJ/5ctRjz2vbPJw1sSfoOoxfOchEZpOGtvhP5gnRuF7T34YMSo4/Ydh+/NJw1zrMI0x4h79+JXDQjv7Lj85pOGumbJbn7W+6syNLT3gjjbVCJvE9gnPLw16k0YPyi7Jn1+CvxInDh3FGMc4/CBl/Db/asxN3ns2R4Rnl4a7QvWia5tJoKvhAPuFoSPC0Z16hv0r52r8SZx3Ly7e9UZG0cOzUqxHh2JeHPXKDbmq00V960m0XjVx7m8rR0irzd2ZeHPXKjZ2riV4ythV7QvAvAvArmhY0Wk4nty8Oeu1boleILELELELFqxCxC2LYti2LZmwWCwWC8K8K8Cktilaf6ibk8YbZNFDLFSr8UyaTxHXOqdDdapWufqnQ3WqVqnzUrZFU+sdiz8plI7dpMmpS0i72TmFlKJ0wbapsVJYKD4K6SF1RmMwbaXSllm+ibB0Vqu2q6Sn5ao5MYQ35rmZuCybfyUWufzzj96l/aplBxUO5P3J+5UcKhEdGGu2ELqzjok2TmO9H9yj3BD9iPHM3cFk2/kotc6RwutVQe01BRccAnZS0WgH1CMIisA4p9IbdpBz20AwCZC3JRQXYosEVmqdK4XFSRDJgbJpivSD7XXOjoa1ovSj7QjLLDBsXQMycOvxXWZRW/BGJkAZdSqdL0VslemH2mPLMT9BZO32dyUWuW47pW4fK6CSMlo2OC6CKMhp/SFaypgfI7+l6Zn0vTM+l6eP6RkdAyg+E58bBRvwiyHZ8IudAwkr0zPpemZ9L0zPpemZ9L0zPpemZ9L0zPpemZ9L0zPpfhRtbuVJWB4HurEbQ1vtrunGx28LQjY3cOy6NxuKexjq2k57XEk95iNebZd+E02SgRtXWYcolaS6lK3JmVSzyud7F12cZF0xhhBpUbVFNks83iFoVQymLKJWuOytyZlUs8r3HYTcusxZRKx1QKA3K2Mqnt2a1tKRsuWTAN9nI5RkuWTGzi0lGKbzG/2nEHTdc1WHmsjMVZqRuXQGZ9mvuo8mhcQXYuXTR5XMZbNbVpR9NW3trrj37TcFE5krTM293yg0nTZcUP3qPO7KskN+1qEGWAuZ/u2JrhtKj3lfzb/lf+ayhS1wslPf8AlDU4TSARQigrtKLWurE40zHegWupI3BWX2rHscCmzNFPca3UqJj2u6uw7RcSnl0EYFMQ1F1h/QuuNybFDac6tUyKVklofCYyG2yJl7q7c2URZTaDHO0SoxkjCQPE9dDHe5ouRybKongA3KOKCJzYQ605xRY6tS2gAUjp2PAd8Lq2QxP0sXEYItFX5RINirJE18v57QTOqR0cMQ0JrZg5sjRfVdMWOsVWTz6XRU0kIMnaZZHYfCax/iN51zDNgsFhnwz4Z8O4w/6E/wD/xAAqEAEAAgADBgcBAQEBAAAAAAABABEhMUEQIDBAUWFxgZGh0fDxwbFQcP/aAAgBAQABPyHhabvi4n/KGmXm+LiV/wApUwRvpco/5Splme+/8sqeL5LhqVcVrfefkPzPyH5jpek/MNb0X5n5z8z8p+Z+U/MX+B+Z+E/M/CfmfhPzPxn5n4z8z8J+Z+C/M/BfmJ/A/MUrwdfMp85qif2f56L/AGYTD1VznvuJVFICWXQ9TIIKLjeCNJu4Yy+rO8F9mQAKAOet274Nn/4JWmqO+hJYhN+6yY+s74sHyLoVNEHjF9EexvGuvQmRx0PPe+36kDB1gtb2Jk26iAeKGKxgJd2PXSKt0dIRWld5FapiJ/HQsROc99uzqiZxJg+wLVKv2Ax1/iEt6J004LsGpbzIYe1lzfvt2siUwh8P8ttxqdRHFx4TtVNux78377crtMFmadltYmdOKrbxvr8+b99uVEGCAbT6BgOP9vnzfvtyBpqmAksTtS9ricf6fPm/fbkTDh1GptwX/pGQUnG+3z5uoerujkHWJAgD4m0E1f6xUwTii5krmvdbwyPLJAjqw1oG7UOylGOjHVl6eK5LiVzI9fgRos6Md7OMoHWNRlaRJnQWhDws+xC4lcwq4Mid4ceUNQdBcGCJZMnUF1rvnBz7ULiVzCWThJsGowtyr1gS1e0AKSyXuCwoFE38+4hfMJPTiHGVrpZbALytmR+gx3Q3s/AUcolgeKiY5h088bGx46PSOA8Hru595GnYcqk8OKux/rFbAYdB2PVkyYtGk4TCyPLJKmKziqSjRGwTXYFN1u+5m+uu+eUfqbZVBviIIaTagpZTLqjWNv0PHfGEeT9xuCqDwyKJ0w24OMce36XjwBjybnF/2r43REs4REsaL2inqS6NHZ9rxhlv5eT1xQjjihvIQXgA7a0QSNPaw0Hds+14w33KOfJpkFwNERUlb4yC1lZSUlJ0J1Cg76bjgLO8Wx9rx4OfdzcZxKYoYztCERTonEZ8lxekH8vPrO4ep1hFbezP9deMqeQvANNRKkzNwV+uSI7/AIX4Q0+vcYRzq5u4oFuUxJ/ptzffXjKEFPGpSuXgdg2ge5LVYQxN2ad8yfqp/PiGYRUWw1cHCTpurQgTGpWt67mfj7r8UU9OGKyxFdphtTF53gmSge8KsHgl2QQFP5IrldBsNufkE1DiFDtz7zti85kMv7hsSFr7p4vrFae/YllI8EVvcA4nZ9/Oa5HhJZTEDwds+7obmi7392nt2CdhHpJ2uwkQpPeTsjHvwHKOfBFinNk1HhrhoM6UU5hGV57HwizZ4wq72bwlf2rW+xW8VBgsUijTccpQRsB1KjIBfgoYH2LQZli5tRnLxdSgy6XBoVXdy9YMKHddkNB1upstKxqribO1BuCskjkay0amBBoJfkbc+1R/o5iSwNNgUT6fDb7DPf5/knvNgfdYfq6x6VMxmAf+ylm2DP7OpsFe4z6zrPu9pme23X2qP9HI1yzg0QqyGHtC1DsSBZALWV2cg6hCQZwNw2JLNaqaBTukrmAtBIKauHXgKL1gNdw6p+imF6pT2jWB6qErZdNYVxAbMB3QE7eku7OYuoJQescKn76NksLowh4GMf6ORBZcFCb3zGofkdIcuOhGHhMs5US2dGbHcKUwEPHWG58V6IjGJxMEeuVqnC0pSlKUrRleAoFfFgIAAMhtaSzcN90b1sINle43jHZZjTnZJZ1lm2nANLGQg0wsQ03LJZ1lnUlnWWbGGOU8ZZ1PWEx6xvHYu+nIrloTXWWgFavDvMsIWSrNyMrwf2hjy1LTFmUCW9kv6QsSfuSQsQJXUmYAJ8fqUXThDPwuzwlDvXNEw2ozYhNJc4Lrv3TMJ3R1TPt2uIQOcqxhWX9eXVl75v5OLcQC89hlSYGac5iN+aR34aUbTuLPEHG+0EomkGMZSIJPvOsRhkeL6yjrwj+zI34UpbMDF/ZLImvvB24nMqmKxLedgONe1gIhbrQxO/DoPAN9LgrhkmQTPnNBM12UXFKyWdGkKOlwELtzKkvw7hXh2JjdEyMIMABUYTLw1OtR2YVgxIQ4Q9XWksgUEzhikKh8nlrAQ/8AQjWH0htYtxCi4CoRVZxicnjUIV7imUesA0Izs6jpwDgJewrhdhs7Cdh6TsIAZBsUzD5QDIDYtmPSAGQEQcydh6QAyIg5kAMiUdCUdCUdCIcwgeQ9OTolZWVlZWVlZWVlZWVlZWVlZXe/X/1r/wD/APw7EzFU2n//2gAMAwEAAgADAAAAEAggggQfPLM/ffffffffffffffQggggknfPPENfffffffffffffQgggggkcYEgsh8woj3fffffffQggggggQYAjGjvcAINvffffffQggggggwwWg5Vwvv603PfffffQggggggQRgkXPvvvvrvffffffaggggggQVARMNvvvvvnfffffffggggggAQYzUn/vvvvo/ffffffqgggggSQQZiLsPvvvqsdfffffvgggggSQQQQRBsvvvqvMxdfffvrggggUSQQQVeDUvfovPFnffffvrgggm+QQQQQcaHvl/PP8AX3333760JHk0ckEEEEtXXPzzxb33333725mb01+8sMsAT0fzzwv3333377768QgEEU4AJp/7zzyn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" alt="السديس اللوجستية">
+      </div>
+      <div>
+        <div class="hero-brand-ar">السديس اللوجستية</div>
+        <div class="hero-brand-sub">تسهيل التخليص الجمركي .. من أجل تجارة أسرع وأكثر أمانًا</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="hero-band" style="background-image:url('https://images.pexels.com/photos/14392678/pexels-photo-14392678.jpeg?auto=compress&amp;cs=tinysrgb&amp;w=1600')">
+    <div class="hero-band-shade"></div>
+  </div>
+
+  <div class="hero-band" style="background-image:url('https://images.pexels.com/photos/5410923/pexels-photo-5410923.jpeg?auto=compress&amp;cs=tinysrgb&amp;w=1600')">
+    <div class="hero-band-shade"></div>
+    <div class="hero-modes">
+      <div class="hero-mode">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M2 12L22 4L14 12L22 20L2 12Z"/></svg>
+        <span>جوًا</span>
+      </div>
+      <span class="hero-mode-sep"></span>
+      <div class="hero-mode">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M2 16L22 16L19 21L5 21Z"/><path d="M12 16V3L18 9H12Z"/></svg>
+        <span>بحرًا</span>
+      </div>
+      <span class="hero-mode-sep"></span>
+      <div class="hero-mode">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M2 8H14V17H2Z"/><path d="M14 11H18L22 15V17H14Z"/><circle cx="6" cy="19" r="1.8"/><circle cx="17" cy="19" r="1.8"/></svg>
+        <span>برًا</span>
+      </div>
+    </div>
+  </div>
 </div>
 
 <!-- ═══════════════════ LOGIN CARD ═══════════════════ -->
