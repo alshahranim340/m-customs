@@ -78,6 +78,8 @@ body.dark-mode {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 12px;
 }
 .modern-header-brand {
   display: flex;
@@ -128,6 +130,7 @@ body.dark-mode {
   display: flex;
   gap: 8px;
   align-items: center;
+  flex-wrap: wrap;
 }
 
 /* ═══════════════════════════════════════════
@@ -218,6 +221,10 @@ body.dark-mode {
   gap: 12px;
   align-items: center;
   border-bottom: 1px solid var(--sd-border);
+  flex-wrap: wrap;
+}
+.modern-search-bar input[type="text"] {
+  min-width: 180px;
 }
 .modern-search-wrap {
   flex: 1;
