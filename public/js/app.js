@@ -505,15 +505,15 @@ body{
 .header {
   display: flex;
   align-items: center;
-  gap: 22px;
-  padding: 34px 34px 22px;
+  gap: 16px;
+  padding: 20px 26px 14px;
   position: relative;
   border-bottom: 1px dashed rgba(200, 148, 58, 0.28);
 }
 
 .logo-frame {
-  width: 88px; height: 88px;
-  border-radius: 16px;
+  width: 62px; height: 62px;
+  border-radius: 14px;
   background: white;
   padding: 6px;
   flex-shrink: 0;
@@ -543,7 +543,7 @@ body{
 .brand { flex: 1; }
 .brand-ar {
   font-family: 'Cairo', 'Tajawal', sans-serif;
-  font-size: 26px;
+  font-size: 19px;
   font-weight: 900;
   color: var(--navy);
   line-height: 1.05;
@@ -551,36 +551,36 @@ body{
 }
 .brand-en {
   font-family: Georgia, serif;
-  font-size: 10px;
+  font-size: 8.5px;
   font-weight: 700;
   color: var(--gold-dark);
-  letter-spacing: 4.5px;
-  margin-top: 5px;
+  letter-spacing: 3.5px;
+  margin-top: 3px;
 }
 .brand-line {
-  width: 40px;
+  width: 34px;
   height: 2px;
   background: linear-gradient(90deg, var(--gold), transparent);
-  margin: 10px 0 8px;
+  margin: 6px 0 5px;
 }
 .brand-sub {
-  font-size: 13.5px;
+  font-size: 11.5px;
   font-weight: 700;
   color: var(--saudi-green-dark);
 }
 .brand-sub-en {
   font-family: monospace;
-  font-size: 8.5px;
+  font-size: 7.5px;
   font-weight: 600;
   color: rgba(0, 72, 34, 0.55);
-  letter-spacing: 2.2px;
-  margin-top: 3px;
+  letter-spacing: 1.8px;
+  margin-top: 2px;
 }
 
 /* Status strip (deep green) */
 .status-strip {
   background: linear-gradient(90deg, var(--saudi-green-dark), var(--saudi-green), var(--saudi-green-dark));
-  padding: 11px 34px;
+  padding: 7px 26px;
   display: flex;
   align-items: center;
   gap: 12px;
@@ -612,22 +612,22 @@ body{
 .status-val { color: rgba(255, 255, 255, 0.75); }
 
 /* Form area */
-.form { padding: 30px 34px 20px; }
+.form { padding: 18px 26px 14px; }
 
 .welcome {
   text-align: center;
-  margin-bottom: 26px;
+  margin-bottom: 14px;
   position: relative;
 }
 .welcome-title {
   font-family: 'Cairo', sans-serif;
-  font-size: 17px;
+  font-size: 15px;
   font-weight: 900;
   color: var(--navy);
-  margin-bottom: 4px;
+  margin-bottom: 3px;
 }
 .welcome-sub {
-  font-size: 11px;
+  font-size: 10px;
   color: var(--saudi-green-dark);
   font-weight: 700;
   letter-spacing: 1px;
@@ -637,7 +637,7 @@ body{
   align-items: center;
   justify-content: center;
   gap: 8px;
-  margin-top: 8px;
+  margin-top: 5px;
 }
 .welcome-ornament .line {
   flex: 0 0 60px;
@@ -650,15 +650,15 @@ body{
   transform: rotate(45deg);
 }
 
-.field { margin-bottom: 16px; }
+.field { margin-bottom: 10px; }
 .field label {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 12px;
+  font-size: 11.5px;
   font-weight: 800;
   color: var(--navy);
-  margin-bottom: 7px;
+  margin-bottom: 5px;
 }
 .field label .ic {
   color: var(--gold);
@@ -671,7 +671,7 @@ body{
 }
 .field input {
   width: 100%;
-  padding: 13px 16px;
+  padding: 10px 14px;
   border: 1.5px solid rgba(200, 148, 58, 0.35);
   border-radius: 10px;
   font-size: 14px;
@@ -691,8 +691,8 @@ body{
 
 .login-btn {
   width: 100%;
-  padding: 15px;
-  margin-top: 10px;
+  padding: 11px;
+  margin-top: 6px;
   background: linear-gradient(135deg,
     var(--saudi-green-dark) 0%,
     var(--saudi-green) 50%,
@@ -738,7 +738,7 @@ body{
     rgba(0, 108, 53, 0.05),
     rgba(200, 148, 58, 0.05));
   border-top: 1px dashed rgba(200, 148, 58, 0.28);
-  padding: 14px 34px;
+  padding: 9px 26px;
   display: flex;
   justify-content: space-between;
   flex-wrap: wrap;
@@ -775,13 +775,13 @@ body{
 }
 
 /* ═══ هوية "الختم" — قسم صور حقيقية (طائرة/سفينة/شاحنة) + بطاقة دخول عائمة ═══ */
-.hero { position: relative; margin-bottom: -130px; }
+.hero { position: relative; margin-bottom: -85px; }
 .hero-band {
   position: relative;
   width: 100%;
-  height: 24vh;
-  min-height: 150px;
-  max-height: 180px;
+  height: 10vh;
+  min-height: 68px;
+  max-height: 108px;
   background-size: cover;
   background-position: center;
   background-color: #0e1b30;
@@ -797,53 +797,55 @@ body{
 }
 /* مرساة يمين فقط — يتجنّب زر الوضع الليلي/النهاري الثابت أعلى يسار الصفحة */
 .hero-topbar {
-  position: absolute; top: 22px; right: 30px;
+  position: absolute; top: 12px; right: 20px;
   display: flex; align-items: center;
-  gap: 12px;
-  max-width: min(78%, 460px);
+  gap: 8px;
+  max-width: min(75%, 360px);
   z-index: 2;
 }
 .hero-brand-ar {
   color: #fff;
   font-family: 'Cairo', 'Tajawal', sans-serif;
-  font-size: clamp(18px, 3.4vw, 26px);
+  font-size: clamp(13px, 2.4vw, 17px);
   font-weight: 900;
   text-shadow: 0 2px 16px rgba(0, 0, 0, 0.55);
 }
 .hero-brand-sub {
   color: rgba(255, 255, 255, 0.9);
-  font-size: 11.5px;
-  margin-top: 5px;
-  line-height: 1.5;
+  font-size: 9px;
+  margin-top: 2px;
+  line-height: 1.4;
   text-shadow: 0 1px 10px rgba(0, 0, 0, 0.55);
 }
 .hero-logo-badge {
-  width: 54px; height: 54px;
-  border-radius: 13px;
+  width: 38px; height: 38px;
+  border-radius: 9px;
   background: #fff;
-  padding: 5px;
+  padding: 4px;
   flex-shrink: 0;
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35), 0 0 0 2px var(--gold);
 }
 .hero-logo-badge img { width: 100%; height: 100%; object-fit: contain; display: block; }
+/* bottom = مقدار تراكب البطاقة (85px) + هامش أمان 12px، حتى لا تختفي الصف خلف البطاقة */
 .hero-modes {
-  position: absolute; right: 30px; bottom: 22px; left: 30px;
-  display: flex; align-items: center; gap: 14px;
-  z-index: 2;
+  position: absolute; right: 20px; bottom: 97px; left: 20px;
+  display: flex; align-items: center; gap: 10px;
+  z-index: 3;
 }
-.hero-mode { display: flex; align-items: center; gap: 7px; }
+.hero-mode { display: flex; align-items: center; gap: 5px; }
 .hero-mode span {
-  color: #fff; font-size: 12px; font-weight: 800;
+  color: #fff; font-size: 10px; font-weight: 800;
   text-shadow: 0 1px 8px rgba(0, 0, 0, 0.55);
 }
-.hero-mode svg { width: 18px; height: 18px; color: var(--gold-light); }
-.hero-mode-sep { width: 26px; height: 1px; background: rgba(255, 255, 255, 0.4); }
+.hero-mode svg { width: 13px; height: 13px; color: var(--gold-light); }
+.hero-mode-sep { width: 18px; height: 1px; background: rgba(255, 255, 255, 0.4); }
 
 @media (max-width: 640px) {
-  .hero-band { height: 18vh; min-height: 110px; max-height: 130px; }
-  .hero-topbar { top: 14px; right: 18px; max-width: 82%; }
-  .hero-modes { right: 18px; left: 18px; bottom: 14px; }
-  .hero { margin-bottom: -100px; }
+  .hero-band { height: 8vh; min-height: 54px; max-height: 76px; }
+  .hero-topbar { top: 8px; right: 14px; max-width: 82%; gap: 6px; }
+  .hero-logo-badge { width: 30px; height: 30px; border-radius: 7px; }
+  .hero-modes { right: 14px; left: 14px; bottom: 72px; gap: 6px; }
+  .hero { margin-bottom: -62px; }
 }
 @media (prefers-reduced-motion: reduce) {
   .wrap { animation: none; }
@@ -872,21 +874,23 @@ body{
 
   <div class="hero-band" style="background-image:url('https://images.pexels.com/photos/5410923/pexels-photo-5410923.jpeg?auto=compress&amp;cs=tinysrgb&amp;w=1600')">
     <div class="hero-band-shade"></div>
-    <div class="hero-modes">
-      <div class="hero-mode">
-        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M2 12L22 4L14 12L22 20L2 12Z"/></svg>
-        <span>جوًا</span>
-      </div>
-      <span class="hero-mode-sep"></span>
-      <div class="hero-mode">
-        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M2 16L22 16L19 21L5 21Z"/><path d="M12 16V3L18 9H12Z"/></svg>
-        <span>بحرًا</span>
-      </div>
-      <span class="hero-mode-sep"></span>
-      <div class="hero-mode">
-        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M2 8H14V17H2Z"/><path d="M14 11H18L22 15V17H14Z"/><circle cx="6" cy="19" r="1.8"/><circle cx="17" cy="19" r="1.8"/></svg>
-        <span>برًا</span>
-      </div>
+  </div>
+
+  <!-- مثبّتة على .hero نفسها (وليست داخل آخر شريط) حتى تبقى دائمًا فوق حافة البطاقة العلوية بغض النظر عن ارتفاع الشاشة -->
+  <div class="hero-modes">
+    <div class="hero-mode">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M2 12L22 4L14 12L22 20L2 12Z"/></svg>
+      <span>جوًا</span>
+    </div>
+    <span class="hero-mode-sep"></span>
+    <div class="hero-mode">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M2 16L22 16L19 21L5 21Z"/><path d="M12 16V3L18 9H12Z"/></svg>
+      <span>بحرًا</span>
+    </div>
+    <span class="hero-mode-sep"></span>
+    <div class="hero-mode">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M2 8H14V17H2Z"/><path d="M14 11H18L22 15V17H14Z"/><circle cx="6" cy="19" r="1.8"/><circle cx="17" cy="19" r="1.8"/></svg>
+      <span>برًا</span>
     </div>
   </div>
 </div>
