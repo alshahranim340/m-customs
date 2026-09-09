@@ -677,38 +677,41 @@ async function loadNews() {
 async function fetchNewsParallel() {
   const rssUrl = `https://news.google.com/rss/search?q=${encodeURIComponent('الجمارك السعودية OR موانئ')}&hl=ar&gl=SA&ceid=SA:ar`;
 
+  // كل استراتيجية دالة (مو Promise جاهز) عشان ما نبدأ الطلب إلا لو احتجناه فعلاً
   const strategies = [
-    fetch(`https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(rssUrl)}&count=10`)
+    () => fetch(`https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(rssUrl)}&count=10`)
       .then(r => r.ok ? r.json() : Promise.reject('rss2json bad'))
       .then(d => {
         if (d.status !== 'ok') return Promise.reject('rss2json ' + d.message);
         return (d.items || []).map(i => ({ title: i.title, link: i.link, pubDate: i.pubDate, source: extractSource(i.title), image: extractImage(i.description || i.content || '') || i.thumbnail || i.enclosure?.link || '' }));
       }),
-    fetch(`https://corsproxy.io/?${encodeURIComponent(rssUrl)}`)
+    () => fetch(`https://corsproxy.io/?${encodeURIComponent(rssUrl)}`)
       .then(r => r.ok ? r.text() : Promise.reject('corsproxy bad'))
       .then(t => parseRSS(t).map(i => ({ ...i, source: extractSource(i.title), image: extractImage(i.description) || '' }))),
-    fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(rssUrl)}`)
+    () => fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(rssUrl)}`)
       .then(r => r.ok ? r.text() : Promise.reject('allorigins bad'))
       .then(t => parseRSS(t).map(i => ({ ...i, source: extractSource(i.title), image: extractImage(i.description) || '' }))),
-    fetch('https://feeds.bbci.co.uk/arabic/business/rss.xml')
+    () => fetch('https://feeds.bbci.co.uk/arabic/business/rss.xml')
       .then(r => r.ok ? r.text() : Promise.reject('bbc bad'))
       .then(t => parseRSS(t).map(i => ({ ...i, source: 'BBC عربي', image: extractImage(i.description) || '' }))),
   ];
 
-  return new Promise((resolve, reject) => {
-    let pending = strategies.length;
-    let firstError = null;
-    strategies.forEach((p, idx) => {
-      p.then(items => {
-        if (items && items.length > 0) resolve(items.slice(0, 10));
-        else if (--pending === 0) reject(firstError || new Error('empty'));
-      }).catch(err => {
-        if (!firstError) firstError = err;
-        if (--pending === 0) reject(firstError);
-      });
-    });
-    setTimeout(() => reject(new Error('timeout')), 25000);
-  });
+  // نجرب الاستراتيجيات بالتتابع (مو كلها مرة وحدة بالتوازي) ونوقف عند أول نجاح.
+  // نفس إصلاح dashboard.js — يمنع أخطاء CORS/403 المتوقعة من باقي البروكسيات
+  // من الظهور بالكونسول كل مرة بدون داعٍ.
+  let firstError = null;
+  for (let idx = 0; idx < strategies.length; idx++) {
+    try {
+      const items = await Promise.race([
+        strategies[idx](),
+        new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 8000)),
+      ]);
+      if (items && items.length > 0) return items.slice(0, 10);
+    } catch (err) {
+      if (!firstError) firstError = err;
+    }
+  }
+  throw firstError || new Error('empty');
 }
 
 function extractImage(html) {
