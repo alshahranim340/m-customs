@@ -1,6 +1,7 @@
 import {
   getAuth, signInWithEmailAndPassword,
-  signOut, onAuthStateChanged, createUserWithEmailAndPassword
+  signOut, onAuthStateChanged, createUserWithEmailAndPassword,
+  sendPasswordResetEmail
 } from 'firebase/auth';
 import {
   doc, setDoc, getDoc, getDocs,
@@ -56,6 +57,10 @@ export async function signIn(email, password) {
 
 export async function logOut() {
   await signOut(auth);
+}
+
+export async function resetPassword(email) {
+  await sendPasswordResetEmail(auth, email);
 }
 
 // ─────────────────────────────────────────────
